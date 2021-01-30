@@ -144,7 +144,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException,
             RepositoryErrorException,
             EntityNotKnownException,
-            PropertyErrorException,
             PagingErrorException,
             UserNotAuthorizedException {
 
@@ -156,51 +155,16 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
 
-        List<Relationship> entityRelationships = new ArrayList<>();
-
-        // TODO: implement...
-
-        /*
-        Map<String, Relationship> relationshipStore = repositoryStore.timeWarpRelationshipStore(asOfTime);
-
-        for (Relationship  storedRelationship : relationshipStore.values())
-        {
-            if (storedRelationship != null)
-            {
-                if (storedRelationship.getStatus() != InstanceStatus.DELETED)
-                {
-                    repositoryValidator.validRelationship(repositoryName, storedRelationship);
-
-                    if (repositoryHelper.relatedEntity(repositoryName,
-                            entityGUID,
-                            storedRelationship))
-                    {
-                        if (relationshipTypeGUID == null)
-                        {
-                            entityRelationships.add(storedRelationship);
-                        }
-                        else if (relationshipTypeGUID.equals(storedRelationship.getType().getTypeDefGUID()))
-                        {
-                            entityRelationships.add(storedRelationship);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (entityRelationships.isEmpty())
-        {
-            return null;
-        }
-
-        return repositoryHelper.formatRelationshipResults(entityRelationships,
+        List<Relationship> entityRelationships = cruxRepositoryConnector.findRelationshipsForEntity(entityGUID,
+                relationshipTypeGUID,
                 fromRelationshipElement,
+                limitResultsByStatus,
+                asOfTime,
                 sequencingProperty,
                 sequencingOrder,
                 pageSize);
-         */
 
-        return entityRelationships.isEmpty() ? null : entityRelationships;
+        return entityRelationships == null || entityRelationships.isEmpty() ? null : entityRelationships;
 
     }
 
@@ -801,17 +765,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         super.manageInstanceParameterValidation(userId, entityGUID, parameterName, methodName);
 
-        // TODO: implement...
-        /*
-        EntityDetail restoredEntity = repositoryStore.retrievePreviousVersionOfEntity(entityGUID);
-        restoredEntity.setUpdatedBy(userId);
+        EntityDetail restoredEntity = cruxRepositoryConnector.restorePreviousVersionOfEntity(userId, entityGUID);
 
+        // Note: these validations occur _after_ actually persisting the restoration (above)
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, restoredEntity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, restoredEntity, methodName);
 
         return restoredEntity;
-         */
-        return null;
 
     }
 
@@ -916,7 +876,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityIsDeleted(repositoryName, entity, methodName);
 
         try {
-            // TODO: should we not follow the maximum page size here?
             List<Relationship> relationships = this.getRelationshipsForEntity(userId,
                     deletedEntityGUID,
                     null,
@@ -995,58 +954,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException,
             ClassificationErrorException,
             PropertyErrorException {
-
-        /*final String  methodName                  = "classifyEntity";
-        final String  entityGUIDParameterName     = "entityGUID";
-        final String  classificationParameterName = "classificationName";
-        final String  propertiesParameterName     = "classificationProperties";
-
-        this.validateRepositoryConnector(methodName);
-        parentConnector.validateRepositoryIsActive(methodName);
-
-        repositoryValidator.validateUserId(repositoryName, userId, methodName);
-        repositoryValidator.validateGUID(repositoryName, entityGUIDParameterName, entityGUID, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        // TODO: since an EntityProxy can technically have a classification, this entire method should probably
-        //  operate against EntitySummary objects (covering EntityDetail and EntityProxy) rather than EntityDetail alone
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, entity);
-
-        InstanceType entityType = entity.getType();
-
-        repositoryValidator.validateClassification(repositoryName, classificationParameterName, classificationName, entityType.getTypeDefName(), methodName);
-
-        Classification newClassification;
-        try {
-            repositoryValidator.validateClassificationProperties(repositoryName, classificationName, propertiesParameterName, classificationProperties, methodName);
-            newClassification = repositoryHelper.getNewClassification(repositoryName,
-                    null,
-                    InstanceProvenanceType.LOCAL_COHORT,
-                    userId,
-                    classificationName,
-                    entityType.getTypeDefName(),
-                    ClassificationOrigin.ASSIGNED,
-                    null,
-                    classificationProperties);
-        } catch (TypeErrorException e) {
-            throw new ClassificationErrorException(OMRSErrorCode.INVALID_CLASSIFICATION_FOR_ENTITY.getMessageDefinition(),
-                    this.getClass().getName(),
-                    methodName,
-                    e);
-        }
-
-        EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, entity, newClassification, methodName);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
-        return cruxRepositoryConnector.updateEntity(updatedEntity);*/
 
         return classifyEntity(userId,
                 entityGUID,
@@ -1415,16 +1322,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         this.manageInstanceParameterValidation(userId, relationshipGUID, parameterName, methodName);
 
-        // TODO: implement...
-        /*
-        Relationship restoredRelationship = repositoryStore.retrievePreviousVersionOfRelationship(relationshipGUID);
-        restoredRelationship.setUpdatedBy(userId);
+        Relationship restoredRelationship = cruxRepositoryConnector.restorePreviousVersionOfRelationship(userId, relationshipGUID);
 
+        // Note: these validations occur _after_ actually persisting the restoration (above)
         repositoryValidator.validateRelationshipFromStore(repositoryName, relationshipGUID, restoredRelationship, methodName);
         repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, restoredRelationship, methodName);
 
-        return restoredRelationship;*/
-        return null;
+        return restoredRelationship;
 
     }
 
@@ -1512,12 +1416,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         restoredRelationship.setStatusOnDelete(null);
         restoredRelationship = repositoryHelper.incrementVersion(userId, relationship, restoredRelationship);
 
-        return cruxRepositoryConnector.updateRelationship(restoredRelationship);
+        restoredRelationship = cruxRepositoryConnector.updateRelationship(restoredRelationship);
 
-        /*
-        // TODO: not clear why these are called again, after the restoration (in-memory metadata collection) (?)
-        repositoryValidator.validateRelationshipFromStore(repositoryName, deletedRelationshipGUID, relationship, methodName);
-        repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, restoredRelationship, methodName);*/
+        // Note: these validations are called _after_ the relationship restoration has already been persisted
+        repositoryValidator.validateRelationshipFromStore(repositoryName, deletedRelationshipGUID, restoredRelationship, methodName);
+        repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, restoredRelationship, methodName);
+
+        return restoredRelationship;
 
     }
 

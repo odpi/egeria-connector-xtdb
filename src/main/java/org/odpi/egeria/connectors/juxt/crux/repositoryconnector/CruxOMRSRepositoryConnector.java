@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import clojure.lang.*;
 import crux.api.Crux;
+import crux.api.HistoryOptions;
 import crux.api.ICruxAPI;
 import crux.api.ICruxDatasource;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
@@ -339,6 +340,55 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Find the relationships, limited by the specified criteria, for the provided entity.
+     * @param entityGUID of the entity for which to find relationships
+     * @param relationshipTypeGUID to limit the relationship types to retrieve (optional)
+     * @param fromRelationshipElement starting element for paging
+     * @param limitResultsByStatus by which to limit results (optional)
+     * @param asOfTime view of the relationships at this particular point in time
+     * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
+     * @param pageSize maximum number of results per page
+     * @return {@code List<Relationship>} list of the matching relationships
+     */
+    public List<Relationship> findRelationshipsForEntity(String entityGUID,
+                                                         String relationshipTypeGUID,
+                                                         int fromRelationshipElement,
+                                                         List<InstanceStatus> limitResultsByStatus,
+                                                         Date asOfTime,
+                                                         String sequencingProperty,
+                                                         SequencingOrder sequencingOrder,
+                                                         int pageSize) {
+
+        // Since a relationship involves not only the relationship object, but also some details from each proxy,
+        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
+        ICruxDatasource db;
+        if (asOfTime != null) {
+            db = cruxAPI.openDB(asOfTime);
+        } else {
+            db = cruxAPI.openDB();
+        }
+
+        Collection<List<?>> cruxResults = findEntityRelationships(db,
+                entityGUID,
+                relationshipTypeGUID,
+                fromRelationshipElement,
+                limitResultsByStatus,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize);
+
+        log.debug("Found results: {}", cruxResults);
+        List<Relationship> results = resultsToList(db, cruxResults);
+
+        // Ensure that we close the open DB resource now that we're finished with it
+        closeDb(db);
+
+        return results;
+
+    }
+
+    /**
      * Search based on the provided parameters.
      * @param relationshipTypeGUID see CruxOMRSMetadataCollection#findRelationships
      * @param relationshipSubtypeGUIDs see CruxOMRSMetadataCollection#findRelationships
@@ -353,14 +403,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @see CruxOMRSMetadataCollection#findRelationships(String, String, List, SearchProperties, int, List, Date, String, SequencingOrder, int)
      */
     public List<Relationship> findRelationships(String relationshipTypeGUID,
-                                           List<String> relationshipSubtypeGUIDs,
-                                           SearchProperties matchProperties,
-                                           int fromRelationshipElement,
-                                           List<InstanceStatus> limitResultsByStatus,
-                                           Date asOfTime,
-                                           String sequencingProperty,
-                                           SequencingOrder sequencingOrder,
-                                           int pageSize) {
+                                                List<String> relationshipSubtypeGUIDs,
+                                                SearchProperties matchProperties,
+                                                int fromRelationshipElement,
+                                                List<InstanceStatus> limitResultsByStatus,
+                                                Date asOfTime,
+                                                String sequencingProperty,
+                                                SequencingOrder sequencingOrder,
+                                                int pageSize) {
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
         // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
@@ -385,6 +435,24 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         );
 
         log.debug("Found results: {}", cruxResults);
+        List<Relationship> results = resultsToList(db, cruxResults);
+
+        // Ensure that we close the open DB resource now that we're finished with it
+        closeDb(db);
+
+        return results;
+
+    }
+
+    /**
+     * Translate the set of Crux document IDs into a list of Egeria Relationships.
+     * @param db already opened point-in-time view of the database
+     * @param cruxResults list of document IDs, eg. from a search
+     * @return {@code List<Relationship>}
+     * @see #searchCrux(ICruxDatasource, String, List, SearchProperties, int, List, SearchClassifications, String, SequencingOrder, int, String)
+     * @see #findEntityRelationships(ICruxDatasource, String, String, int, List, String, SequencingOrder, int)
+     */
+    private List<Relationship> resultsToList(ICruxDatasource db, Collection<List<?>> cruxResults) {
         List<Relationship> results = null;
         if (cruxResults != null) {
             results = new ArrayList<>();
@@ -404,16 +472,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 }
             }
         }
-
-        try {
-            // 4. Ensure that we close the open DB resource now that we're finished with it
-            db.close();
-        } catch (IOException e) {
-            log.error("Unable to close the open DB resource.", e);
-        }
-
         return results;
-
     }
 
     /**
@@ -505,16 +564,91 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // 3. Map through the result (involves additional queries, so cannot close DB yet)
         Relationship result = rm.toEgeria();
 
-        try {
-            // 4. Ensure that we close the open DB resource now that we're finished with it
-            db.close();
-        } catch (IOException e) {
-            log.error("Unable to close the open DB resource.", e);
-        }
+        // 4. Ensure that we close the open DB resource now that we're finished with it
+        closeDb(db);
 
         // 5. Return the resulting relationship
         return result;
 
+    }
+
+    /**
+     * Restore the previous version of the provided entity, and return the restored version (or null if there was no
+     * previous version and hence no restoration).
+     * @param userId of the user requesting the restoration
+     * @param guid of the entity for which to restore the previous version
+     * @return EntityDetail giving the restored version (or null if there was no previous version to restore)
+     */
+    public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) {
+        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
+        Keyword docRef = EntitySummaryMapping.getReference(guid);
+        List<Map<Keyword, ?>> history = cruxAPI.db().entityHistory(docRef, options);
+        Map<Keyword, Object> currentVersionCrux  = null;
+        Map<Keyword, Object> previousVersionCrux = null;
+        if (history != null && history.size() > 1) {
+            // There must be a minimum of two entries in the history for us to have a previous version to go to.
+            currentVersionCrux  = new HashMap<>(history.get(0));
+            previousVersionCrux = new HashMap<>(history.get(1));
+        }
+        if (currentVersionCrux != null) {
+            EntityDetailMapping edmC = new EntityDetailMapping(this, currentVersionCrux);
+            EntityDetail current = edmC.toEgeria();
+            long currentVersion = current.getVersion();
+            EntityDetailMapping edmP = new EntityDetailMapping(this, previousVersionCrux);
+            EntityDetail restored = edmP.toEgeria();
+            // Update the version of the restored instance to be one more than the latest (current) version, the update
+            // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
+            // and the last user to update it to the user that requested this restoration
+            restored.setVersion(currentVersion + 1);
+            restored.setUpdateTime(new Date());
+            restored.setUpdatedBy(userId);
+            // Then submit this version back into Crux as an update, and return the result
+            return updateEntity(restored);
+        }
+        return null;
+    }
+
+    /**
+     * Restore the previous version of the provided relationship, and return the restored version (or null if there was
+     * no previous version and hence no restoration).
+     * @param userId of the user requesting the restoration
+     * @param guid of the relationship for which to restore the previous version
+     * @return Relationship giving the restored version (or null if there was no previous version to restore)
+     */
+    public Relationship restorePreviousVersionOfRelationship(String userId, String guid) {
+        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
+        Keyword docRef = RelationshipMapping.getReference(guid);
+        ICruxDatasource db = cruxAPI.openDB();
+        List<Map<Keyword, ?>> history = db.entityHistory(docRef, options);
+        Map<Keyword, Object> currentVersionCrux  = null;
+        Map<Keyword, Object> previousVersionCrux = null;
+        if (history != null && history.size() > 1) {
+            // There must be a minimum of two entries in the history for us to have a previous version to go to.
+            currentVersionCrux  = new HashMap<>(history.get(0));
+            previousVersionCrux = new HashMap<>(history.get(1));
+        }
+        Relationship restored = null;
+        if (currentVersionCrux != null) {
+            RelationshipMapping rmC = new RelationshipMapping(this, currentVersionCrux, db);
+            Relationship current = rmC.toEgeria();
+            long currentVersion = current.getVersion();
+            RelationshipMapping rmP = new RelationshipMapping(this, previousVersionCrux, db);
+            restored = rmP.toEgeria();
+            // Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
+            // Update the version of the restored instance to be one more than the latest (current) version, the update
+            // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
+            // and the last user to update it to the user that requested this restoration
+            restored.setVersion(currentVersion + 1);
+            restored.setUpdateTime(new Date());
+            restored.setUpdatedBy(userId);
+            // Then submit this version back into Crux as an update
+            restored = updateRelationship(restored);
+        } else {
+            // Even if we did not find any history, ensure that we close the open DB resource
+            closeDb(db);
+        }
+        return restored;
     }
 
     /**
@@ -635,12 +769,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           int pageSize,
                                           String namespace) {
         CruxQuery query = new CruxQuery();
-        query.addTypeCondition(typeGuid, subtypeGuids);
-        query.addSequencing(sequencingOrder, sequencingProperty, namespace);
-        query.addPaging(fromElement, pageSize);
-        query.addPropertyConditions(matchProperties, namespace);
-        query.addClassificationConditions(matchClassifications);
-        query.addStatusLimiters(limitResultsByStatus);
+        updateQuery(query,
+                typeGuid,
+                subtypeGuids,
+                matchProperties,
+                fromElement,
+                limitResultsByStatus,
+                matchClassifications,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                namespace);
         log.debug("Querying with: {}", query.getQuery());
         return cruxAPI.db(asOfTime).query(query.getQuery());
     }
@@ -656,7 +795,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByStatus by which to limit results (optional)
      * @param matchClassifications by which to limit entity results (must be null for relationships) (optional)
      * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
-     * @param sequencingOrder by which to order results (optinoal, will default to GUID)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
@@ -673,14 +812,89 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           int pageSize,
                                           String namespace) {
         CruxQuery query = new CruxQuery();
+        updateQuery(query,
+                typeGuid,
+                subtypeGuids,
+                matchProperties,
+                fromElement,
+                limitResultsByStatus,
+                matchClassifications,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                namespace);
+        log.debug("Querying with: {}", query.getQuery());
+        return db.query(query.getQuery());
+    }
+
+    /**
+     * Find the relationships that match the provided parameters.
+     * @param db already opened point-in-time view of the database
+     * @param entityGUID of the entity for which to find relationships
+     * @param relationshipTypeGUID to limit the relationship types to retrieve (optional)
+     * @param fromRelationshipElement starting element for paging
+     * @param limitResultsByStatus by which to limit results (optional)
+     * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
+     * @param pageSize maximum number of results per page
+     * @return {@code Collection<List<?>>} list of the Crux document references that match
+     */
+    public Collection<List<?>> findEntityRelationships(ICruxDatasource db,
+                                                       String entityGUID,
+                                                       String relationshipTypeGUID,
+                                                       int fromRelationshipElement,
+                                                       List<InstanceStatus> limitResultsByStatus,
+                                                       String sequencingProperty,
+                                                       SequencingOrder sequencingOrder,
+                                                       int pageSize) {
+        CruxQuery query = new CruxQuery();
+        query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
+        updateQuery(query,
+                relationshipTypeGUID,
+                null,
+                null,
+                fromRelationshipElement,
+                limitResultsByStatus,
+                null,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                null);
+        log.debug("Querying with: {}", query.getQuery());
+        return db.query(query.getQuery());
+    }
+
+    /**
+     * Update the provided query with the specified parameters.
+     * @param query into which to add conditions
+     * @param typeGuid to limit the search by type (optional)
+     * @param subtypeGuids to limit the search to a set of subtypes (optional)
+     * @param matchProperties by which to limit the results (optional)
+     * @param fromElement starting element for paging
+     * @param limitResultsByStatus by which to limit results (optional)
+     * @param matchClassifications by which to limit entity results (must be null for relationships) (optional)
+     * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
+     * @param sequencingOrder by which to order results (optinoal, will default to GUID)
+     * @param pageSize maximum number of results per page
+     * @param namespace by which to qualify the matchProperties
+     */
+    private void updateQuery(CruxQuery query,
+                             String typeGuid,
+                             List<String> subtypeGuids,
+                             SearchProperties matchProperties,
+                             int fromElement,
+                             List<InstanceStatus> limitResultsByStatus,
+                             SearchClassifications matchClassifications,
+                             String sequencingProperty,
+                             SequencingOrder sequencingOrder,
+                             int pageSize,
+                             String namespace) {
         query.addTypeCondition(typeGuid, subtypeGuids);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace);
         query.addPaging(fromElement, pageSize);
         query.addPropertyConditions(matchProperties, namespace);
         query.addClassificationConditions(matchClassifications);
         query.addStatusLimiters(limitResultsByStatus);
-        log.debug("Querying with: {}", query.getQuery());
-        return db.query(query.getQuery());
     }
 
     /**
@@ -702,6 +916,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         List<List<?>> statements = new ArrayList<>();
         statements.add(Constants.evict(docRef));
         return statements;
+    }
+
+    private void closeDb(ICruxDatasource db) {
+        try {
+            db.close();
+        } catch (IOException e) {
+            log.error("Unable to close the open DB resource.", e);
+        }
     }
 
 }

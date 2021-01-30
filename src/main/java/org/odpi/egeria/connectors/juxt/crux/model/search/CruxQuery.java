@@ -37,7 +37,7 @@ public class CruxQuery {
     private final List<Symbol> findElements;
     private final List<IPersistentCollection> conditions;
     private final List<IPersistentVector> sequencing;
-    private int limit = 200;
+    private int limit = Constants.DEFAULT_PAGE_SIZE;
     private int offset = 0;
 
     /**
@@ -49,6 +49,28 @@ public class CruxQuery {
         findElements.add(DOC_ID); // Always have the DocID itself as the first element, to ease parsing of results
         conditions = new ArrayList<>();
         sequencing = new ArrayList<>();
+    }
+
+    /**
+     * Add a condition to match either endpoint of a relationship to the provided reference (primary key).
+     * @param reference the primary key value of an entity, used to match either end of a relationship
+     */
+    public void addRelationshipEndpointConditions(Keyword reference) {
+        List<Object> orConditions = new ArrayList<>();
+        orConditions.add(OR_OPERATOR);
+        orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_ONE_PROXY, reference));
+        orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_TWO_PROXY, reference));
+        conditions.add(PersistentList.create(orConditions));
+    }
+
+    /**
+     * Add a condition to match the value of a property to a reference (primary key).
+     * @param property to match
+     * @param reference the primary key value to which the property should refer
+     * @return PersistentVector for the condition
+     */
+    protected PersistentVector getReferenceCondition(Keyword property, Keyword reference) {
+        return PersistentVector.create(DOC_ID, property, reference);
     }
 
     /**
@@ -363,6 +385,9 @@ public class CruxQuery {
             // Translate the provided sequencingProperty name into an appropriate property name reference
             propertyRef = Keyword.intern(namespace, sequencingProperty + ".value");
         }
+        if (sequencingOrder == null) {
+            sequencingOrder = SequencingOrder.GUID;
+        }
         // TODO: at the moment, the conditions for the sorting will mean that any matching documents must have
         //  a non-null value for that sorting, which may be different behaviour than we expect from the interface
         //  on Egeria's side...  How to include results that are empty, even when sorting?
@@ -422,7 +447,13 @@ public class CruxQuery {
      */
     public void addPaging(int fromElement, int pageSize) {
         offset = fromElement;
-        limit = pageSize;
+        if (pageSize > 0) {
+            // If the pageSize is 0, then we would return no results (no point in searching), so we will only bother
+            // to override the pageSize if a value greater than 0 has been provided. (Some of the REST requests classes
+            // in Egeria core default the pageSize to 0 if it has not been specified explicitly, which does not really
+            // make any sense: we will instead use the overall default page size setup as part of the query constructor).
+            limit = pageSize;
+        }
     }
 
     /**

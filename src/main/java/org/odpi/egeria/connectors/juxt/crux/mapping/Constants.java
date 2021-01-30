@@ -17,6 +17,7 @@ public class Constants {
 
     // Shared properties
     public static final Keyword CRUX_PK = Keyword.intern("crux.db", "id");
+    public static final int DEFAULT_PAGE_SIZE = 50; // TODO: probably makes more sense to make this a configurable option for the connector
 
     // Shared operations
     public static final Keyword CRUX_PUT = Keyword.intern("crux.tx", "put");
