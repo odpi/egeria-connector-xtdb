@@ -8,11 +8,12 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.*;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.PrimitiveDefCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Captures the structure of a query against Crux.
@@ -21,20 +22,46 @@ public class CruxQuery {
 
     private static final Logger log = LoggerFactory.getLogger(CruxQuery.class);
 
+    // Variable names (for sorting)
     private static final Symbol DOC_ID = Symbol.intern("e");
     private static final Symbol CREATE_TIME = Symbol.intern("ct");
     private static final Symbol UPDATE_TIME = Symbol.intern("ut");
     private static final Symbol SORT_PROPERTY = Symbol.intern("sp");
 
-    private static final Symbol OR_OPERATOR = Symbol.intern("or");
-    private static final Symbol AND_OPERATOR = Symbol.intern("and");
-    private static final Symbol NOT_OPERATOR = Symbol.intern("not");
-
+    // Sort orders
     private static final Keyword SORT_ASCENDING = Keyword.intern("asc");
     private static final Keyword SORT_DESCENDING = Keyword.intern("desc");
 
+    // Predicates (for comparisons)
+    private static final Symbol OR_OPERATOR = Symbol.intern("or");
+    private static final Symbol AND_OPERATOR = Symbol.intern("and");
+    private static final Symbol NOT_OPERATOR = Symbol.intern("not");
+    private static final Symbol GT_OPERATOR = Symbol.intern(">");
+    private static final Symbol GTE_OPERATOR = Symbol.intern(">=");
+    private static final Symbol LT_OPERATOR = Symbol.intern("<");
+    private static final Symbol LTE_OPERATOR = Symbol.intern("<=");
+    private static final Symbol IS_NULL_OPERATOR = Symbol.intern("nil?");
+    private static final Symbol NOT_NULL_OPERATOR = Symbol.intern("some?");
+    private static final Symbol REGEX_OPERATOR = Symbol.intern("re-matches");
+    private static final Symbol IN_OPERATOR = null; // TODO
+
+    private static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
+    private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
+        Map<PropertyComparisonOperator, Symbol> map = new HashMap<>();
+        map.put(PropertyComparisonOperator.GT, GT_OPERATOR);
+        map.put(PropertyComparisonOperator.GTE, GTE_OPERATOR);
+        map.put(PropertyComparisonOperator.LT, LT_OPERATOR);
+        map.put(PropertyComparisonOperator.LTE, LTE_OPERATOR);
+        map.put(PropertyComparisonOperator.IS_NULL, IS_NULL_OPERATOR);
+        map.put(PropertyComparisonOperator.NOT_NULL, NOT_NULL_OPERATOR);
+        map.put(PropertyComparisonOperator.LIKE, REGEX_OPERATOR);
+        map.put(PropertyComparisonOperator.IN, IN_OPERATOR);
+        return map;
+    }
+
     private IPersistentMap query;
     private final List<Symbol> findElements;
+    private final Map<Symbol, IPersistentCollection> variablesForPredicates;
     private final List<IPersistentCollection> conditions;
     private final List<IPersistentVector> sequencing;
     private int limit = Constants.DEFAULT_PAGE_SIZE;
@@ -46,6 +73,7 @@ public class CruxQuery {
     public CruxQuery() {
         query = PersistentArrayMap.EMPTY;
         findElements = new ArrayList<>();
+        variablesForPredicates = new TreeMap<>();
         findElements.add(DOC_ID); // Always have the DocID itself as the first element, to ease parsing of results
         conditions = new ArrayList<>();
         sequencing = new ArrayList<>();
@@ -244,18 +272,43 @@ public class CruxQuery {
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
             // For equality we can compare directly to the value
+            // TODO: in the case of Strings -- for equality, do we assume that the string will be interpreted
+            //  literally (no regex handling)?  This is what the code will currently do...
             propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
         } else {
-            // For any others, we need to translate into predicate form
+            // For any others, we need to translate into predicate form, which requires two pieces:
+            //  [e :property variable]  ;; which must be at the root level of the where conditions (not nested)
+            //  [(predicate variable "value")] | [(predicate #"regex" variable)]  ;; which should be embedded in whatever condition applies to it
             Symbol variable = Symbol.intern("v_" + propertyName);
             Symbol predicate = getPredicateForOperator(comparator);
             // Add the condition for the property bound to a variable...
-            propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
-            // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
+            addVariableForPredicate(variable, propertyRef);
             List<Object> predicateComparison = new ArrayList<>();
             predicateComparison.add(predicate);
-            predicateComparison.add(variable);
-            predicateComparison.add(getValueForComparison(value));
+            if (REGEX_OPERATOR.equals(predicate)) {
+                // TODO: for now this treats all string comparisons as raw regexes -- this is likely to be the most complete
+                //  functionality, but may also be the slowest for common scenarios like 'exact-match' but also possibly
+                //  for 'contains', 'starts-with', etc.
+                //  It may be worthwhile splitting out the most common scenarios for direct Clojure operations like
+                //  just using the EQ approach above for exact-match, then the Clojure string predicates like
+                //  clojure.string.ends-with?, clojure.string.includes? and clojure.string.starts-with? and only fall-back
+                //  to the below options if the received property is a string and not one of these simple (common) regexes
+                // For regexes, we need a (predicate #"value" variable) pattern
+                Object compareTo = getValueForComparison(value);
+                if (compareTo instanceof String) {
+                    // Compile a Pattern for the regex
+                    Pattern regex = Pattern.compile((String) compareTo);
+                    predicateComparison.add(regex);
+                    predicateComparison.add(variable);
+                } else {
+                    log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
+                }
+            } else {
+                // For everything else, we need a (predicate variable value) pattern
+                // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
+                predicateComparison.add(variable);
+                predicateComparison.add(getValueForComparison(value));
+            }
             // Note that the predicate list itself needs to be Vector-wrapped
             propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
         }
@@ -268,31 +321,9 @@ public class CruxQuery {
      * @return Symbol giving the appropriate Crux predicate
      */
     protected Symbol getPredicateForOperator(PropertyComparisonOperator comparator) {
-        Symbol toUse = null;
-        switch (comparator) {
-            case NEQ:
-                toUse = NOT_OPERATOR;
-                break;
-            case GT:
-                toUse = Symbol.intern(">");
-                break;
-            case GTE:
-                toUse = Symbol.intern(">=");
-                break;
-            case LT:
-                toUse = Symbol.intern("<");
-                break;
-            case LTE:
-                toUse = Symbol.intern("<=");
-                break;
-            case IS_NULL:
-                toUse = Symbol.intern("missing?"); // TODO: this may not (yet) be supported in Crux, any other option?
-                break;
-            case LIKE: // TODO...
-            case IN: // TODO...
-            default:
-                log.warn("Unmapped comparison operator: {}", comparator);
-                break;
+        Symbol toUse = PCO_TO_SYMBOL.getOrDefault(comparator, null);
+        if (toUse == null) {
+            log.warn("Unmapped comparison operator: {}", comparator);
         }
         return toUse;
     }
@@ -463,6 +494,8 @@ public class CruxQuery {
     public IPersistentMap getQuery() {
         // Add the elements to be found:  :find [ e ... ]
         query = query.assoc(Keyword.intern("find"), PersistentVector.create(findElements));
+        // Add all of the variables needed for predicates to the conditions
+        conditions.addAll(variablesForPredicates.values());
         // Add the conditions to the query:  :where [[ ... condition ...], [ ... condition ... ], ... ]
         query = query.assoc(Keyword.intern("where"), PersistentVector.create(conditions));
         // Add the sequencing information to the query:  :order-by [[ ... ]]
@@ -477,6 +510,12 @@ public class CruxQuery {
     private void addFindElement(Symbol element) {
         if (!findElements.contains(element)) {
             findElements.add(element);
+        }
+    }
+
+    private void addVariableForPredicate(Symbol variable, Keyword propertyRef) {
+        if (!variablesForPredicates.containsKey(variable)) {
+            variablesForPredicates.put(variable, PersistentVector.create(DOC_ID, propertyRef, variable));
         }
     }
 
