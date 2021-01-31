@@ -69,7 +69,9 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
                     value = new Date((Long) longForm);
                 }
                 break;
-            case OM_PRIMITIVE_TYPE_STRING: // TODO: we may need further checks for strings (ie. regex)?
+            case OM_PRIMITIVE_TYPE_STRING:
+                // Note: further translation of strings into regexes is only necessary for queries, so that will be
+                // done in the CruxQuery class directly.
             case OM_PRIMITIVE_TYPE_BOOLEAN:
             case OM_PRIMITIVE_TYPE_BIGINTEGER:
             case OM_PRIMITIVE_TYPE_BIGDECIMAL:

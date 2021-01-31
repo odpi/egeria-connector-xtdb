@@ -324,6 +324,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         super.findEntitiesByPropertyValueParameterValidation(userId, entityTypeGUID, searchCriteria, fromEntityElement, limitResultsByStatus, limitResultsByClassification, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
         // TODO: implement...
+        //  Likely the best option would be the built-in Lucene indexing (in alpha state): https://opencrux.com/reference/lucene.html
+        //  However, using the simplest 'wildcard-text-search' option to go across all attributes will likely
+        //  inadvertently include searching against non-String attributes and (more crucially) any serialised JSON data
+        //  ... so we may anyway still need to do TypeDef-interrogation to see which properties to search and either
+        //  wrap them all with an OR (and 'text-search' predicates), or resort to calling Java's .match() directly
+        //  (if this is even a possibility with Crux?)
         return null;
 
     }
@@ -482,6 +488,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         super.findRelationshipsByPropertyValueParameterValidation(userId, relationshipTypeGUID, searchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
         // TODO: implement...
+        //  Likely the best option would be the built-in Lucene indexing (in alpha state): https://opencrux.com/reference/lucene.html
+        //  However, using the simplest 'wildcard-text-search' option to go across all attributes will likely
+        //  inadvertently include searching against non-String attributes and (more crucially) any serialised JSON data
+        //  ... so we may anyway still need to do TypeDef-interrogation to see which properties to search and either
+        //  wrap them all with an OR (and 'text-search' predicates), or resort to calling Java's .match() directly
+        //  (if this is even a possibility with Crux?)
         return null;
 
     }
@@ -895,6 +907,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 }
             }
         } catch (Exception e) {
+            log.error("Exception was thrown in purgeEntity.", e); // TODO: remove once we determine source of NPE
             auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(deletedEntityGUID), e);
         }
 

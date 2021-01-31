@@ -212,10 +212,12 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * @return InstancePropertyValue
      */
     private static InstancePropertyValue getInstancePropertyValue(String jsonValue) {
-        try {
-            return mapper.readValue(jsonValue, new TypeReference<InstancePropertyValue>() {});
-        } catch (IOException e) {
-            log.error("Unable to translate value from JSON: {}", jsonValue, e);
+        if (jsonValue != null) {
+            try {
+                return mapper.readValue(jsonValue, new TypeReference<InstancePropertyValue>() {});
+            } catch (IOException e) {
+                log.error("Unable to translate value from JSON: {}", jsonValue, e);
+            }
         }
         return null;
     }

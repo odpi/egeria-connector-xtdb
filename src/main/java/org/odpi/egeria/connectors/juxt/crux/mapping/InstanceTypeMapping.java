@@ -198,7 +198,9 @@ public class InstanceTypeMapping extends AbstractMapping {
                             it.setTypeDefVersion(objValue == null ? 0 : (Long) objValue);
                             break;
                         case N_TYPEDEF_CATEGORY:
-                            it.setTypeDefCategory(mapper.readValue(value, new TypeReference<TypeDefCategory>() {}));
+                            if (value != null) {
+                                it.setTypeDefCategory(mapper.readValue(value, new TypeReference<TypeDefCategory>() {}));
+                            }
                             break;
                         case N_TYPEDEF_NAME:
                             it.setTypeDefName(value);
@@ -210,10 +212,14 @@ public class InstanceTypeMapping extends AbstractMapping {
                             it.setTypeDefDescriptionGUID(value);
                             break;
                         case N_TYPEDEF_SUPERTYPES:
-                            it.setTypeDefSuperTypes(mapper.readValue(value, new TypeReference<List<TypeDefLink>>() {}));
+                            if (value != null) {
+                                it.setTypeDefSuperTypes(mapper.readValue(value, new TypeReference<List<TypeDefLink>>() {}));
+                            }
                             break;
                         case N_VALID_STATUS_LIST:
-                            it.setValidStatusList(mapper.readValue(value, new TypeReference<List<InstanceStatus>>() {}));
+                            if (value != null) {
+                                it.setValidStatusList(mapper.readValue(value, new TypeReference<List<InstanceStatus>>() {}));
+                            }
                             break;
                         case N_VALID_INSTANCE_PROPERTIES:
                             it.setValidInstanceProperties(objValue == null ? null : (List<String>) objValue);

@@ -163,7 +163,9 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                         iah.setHeaderVersion(objValue == null ? 0 : (Long) objValue);
                         break;
                     case N_TYPE:
-                        iah.setType(mapper.readValue(value, new TypeReference<InstanceType>() {}));
+                        if (value != null) {
+                            iah.setType(mapper.readValue(value, new TypeReference<InstanceType>() {}));
+                        }
                         break;
                     case N_INSTANCE_PROVENANCE_TYPE:
                         iah.setInstanceProvenanceType(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal((Integer) objValue));
@@ -205,7 +207,9 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                         iah.setStatusOnDelete(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
                         break;
                     case N_MAPPING_PROPERTIES:
-                        iah.setMappingProperties(mapper.readValue(value, new TypeReference<Map<String, Serializable>>() {}));
+                        if (value != null) {
+                            iah.setMappingProperties(mapper.readValue(value, new TypeReference<Map<String, Serializable>>() {}));
+                        }
                         break;
                     default:
                         log.warn("Unmapped InstanceAuditHeader property ({}): {}", property, objValue);
