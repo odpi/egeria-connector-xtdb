@@ -68,7 +68,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "isEntityKnown";
         this.getInstanceParameterValidation(userId, guid, methodName);
         try {
-            EntityDetail entity = cruxRepositoryConnector.getEntity(guid, null);
+            EntityDetail entity = cruxRepositoryConnector.getEntity(guid, null, false);
             repositoryValidator.validateEntityFromStore(repositoryName, guid, entity, methodName);
             return entity;
         } catch (EntityNotKnownException e) {
@@ -122,7 +122,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityProxyOnlyException {
         final String methodName = "getEntityDetail";
         super.getInstanceParameterValidation(userId, guid, methodName);
-        EntityDetail entity = cruxRepositoryConnector.getEntity(guid, asOfTime);
+        EntityDetail entity = cruxRepositoryConnector.getEntity(guid, asOfTime, false);
         repositoryValidator.validateEntityFromStore(repositoryName, guid, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
         return entity;
@@ -700,8 +700,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
         } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -745,7 +746,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null);
+            // Note that properties only exist on EntityDetail (not EntityProxy), so we will ensure that we have
+            // a full entity and not only a proxy
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
@@ -811,7 +814,14 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         super.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, obsoleteEntityGUID, parameterName, methodName);
 
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(obsoleteEntityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(obsoleteEntityGUID, null, true);
+        } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    obsoleteEntityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         repositoryValidator.validateEntityFromStore(repositoryName, obsoleteEntityGUID, entity, methodName);
         repositoryValidator.validateTypeForInstanceDelete(repositoryName, typeDefGUID, typeDefName, entity, methodName);
@@ -844,8 +854,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(obsoleteEntityGUID), e);
         }
 
-        EntityDetail updatedEntity = new EntityDetail((EntityDetail) entity);
-
+        EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setStatusOnDelete(entity.getStatus());
         updatedEntity.setStatus(InstanceStatus.DELETED);
         // TODO: should we not add the calling user to the 'maintainedBy' list?
@@ -931,13 +940,19 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         super.manageInstanceParameterValidation(userId, deletedEntityGUID, parameterName, methodName);
 
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(deletedEntityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(deletedEntityGUID, null, true);
+        } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    deletedEntityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         repositoryValidator.validateEntityFromStore(repositoryName, deletedEntityGUID, entity, methodName);
         repositoryValidator.validateEntityIsDeleted(repositoryName, entity, methodName);
 
-        EntityDetail restoredEntity = new EntityDetail((EntityDetail) entity);
-
+        EntityDetail restoredEntity = new EntityDetail(entity);
         restoredEntity.setStatus(entity.getStatusOnDelete());
         restoredEntity.setStatusOnDelete(null);
         // TODO: should we not add the calling user to the 'maintainedBy' list?
@@ -1001,7 +1016,14 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, entityGUIDParameterName, entityGUID, methodName);
 
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(entityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+        } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
@@ -1042,7 +1064,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                     repositoryName, classificationName, entityType.getTypeDefName()), this.getClass().getName(), methodName, e);
         }
 
-        EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, (EntityDetail) entity, newClassification, methodName);
+        EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, entity, newClassification, methodName);
         // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
@@ -1066,12 +1088,19 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         super.declassifyEntityParameterValidation(userId, entityGUID, classificationName, methodName);
 
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(entityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+        } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
 
-        EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName, (EntityDetail) entity, classificationName, methodName);
+        EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName, entity, classificationName, methodName);
         // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
@@ -1097,7 +1126,14 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         super.classifyEntityParameterValidation(userId, entityGUID, classificationName, properties, methodName);
 
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(entityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+        } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
@@ -1109,7 +1145,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail updatedEntity = repositoryHelper.updateClassificationInEntity(repositoryName,
                 userId,
-                (EntityDetail) entity,
+                entity,
                 newClassification,
                 methodName);
         // TODO: should we not add the calling user to the 'maintainedBy' list?
@@ -1433,8 +1469,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
         } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1478,8 +1515,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
         } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1522,8 +1560,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
         } catch (EntityProxyOnlyException e) {
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1785,7 +1824,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail retrievedEntity = null;
         try {
-            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null);
+            // Note that this should never be thrown here due to the 'true' on acceptProxies above
+            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, true);
         } catch (EntityProxyOnlyException e) {
             log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
         }
@@ -1846,8 +1886,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail retrievedEntity = null;
         try {
-            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null);
+            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, true);
         } catch (EntityProxyOnlyException e) {
+            // Note that this should never be logged here due to the 'true' on acceptProxies above
             log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
         }
 

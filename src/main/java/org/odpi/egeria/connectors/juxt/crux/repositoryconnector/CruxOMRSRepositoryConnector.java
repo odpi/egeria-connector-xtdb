@@ -255,17 +255,18 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * Retrieve the requested entity from the Crux repository.
      * @param guid of the entity to retrieve
      * @param asOfTime view of the entity at this particular point in time
+     * @param acceptProxies if true, allow proxies to be returned as EntityDetails
      * @return EntityDetail as it existed at the specified point in time
-     * @throws EntityProxyOnlyException if the entity requested is only an EntityProxy
+     * @throws EntityProxyOnlyException if the entity requested is only an EntityProxy (and acceptProxies is false)
      */
-    public EntityDetail getEntity(String guid, Date asOfTime) throws EntityProxyOnlyException {
+    public EntityDetail getEntity(String guid, Date asOfTime, boolean acceptProxies) throws EntityProxyOnlyException {
         final String methodName = "getEntity";
         Map<Keyword, Object> cruxDoc = getCruxObjectByReference(EntityDetailMapping.getReference(guid), asOfTime);
         log.debug("Found results: {}", cruxDoc);
         if (cruxDoc == null) {
             return null;
         }
-        if (EntityProxyMapping.isOnlyAProxy(cruxDoc)) {
+        if (!acceptProxies && EntityProxyMapping.isOnlyAProxy(cruxDoc)) {
             throw new EntityProxyOnlyException(
                     CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                             guid, repositoryName
