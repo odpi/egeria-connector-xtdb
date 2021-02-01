@@ -194,15 +194,10 @@ public class CruxQuery {
             if (propertyConditions != null && !propertyConditions.isEmpty()) {
                 List<IPersistentCollection> allConditions = new ArrayList<>();
                 for (PropertyCondition condition : propertyConditions) {
-                    // pull together the individual property conditions
-                    SearchProperties nestedConditions = condition.getNestedConditions();
-                    if (nestedConditions != null) {
-                        return getPropertyConditions(nestedConditions, namespace, matchCriteria.equals(MatchCriteria.ANY));
-                    } else {
-                        List<IPersistentCollection> cruxConditions = getSinglePropertyCondition(condition, namespace);
-                        if (cruxConditions != null && !cruxConditions.isEmpty()) {
-                            allConditions.addAll(cruxConditions);
-                        }
+                    // Ensure every condition, whether nested or singular, is added to the 'allConditions' list
+                    List<IPersistentCollection> cruxConditions = getSinglePropertyCondition(condition, namespace);
+                    if (cruxConditions != null && !cruxConditions.isEmpty()) {
+                        allConditions.addAll(cruxConditions);
                     }
                 }
                 // apply the matchCriteria against the full set of nested property conditions
@@ -213,7 +208,7 @@ public class CruxQuery {
                             // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate
                             predicatedConditions.add(AND_OPERATOR);
                         } else {
-                            // otherwise, return conditions directly
+                            // otherwise, we can return the conditions directly (nothing more to process on them)
                             return allConditions;
                         }
                         break;
@@ -239,86 +234,95 @@ public class CruxQuery {
     }
 
     /**
-     * Translate the provided singular condition (only, does not handle nested sets of conditions) into a Crux query
-     * condition.
+     * Translate the provided condition, considered on its own, into a Crux query condition. Handles both single
+     * property conditions and nested conditions (though the latter simply recurse back to getPropertyConditions)
      * @param singleCondition to translate (should not contain nested condition)
      * @param namespace by which to qualify the properties in the condition
      * @return {@code List<IPersistentCollection>} giving the appropriate Crux query condition(s)
+     * @see #getPropertyConditions(SearchProperties, String, boolean)
      */
     protected List<IPersistentCollection> getSinglePropertyCondition(PropertyCondition singleCondition, String namespace) {
-        String propertyName = singleCondition.getProperty();
-        PropertyComparisonOperator comparator = singleCondition.getOperator();
-        InstancePropertyValue value = singleCondition.getValue();
-        Keyword propertyRef;
-        if (InstanceAuditHeaderMapping.KNOWN_PROPERTIES.contains(propertyName)) {
-            // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
-            // InstanceValueProperties but simple native types
-            if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS)) {
-                // However, if they are instance headers embedded in a classification, they still need the base-level
-                // classification namespace qualifier
-                propertyRef = Keyword.intern(namespace, propertyName);
-            } else {
-                propertyRef = Keyword.intern(propertyName);
-            }
+        SearchProperties nestedConditions = singleCondition.getNestedConditions();
+        if (nestedConditions != null) {
+            // If the conditions are nested, simply recurse back on getPropertyConditions
+            MatchCriteria matchCriteria = nestedConditions.getMatchCriteria();
+            return getPropertyConditions(nestedConditions, namespace, matchCriteria.equals(MatchCriteria.ANY));
         } else {
-            // Any others we should assume are InstanceProperties, which will need namespace AND '.value' qualification
-            if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS) && !ClassificationMapping.KNOWN_PROPERTIES.contains(propertyName)) {
-                // Once again, if they are classification-specific properties, they need further qualification
-                propertyRef = Keyword.intern(namespace + "." + ClassificationMapping.CLASSIFICATION_PROPERTIES_NS, propertyName + ".value");
-            } else {
-                propertyRef = Keyword.intern(namespace, propertyName + ".value");
-            }
-        }
-        List<IPersistentCollection> propertyConditions = new ArrayList<>();
-        if (comparator.equals(PropertyComparisonOperator.EQ)) {
-            // For equality we can compare directly to the value
-            // TODO: in the case of Strings -- for equality, do we assume that the string will be interpreted
-            //  literally (no regex handling)?  This is what the code will currently do...
-            propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
-        } else if (comparator.equals(PropertyComparisonOperator.NEQ)) {
-            // Similarly for inequality, just by wrapping in a NOT predicate
-            List<Object> predicateComparison = new ArrayList<>();
-            predicateComparison.add(NOT_OPERATOR);
-            predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
-            propertyConditions.add(PersistentList.create(predicateComparison));
-        } else {
-            // For any others, we need to translate into predicate form, which requires two pieces:
-            //  [e :property variable]  ;; which must be at the root level of the where conditions (not nested)
-            //  [(predicate variable "value")] | [(predicate #"regex" variable)]  ;; which should be embedded in whatever condition applies to it
-            Symbol variable = Symbol.intern("v_" + propertyName);
-            Symbol predicate = getPredicateForOperator(comparator);
-            // Add the condition for the property bound to a variable...
-            addVariableForPredicate(variable, propertyRef);
-            List<Object> predicateComparison = new ArrayList<>();
-            predicateComparison.add(predicate);
-            if (REGEX_OPERATOR.equals(predicate)) {
-                // TODO: for now this treats all string comparisons as raw regexes -- this is likely to be the most complete
-                //  functionality, but may also be the slowest for common scenarios like 'exact-match' but also possibly
-                //  for 'contains', 'starts-with', etc.
-                //  It may be worthwhile splitting out the most common scenarios for direct Clojure operations like
-                //  just using the EQ approach above for exact-match, then the Clojure string predicates like
-                //  clojure.string.ends-with?, clojure.string.includes? and clojure.string.starts-with? and only fall-back
-                //  to the below options if the received property is a string and not one of these simple (common) regexes
-                // For regexes, we need a (predicate #"value" variable) pattern
-                Object compareTo = getValueForComparison(value);
-                if (compareTo instanceof String) {
-                    // Compile a Pattern for the regex
-                    Pattern regex = Pattern.compile((String) compareTo);
-                    predicateComparison.add(regex);
-                    predicateComparison.add(variable);
+            // Otherwise, parse through and process a single value condition
+            String propertyName = singleCondition.getProperty();
+            PropertyComparisonOperator comparator = singleCondition.getOperator();
+            InstancePropertyValue value = singleCondition.getValue();
+            Keyword propertyRef;
+            if (InstanceAuditHeaderMapping.KNOWN_PROPERTIES.contains(propertyName)) {
+                // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
+                // InstanceValueProperties but simple native types
+                if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS)) {
+                    // However, if they are instance headers embedded in a classification, they still need the base-level
+                    // classification namespace qualifier
+                    propertyRef = Keyword.intern(namespace, propertyName);
                 } else {
-                    log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
+                    propertyRef = Keyword.intern(propertyName);
                 }
             } else {
-                // For everything else, we need a (predicate variable value) pattern
-                // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
-                predicateComparison.add(variable);
-                predicateComparison.add(getValueForComparison(value));
+                // Any others we should assume are InstanceProperties, which will need namespace AND '.value' qualification
+                if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS) && !ClassificationMapping.KNOWN_PROPERTIES.contains(propertyName)) {
+                    // Once again, if they are classification-specific properties, they need further qualification
+                    propertyRef = Keyword.intern(namespace + "." + ClassificationMapping.CLASSIFICATION_PROPERTIES_NS, propertyName + ".value");
+                } else {
+                    propertyRef = Keyword.intern(namespace, propertyName + ".value");
+                }
             }
-            // Note that the predicate list itself needs to be Vector-wrapped
-            propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+            List<IPersistentCollection> propertyConditions = new ArrayList<>();
+            if (comparator.equals(PropertyComparisonOperator.EQ)) {
+                // For equality we can compare directly to the value
+                // TODO: in the case of Strings -- for equality, do we assume that the string will be interpreted
+                //  literally (no regex handling)?  This is what the code will currently do...
+                propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+            } else if (comparator.equals(PropertyComparisonOperator.NEQ)) {
+                // Similarly for inequality, just by wrapping in a NOT predicate
+                List<Object> predicateComparison = new ArrayList<>();
+                predicateComparison.add(NOT_OPERATOR);
+                predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+                propertyConditions.add(PersistentList.create(predicateComparison));
+            } else {
+                // For any others, we need to translate into predicate form, which requires two pieces:
+                //  [e :property variable]  ;; which must be at the root level of the where conditions (not nested)
+                //  [(predicate variable "value")] | [(predicate #"regex" variable)]  ;; which should be embedded in whatever condition applies to it
+                Symbol variable = Symbol.intern("v_" + propertyName);
+                Symbol predicate = getPredicateForOperator(comparator);
+                // Add the condition for the property bound to a variable...
+                addVariableForPredicate(variable, propertyRef);
+                List<Object> predicateComparison = new ArrayList<>();
+                predicateComparison.add(predicate);
+                if (REGEX_OPERATOR.equals(predicate)) {
+                    // TODO: for now this treats all string comparisons as raw regexes -- this is likely to be the most complete
+                    //  functionality, but may also be the slowest for common scenarios like 'exact-match' but also possibly
+                    //  for 'contains', 'starts-with', etc.
+                    //  It may be worthwhile splitting out the most common scenarios for direct Clojure operations like
+                    //  just using the EQ approach above for exact-match, then the Clojure string predicates like
+                    //  clojure.string.ends-with?, clojure.string.includes? and clojure.string.starts-with? and only fall-back
+                    //  to the below options if the received property is a string and not one of these simple (common) regexes
+                    // For regexes, we need a (predicate #"value" variable) pattern
+                    Object compareTo = getValueForComparison(value);
+                    if (compareTo instanceof String) {
+                        // Compile a Pattern for the regex
+                        Pattern regex = Pattern.compile((String) compareTo);
+                        predicateComparison.add(regex);
+                        predicateComparison.add(variable);
+                    } else {
+                        log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
+                    }
+                } else {
+                    // For everything else, we need a (predicate variable value) pattern
+                    // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
+                    predicateComparison.add(variable);
+                    predicateComparison.add(getValueForComparison(value));
+                }
+                // Note that the predicate list itself needs to be Vector-wrapped
+                propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+            }
+            return propertyConditions;
         }
-        return propertyConditions;
     }
 
     /**
