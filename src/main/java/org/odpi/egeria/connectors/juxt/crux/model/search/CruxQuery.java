@@ -275,6 +275,12 @@ public class CruxQuery {
             // TODO: in the case of Strings -- for equality, do we assume that the string will be interpreted
             //  literally (no regex handling)?  This is what the code will currently do...
             propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+        } else if (comparator.equals(PropertyComparisonOperator.NEQ)) {
+            // Similarly for inequality, just by wrapping in a NOT predicate
+            List<Object> predicateComparison = new ArrayList<>();
+            predicateComparison.add(NOT_OPERATOR);
+            predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+            propertyConditions.add(PersistentList.create(predicateComparison));
         } else {
             // For any others, we need to translate into predicate form, which requires two pieces:
             //  [e :property variable]  ;; which must be at the root level of the where conditions (not nested)
