@@ -59,12 +59,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         if (metadataCollectionId != null) {
             try {
                 metadataCollection = new CruxOMRSMetadataCollection(this,
-                        repositoryName,
+                        super.serverName,
                         repositoryHelper,
                         repositoryValidator,
                         metadataCollectionId);
             } catch (Exception e) {
-                throw new OMRSLogicErrorException(OMRSErrorCode.NULL_METADATA_COLLECTION.getMessageDefinition(repositoryName),
+                throw new OMRSLogicErrorException(OMRSErrorCode.NULL_METADATA_COLLECTION.getMessageDefinition(super.serverName),
                         this.getClass().getName(),
                         methodName,
                         e);
@@ -235,7 +235,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return EntityProxy of the current version of the entity
      */
     public EntityProxy getEntityProxy(String guid) {
-        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(EntityProxyMapping.getReference(guid), null);
+        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(EntityProxyMapping.getReference(guid));
         return EntityProxyMapping.getFromMap(this, cruxDoc);
     }
 
@@ -245,7 +245,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return EntitySummary of the current version of the entity
      */
     public EntitySummary getEntitySummary(String guid) {
-        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(EntitySummaryMapping.getReference(guid), null);
+        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(EntitySummaryMapping.getReference(guid));
         log.debug("Found results: {}", cruxDoc);
         EntitySummaryMapping esm = new EntitySummaryMapping(this, cruxDoc);
         return esm.toEgeria();
@@ -580,20 +580,21 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return EntityDetail giving the restored version (or null if there was no previous version to restore)
      */
     public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) {
-        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
         Keyword docRef = EntitySummaryMapping.getReference(guid);
-        List<Map<Keyword, ?>> history = cruxAPI.db().entityHistory(docRef, options);
-        Map<Keyword, Object> currentVersionCrux  = null;
-        Map<Keyword, Object> previousVersionCrux = null;
+        List<Map<Keyword, ?>> history = getObjectHistory(docRef);
+        Map<Keyword, Object> currentVersionTxn  = null;
+        Map<Keyword, Object> previousVersionTxn = null;
         if (history != null && history.size() > 1) {
             // There must be a minimum of two entries in the history for us to have a previous version to go to.
-            currentVersionCrux  = new HashMap<>(history.get(0));
-            previousVersionCrux = new HashMap<>(history.get(1));
+            currentVersionTxn  = new HashMap<>(history.get(0));
+            previousVersionTxn = new HashMap<>(history.get(1));
         }
-        if (currentVersionCrux != null) {
+        if (currentVersionTxn != null) {
+            Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
             EntityDetailMapping edmC = new EntityDetailMapping(this, currentVersionCrux);
             EntityDetail current = edmC.toEgeria();
             long currentVersion = current.getVersion();
+            Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
             EntityDetailMapping edmP = new EntityDetailMapping(this, previousVersionCrux);
             EntityDetail restored = edmP.toEgeria();
             // Update the version of the restored instance to be one more than the latest (current) version, the update
@@ -602,6 +603,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             restored.setVersion(currentVersion + 1);
             restored.setUpdateTime(new Date());
             restored.setUpdatedBy(userId);
+            // TODO: should we not add the calling user to the 'maintainedBy' list?
             // Then submit this version back into Crux as an update, and return the result
             return updateEntity(restored);
         }
@@ -616,22 +618,25 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return Relationship giving the restored version (or null if there was no previous version to restore)
      */
     public Relationship restorePreviousVersionOfRelationship(String userId, String guid) {
-        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
         Keyword docRef = RelationshipMapping.getReference(guid);
         ICruxDatasource db = cruxAPI.openDB();
-        List<Map<Keyword, ?>> history = db.entityHistory(docRef, options);
-        Map<Keyword, Object> currentVersionCrux  = null;
-        Map<Keyword, Object> previousVersionCrux = null;
+        List<Map<Keyword, ?>> history = getObjectHistory(db, docRef);
+        Map<Keyword, Object> currentVersionTxn  = null;
+        Map<Keyword, Object> previousVersionTxn = null;
         if (history != null && history.size() > 1) {
             // There must be a minimum of two entries in the history for us to have a previous version to go to.
-            currentVersionCrux  = new HashMap<>(history.get(0));
-            previousVersionCrux = new HashMap<>(history.get(1));
+            currentVersionTxn  = new HashMap<>(history.get(0));
+            previousVersionTxn = new HashMap<>(history.get(1));
         }
         Relationship restored = null;
-        if (currentVersionCrux != null) {
+        if (currentVersionTxn != null) {
+            // Note that here we will not pass-through the opened DB as these methods will need to retrieve a different
+            // point-in-time view anyway (so cannot use the opened DB resource)
+            Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
             RelationshipMapping rmC = new RelationshipMapping(this, currentVersionCrux, db);
             Relationship current = rmC.toEgeria();
             long currentVersion = current.getVersion();
+            Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
             RelationshipMapping rmP = new RelationshipMapping(this, previousVersionCrux, db);
             restored = rmP.toEgeria();
             // Ensure that we close the open DB resource now that we're finished with it
@@ -649,6 +654,48 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             closeDb(db);
         }
         return restored;
+    }
+
+    /**
+     * Retrieve the transaction history for the provided Crux object, which will be of a form like the following:
+     * <code>
+     * {
+     *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
+     *     :crux.tx/tx-id 2,
+     *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
+     *     :crux.db/content-hash #crux/id "80cdbac164c61913dee8e391db249db941fb053a"
+     * }
+     * </code>
+     * @param reference indicating the primary key of the object for which to retrieve the transaction history.
+     * @return {@code List<Map<Keyword, ?>>} of the transaction history
+     */
+    private List<Map<Keyword, ?>> getObjectHistory(Keyword reference) {
+        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
+        List<Map<Keyword, ?>> history = cruxAPI.db().entityHistory(reference, options);
+        log.debug("Found history: {}", history);
+        return history;
+    }
+
+    /**
+     * Retrieve the transaction history for the provided Crux object, from an already-opened point-in-time view of the
+     * repository, which will be of a form like the following:
+     * <code>
+     * {
+     *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
+     *     :crux.tx/tx-id 2,
+     *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
+     *     :crux.db/content-hash #crux/id "80cdbac164c61913dee8e391db249db941fb053a"
+     * }
+     * </code>
+     * @param db from which to retrieve the transaction history
+     * @param reference indicating the primary key of the object for which to retrieve the transaction history.
+     * @return {@code List<Map<Keyword, ?>>} of the transaction history
+     */
+    private List<Map<Keyword, ?>> getObjectHistory(ICruxDatasource db, Keyword reference) {
+        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
+        List<Map<Keyword, ?>> history = db.entityHistory(reference, options);
+        log.debug("Found history: {}", history);
+        return history;
     }
 
     /**
@@ -719,6 +766,15 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Retrieve the current version of the requested reference's details from the Crux repository.
+     * @param reference indicating the primary key of the Crux object to retrieve
+     * @return {@code Map<Keyword, Object>} of the object's properties
+     */
+    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference) {
+        return getCruxObjectByReference(reference, (Date) null);
+    }
+
+    /**
      * Retrieve the requested reference's details from the Crux repository.
      * @param reference indicating the primary key of the Crux object to retrieve
      * @param asOfTime view of the object at this particular point in time (or null for current)
@@ -740,6 +796,20 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      */
     public Map<Keyword, Object> getCruxObjectByReference(ICruxDatasource db, Keyword reference) {
         return db.entity(reference);
+    }
+
+    /**
+     * Retrieve the requested reference's details from the Crux repository at the precise version indicated by
+     * the provided transaction details (as returned by an entity history call, must include the valid-time and
+     * tx-time).
+     * @param reference indicating the primary key of the Crux object to retrieve
+     * @param txnDetails containing the valid-time and tx-time of the precise version of the document to retrieve
+     * @return {@code Map<Keyword, Object>} of the object's properties
+     */
+    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Map<Keyword, Object> txnDetails) {
+        Date validTime = (Date) txnDetails.get(Constants.CRUX_VALID_TIME);
+        Date txnTime   = (Date) txnDetails.get(Constants.CRUX_TX_TIME);
+        return cruxAPI.db(validTime, txnTime).entity(reference);
     }
 
     /**

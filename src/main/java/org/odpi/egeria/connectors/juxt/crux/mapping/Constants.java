@@ -17,6 +17,8 @@ public class Constants {
 
     // Shared properties
     public static final Keyword CRUX_PK = Keyword.intern("crux.db", "id");
+    public static final Keyword CRUX_TX_TIME = Keyword.intern("crux.tx", "tx-time");
+    public static final Keyword CRUX_VALID_TIME = Keyword.intern("crux.db", "valid-time");
     public static final int DEFAULT_PAGE_SIZE = 50; // TODO: probably makes more sense to make this a configurable option for the connector
 
     // Shared operations
