@@ -150,7 +150,11 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String  methodName = "getRelationshipsForEntity";
         super.getRelationshipsForEntityParameterValidation(userId, entityGUID, relationshipTypeGUID, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
-        EntitySummary entity = this.getEntitySummary(userId, entityGUID);
+        // Note: we are doing this against EntitySummary to cover both EntityDetail and EntityProxy (both are involved
+        // in relationships), but we call the internal repository directly rather than the MetadataCollection method as
+        // the MetadataCollection method will validate that the EntitySummary is active (non-deleted) while this method
+        // should do no such validation prior to retrieving the relationships
+        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(entityGUID);
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
@@ -610,6 +614,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 initialClassifications);
 
         newEntity.setMetadataCollectionName(metadataCollectionName);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
 
         if (initialStatus != null) {
             newEntity.setStatus(initialStatus);
@@ -714,6 +719,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setStatus(newStatus);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -756,6 +762,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setProperties(properties);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -849,6 +856,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         updatedEntity.setStatusOnDelete(entity.getStatus());
         updatedEntity.setStatus(InstanceStatus.DELETED);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -887,7 +895,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateTypeForInstanceDelete(repositoryName, typeDefGUID, typeDefName, entity, methodName);
         repositoryValidator.validateEntityIsDeleted(repositoryName, entity, methodName);
 
-        try {
+        // TODO: the InMemoryOMRSMetadataCollection makes this call and catches all exceptions (with no logging), but
+        //  actually the call itself will ALWAYS give an EntityNotKnownException because we are validating just above
+        //  that this entity is deleted, while the getRelationshipsForEntity call is validating that the entity is NOT
+        //  deleted (and if it is, will throw an EntityNotKnownException). So it ALWAYS throws an EntityNotKnownException.
+        //  We can therefore either remove this code entirely (as it does nothing but add Exception processing overhead),
+        //  or we need to change the logic across the various repositories.
+        /*try {
             List<Relationship> relationships = this.getRelationshipsForEntity(userId,
                     deletedEntityGUID,
                     null,
@@ -909,7 +923,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         } catch (Exception e) {
             log.error("Exception was thrown in purgeEntity.", e); // TODO: remove once we determine source of NPE
             auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(deletedEntityGUID), e);
-        }
+        }*/
 
         cruxRepositoryConnector.purgeEntity(entity.getGUID());
 
@@ -948,6 +962,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         restoredEntity.setStatus(entity.getStatusOnDelete());
         restoredEntity.setStatusOnDelete(null);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         restoredEntity = repositoryHelper.incrementVersion(userId, entity, restoredEntity);
 
         return cruxRepositoryConnector.updateEntity(restoredEntity);
@@ -1058,6 +1073,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         }
 
         EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, entity, newClassification, methodName);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1094,6 +1110,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
 
         EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName, entity, classificationName, methodName);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1141,6 +1158,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 entity,
                 newClassification,
                 methodName);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1521,6 +1539,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         EntityDetail updatedEntity = new EntityDetail(entity);
         InstanceType newInstanceType = repositoryHelper.getNewInstanceType(repositoryName, newTypeDefSummary);
         updatedEntity.setType(newInstanceType);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1562,6 +1581,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         updatedEntity.setMetadataCollectionId(newHomeMetadataCollectionId);
         updatedEntity.setMetadataCollectionName(newHomeMetadataCollectionName);
         updatedEntity.setInstanceProvenanceType(InstanceProvenanceType.LOCAL_COHORT);
+        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1846,6 +1866,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
                 if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
                     updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
+                    // TODO: should we not add the calling user to the 'maintainedBy' list?
                     cruxRepositoryConnector.updateEntity(updatedEntity);
                 } else {
                     cruxRepositoryConnector.saveReferenceCopy(entity);
@@ -1897,6 +1918,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
                 if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
                     updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
+                    // TODO: should we not add the calling user to the 'maintainedBy' list?
                     cruxRepositoryConnector.updateEntity(updatedEntity);
                 } else {
                     cruxRepositoryConnector.saveReferenceCopy(entity);
