@@ -90,7 +90,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
         final String methodName = "getEntitySummary";
         super.getInstanceParameterValidation(userId, guid, methodName);
-        EntitySummary summary = cruxRepositoryConnector.getEntitySummary(guid);
+        EntitySummary summary = null;
+        try {
+            summary = cruxRepositoryConnector.getEntity(guid, null, true);
+        } catch (EntityProxyOnlyException e) {
+            log.error("Caught exception that should never be thrown given 'true' on acceptProxies.", e);
+        }
         repositoryValidator.validateEntityFromStore(repositoryName, guid, summary, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, summary, methodName);
         return summary;
@@ -148,14 +153,15 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PagingErrorException,
             UserNotAuthorizedException {
 
-        final String  methodName = "getRelationshipsForEntity";
+        final String methodName = "getRelationshipsForEntity";
         super.getRelationshipsForEntityParameterValidation(userId, entityGUID, relationshipTypeGUID, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
+        // TODO: reverted this back to match the in-memory implementation -- does it cause other problems?
         // Note: we are doing this against EntitySummary to cover both EntityDetail and EntityProxy (both are involved
         // in relationships), but we call the internal repository directly rather than the MetadataCollection method as
         // the MetadataCollection method will validate that the EntitySummary is active (non-deleted) while this method
         // should do no such validation prior to retrieving the relationships
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(entityGUID);
+        EntitySummary entity = this.getEntitySummary(userId, entityGUID);
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
@@ -677,6 +683,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         super.addEntityProxyParameterValidation(userId, entityProxy);
         EntityDetail entity = this.isEntityKnown(userId, entityProxy.getGUID());
         if (entity == null) {
+            log.debug("Adding a proxy for: {}", entityProxy);
             cruxRepositoryConnector.createEntityProxy(entityProxy);
         }
     }
@@ -700,18 +707,15 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-
         repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
-
         repositoryValidator.validateInstanceType(repositoryName, entity);
 
         TypeDef typeDef = super.getTypeDefForInstance(entity, methodName);
@@ -816,7 +820,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(obsoleteEntityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(obsoleteEntityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
             // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
@@ -884,7 +888,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         // TODO: shouldn't this operate against any EntitySummary, since it may be a proxy that someone
         //  wants to purge?
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(deletedEntityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(deletedEntityGUID, null, false);
+        } catch (EntityProxyOnlyException e) {
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    deletedEntityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         repositoryValidator.validateEntityFromStore(repositoryName, deletedEntityGUID, entity, methodName);
         repositoryValidator.validateTypeForInstanceDelete(repositoryName, typeDefGUID, typeDefName, entity, methodName);
@@ -916,7 +926,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 }
             }
         } catch (Exception e) {
-            log.error("Exception was thrown in purgeEntity.", e); // TODO: remove once we determine source of NPE
+            log.error("Exception was thrown in purgeEntity.", e);
             auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(deletedEntityGUID), e);
         }*/
 
@@ -942,9 +952,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(deletedEntityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(deletedEntityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     deletedEntityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1005,7 +1014,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             ClassificationErrorException,
             PropertyErrorException {
 
-        final String methodName = "classifyEntity (detailed)";
+        final String methodName = "classifyEntity";
         final String entityGUIDParameterName = "entityGUID";
         final String classificationParameterName = "classificationName";
         final String propertiesParameterName = "classificationProperties";
@@ -1018,9 +1027,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1090,9 +1098,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1128,9 +1135,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1469,9 +1475,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1515,9 +1520,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1560,9 +1564,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail entity;
         try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1738,7 +1741,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     public List<Classification> getHomeClassifications(String userId,
                                                        String entityGUID) throws
             InvalidParameterException,
-            RepositoryErrorException {
+            RepositoryErrorException,
+            EntityNotKnownException {
 
         final String methodName = "getHomeClassifications";
         final String guidParameterName = "entityGUID";
@@ -1749,9 +1753,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, guidParameterName, entityGUID, methodName);
 
-        // Note: we are doing this against the EntitySummary, since Proxies can have classifications as well
-        // (if this MUST only operate on EntityDetail, change below retrieval)
-        EntitySummary retrievedEntity = cruxRepositoryConnector.getEntitySummary(entityGUID);
+        EntityDetail retrievedEntity;
+        try {
+            retrievedEntity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
+        } catch (EntityProxyOnlyException e) {
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         List<Classification> homeClassifications = new ArrayList<>();
 
@@ -1792,7 +1800,14 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         this.manageReferenceInstanceParameterValidation(userId, entityGUID, typeDefGUID, typeDefName, entityParameterName, homeMetadataCollectionId, homeParameterName, methodName);
 
-        EntitySummary entity = cruxRepositoryConnector.getEntitySummary(entityGUID);
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
+        } catch (EntityProxyOnlyException e) {
+            log.error("Attempted to purgeEntityReferenceCopy on an EntityProxy -- should this actually work?", e);
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
 
         if (entity != null) {
             cruxRepositoryConnector.purgeEntity(entityGUID);
@@ -1824,8 +1839,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail retrievedEntity = null;
         try {
-            // Note that this should never be thrown here due to the 'true' on acceptProxies above
-            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, true);
+            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, false);
         } catch (EntityProxyOnlyException e) {
             log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
         }
@@ -1886,9 +1900,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail retrievedEntity = null;
         try {
-            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, true);
+            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, false);
         } catch (EntityProxyOnlyException e) {
-            // Note that this should never be logged here due to the 'true' on acceptProxies above
             log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
         }
 
@@ -1935,8 +1948,32 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         super.referenceInstanceParameterValidation(userId, relationship, instanceParameterName, methodName);
 
-        List<List<?>> statements = cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityOneProxy());
-        statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityTwoProxy()));
+        // Note: we will first check whether each proxy already exists prior to forcing its creation (as the creation
+        // will force the 'proxy' flag to true, even if the entity already exists (which we do not want to happen)
+        EntityDetail one = null;
+        try {
+            one = getEntityDetail(userId, relationship.getEntityOneProxy().getGUID());
+            log.debug("EntityProxyOne is already known and not a proxy, will not overwrite it.");
+        } catch (EntityNotKnownException | EntityProxyOnlyException e) {
+            log.debug("EntityProxyOne is either not known or only a proxy, will overwrite it.");
+        }
+        EntityDetail two = null;
+        try {
+            two = getEntityDetail(userId, relationship.getEntityTwoProxy().getGUID());
+            log.debug("EntityProxyTwo is already known and not a proxy, will not overwrite it.");
+        } catch (EntityNotKnownException | EntityProxyOnlyException e) {
+            log.debug("EntityProxyTwo is either not known or only a proxy, will overwrite it.");
+        }
+
+        // Only create entity proxies if the above retrievals indicated that they do not yet exist
+        // TODO: there may be a more optimal way of achieving this directly through the Crux statements -- future optimisation?
+        List<List<?>> statements = new ArrayList<>();
+        if (one == null) {
+            statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityOneProxy()));
+        }
+        if (two == null) {
+            statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityTwoProxy()));
+        }
         statements.addAll(cruxRepositoryConnector.getSaveReferenceCopyStatements(relationship));
         cruxRepositoryConnector.runMultiStatementTx(statements);
 
