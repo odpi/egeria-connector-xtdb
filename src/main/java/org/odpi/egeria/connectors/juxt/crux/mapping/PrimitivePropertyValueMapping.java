@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.PrimitiveDefCategory;
 
@@ -16,11 +17,11 @@ import java.util.Date;
  * <code>
  *     {
  *         ...
- *         :entityProperties/qualifiedName.type "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_STRING\",\"primitiveValue\":\"A Simple Term\"}"
- *         :entityProperties/qualifiedName.value "A Simple Term"
+ *         :entityProperties/qualifiedName.json "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_STRING\",\"primitiveValue\":\"A Simple Term\"}"
+ *         :entityProperties/Referenceable.qualifiedName.value "A Simple Term"
  *         ...
- *         :classifications.Confidentiality.classificationProperties/level.type "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_INT\",\"primitiveValue\":5}"
- *         :classifications.Confidentiality.classificationProperties/level.value 5
+ *         :classifications.Confidentiality.classificationProperties/Confidentiality.level.json "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_INT\",\"primitiveValue\":5}"
+ *         :classifications.Confidentiality.classificationProperties/Confidentiality.level.value 5
  *         ...
  *     }
  * </code>
@@ -30,15 +31,17 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
     /**
      * Construct a mapping from PrimitivePropertyValue (to map to a Crux representation).
      * @param cruxConnector connectivity to Crux
+     * @param instanceType of the instance for which the value needs to be mapped
      * @param propertyName of the property to map
      * @param value from which to map
      * @param namespace by which to qualify properties
      */
     public PrimitivePropertyValueMapping(CruxOMRSRepositoryConnector cruxConnector,
+                                         InstanceType instanceType,
                                          String propertyName,
                                          PrimitivePropertyValue value,
                                          String namespace) {
-        super(cruxConnector, propertyName, value, namespace);
+        super(cruxConnector, instanceType, propertyName, value, namespace);
     }
 
     /**
@@ -49,6 +52,8 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
         if (value instanceof PrimitivePropertyValue) {
             PrimitivePropertyValue ppv = (PrimitivePropertyValue) value;
             cruxMap.put(getPropertyValueKeyword(), getPrimitiveValueForComparison(ppv));
+        } else {
+            cruxMap.put(getPropertyValueKeyword(), null);
         }
     }
 

@@ -6,10 +6,12 @@ import clojure.lang.Keyword;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProperties;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +25,7 @@ public class InstancePropertiesMapping extends AbstractMapping {
     private static final Logger log = LoggerFactory.getLogger(InstancePropertiesMapping.class);
 
     private String namespace;
+    private InstanceType instanceType;
     private InstanceProperties instanceProperties;
     private Map<Keyword, Object> cruxMap;
 
@@ -37,14 +40,18 @@ public class InstancePropertiesMapping extends AbstractMapping {
     /**
      * Construct a mapping from InstanceProperties (to map to a Crux representation).
      * @param cruxConnector connectivity to Crux
+     * @param instanceType of instance in which the properties exist
      * @param instanceProperties from which to map
      * @param namespace by which to qualify properties
      */
     public InstancePropertiesMapping(CruxOMRSRepositoryConnector cruxConnector,
+                                     InstanceType instanceType,
                                      InstanceProperties instanceProperties,
                                      String namespace) {
         this(cruxConnector);
+        this.instanceType = instanceType;
         this.instanceProperties = instanceProperties;
+        this.cruxMap = null;
         this.namespace = namespace;
     }
 
@@ -58,6 +65,7 @@ public class InstancePropertiesMapping extends AbstractMapping {
                                      Map<Keyword, Object> cruxMap,
                                      String namespace) {
         this(cruxConnector);
+        this.instanceProperties = null;
         this.cruxMap = cruxMap;
         this.namespace = namespace;
     }
@@ -65,12 +73,12 @@ public class InstancePropertiesMapping extends AbstractMapping {
     /**
      * Map from Egeria to Crux.
      * @return {@code Map<Keyword, Object>}
-     * @see #InstancePropertiesMapping(CruxOMRSRepositoryConnector, InstanceProperties, String)
+     * @see #InstancePropertiesMapping(CruxOMRSRepositoryConnector, InstanceType, InstanceProperties, String)
      */
     public Map<Keyword, Object> toCrux() {
 
         if (cruxMap == null && instanceProperties != null) {
-            cruxMap = toMap(instanceProperties, namespace);
+            toMap();
         }
         if (cruxMap != null) {
             return cruxMap;
@@ -92,7 +100,7 @@ public class InstancePropertiesMapping extends AbstractMapping {
         } else if (cruxMap == null) {
             return null;
         } else {
-            instanceProperties = fromMap(cruxMap, namespace);
+            fromMap();
             return instanceProperties;
         }
 
@@ -100,50 +108,59 @@ public class InstancePropertiesMapping extends AbstractMapping {
 
     /**
      * Translate the provided Egeria representation into a Crux map.
-     * @param properties Egeria representation from which to map
-     * @param namespace by which to qualify the set of properties
-     * @return {@code Map<Keyword, Object>} Crux representation
      */
-    protected Map<Keyword, Object> toMap(InstanceProperties properties,
-                                         String namespace) {
-        Map<Keyword, Object> map = new HashMap<>();
-        if (properties == null) {
-            map.put(Keyword.intern(namespace), null);
+    protected void toMap() {
+        cruxMap = new HashMap<>();
+        if (instanceProperties == null) {
+            cruxMap.put(Keyword.intern(namespace), null);
         } else {
-            Map<String, InstancePropertyValue> propertyMap = properties.getInstanceProperties();
+            Map<String, InstancePropertyValue> propertyMap = instanceProperties.getInstanceProperties();
             if (propertyMap != null) {
                 for (Map.Entry<String, InstancePropertyValue> entry : propertyMap.entrySet()) {
                     String propertyName = entry.getKey();
                     InstancePropertyValue value = entry.getValue();
                     if (value != null) {
-                        InstancePropertyValueMapping ipvm = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, propertyName, value, namespace);
+                        InstancePropertyValueMapping ipvm = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, value, namespace);
                         if (ipvm != null) {
                             Map<Keyword, Object> singlePropertyMap = ipvm.toCrux();
                             if (singlePropertyMap != null) {
-                                map.putAll(singlePropertyMap);
+                                cruxMap.putAll(singlePropertyMap);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Create an empty map if there is not one, for next set of checks
+                propertyMap = new HashMap<>();
+            }
+            // explicitly set any other properties on the instance to null, so that we can still include them
+            // if sorting, or running an explicit 'IS_NULL' or 'NOT_NULL' search against appropriately
+            List<String> allProperties = instanceType.getValidInstanceProperties();
+            if (allProperties != null) {
+                for (String propertyName : allProperties) {
+                    if (!propertyMap.containsKey(propertyName)) {
+                        // Only explicitly set to null if the earlier processing has not already set a value on the property
+                        InstancePropertyValueMapping ipvm = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, null, namespace);
+                        if (ipvm != null) {
+                            Map<Keyword, Object> singlePropertyMap = ipvm.toCrux();
+                            if (singlePropertyMap != null) {
+                                cruxMap.putAll(singlePropertyMap);
                             }
                         }
                     }
                 }
             }
         }
-        return map;
     }
 
     /**
      * Translate the provided Crux representation into an Egeria representation.
-     * @param map from which to map
-     * @param namespace by which the properties are qualified
-     * @return InstanceProperties that were mapped
      */
-    protected InstanceProperties fromMap(Map<Keyword, Object> map, String namespace) {
-        Map<String, InstancePropertyValue> ipvs = InstancePropertyValueMapping.getInstancePropertyValuesFromMap(map, namespace);
+    protected void fromMap() {
+        Map<String, InstancePropertyValue> ipvs = InstancePropertyValueMapping.getInstancePropertyValuesFromMap(cruxMap, namespace);
         if (!ipvs.isEmpty()) {
-            InstanceProperties ip = new InstanceProperties();
-            ip.setInstanceProperties(ipvs);
-            return ip;
-        } else {
-            return null;
+            instanceProperties = new InstanceProperties();
+            instanceProperties.setInstanceProperties(ipvs);
         }
     }
 

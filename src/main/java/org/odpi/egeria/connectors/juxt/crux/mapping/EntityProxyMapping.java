@@ -68,7 +68,7 @@ public class EntityProxyMapping extends EntitySummaryMapping {
         super.toMap();
         // set an internal marker that this is only a proxy
         cruxMap.put(ENTITY_PROXY_ONLY_MARKER, true);
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, ((EntityProxy) instanceHeader).getUniqueProperties(), UNIQUE_PROPERTIES_NS);
+        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, instanceHeader.getType(), ((EntityProxy) instanceHeader).getUniqueProperties(), UNIQUE_PROPERTIES_NS);
         Map<Keyword, Object> propertyMap = ipm.toCrux();
         if (propertyMap != null) {
             cruxMap.putAll(propertyMap);
