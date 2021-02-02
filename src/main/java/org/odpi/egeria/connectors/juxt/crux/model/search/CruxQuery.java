@@ -36,6 +36,8 @@ public class CruxQuery {
     private static final Symbol OR_OPERATOR = Symbol.intern("or");
     private static final Symbol AND_OPERATOR = Symbol.intern("and");
     private static final Symbol NOT_OPERATOR = Symbol.intern("not");
+    private static final Symbol OR_JOIN = Symbol.intern("or-join");
+    private static final Symbol NOT_JOIN = Symbol.intern("not-join");
     private static final Symbol GT_OPERATOR = Symbol.intern(">");
     private static final Symbol GTE_OPERATOR = Symbol.intern(">=");
     private static final Symbol LT_OPERATOR = Symbol.intern("<");
@@ -195,7 +197,7 @@ public class CruxQuery {
                 List<IPersistentCollection> allConditions = new ArrayList<>();
                 for (PropertyCondition condition : propertyConditions) {
                     // Ensure every condition, whether nested or singular, is added to the 'allConditions' list
-                    List<IPersistentCollection> cruxConditions = getSinglePropertyCondition(condition, namespace);
+                    List<IPersistentCollection> cruxConditions = getSinglePropertyCondition(condition, matchCriteria, namespace);
                     if (cruxConditions != null && !cruxConditions.isEmpty()) {
                         allConditions.addAll(cruxConditions);
                     }
@@ -204,6 +206,7 @@ public class CruxQuery {
                 List<Object> predicatedConditions = new ArrayList<>();
                 switch (matchCriteria) {
                     case ALL:
+                        // TODO: do we need to make this distinction any longer?
                         if (orNested) {
                             // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate
                             predicatedConditions.add(AND_OPERATOR);
@@ -213,10 +216,14 @@ public class CruxQuery {
                         }
                         break;
                     case ANY:
-                        predicatedConditions.add(OR_OPERATOR);
+                        // (or-join [e] (and [e :property var] [(predicate ... var)]) )
+                        predicatedConditions.add(OR_JOIN);
+                        predicatedConditions.add(PersistentVector.create(DOC_ID));
                         break;
                     case NONE:
-                        predicatedConditions.add(NOT_OPERATOR);
+                        // (not-join [e] [e :property var] [(predicate ... var)] )
+                        predicatedConditions.add(NOT_JOIN);
+                        predicatedConditions.add(PersistentVector.create(DOC_ID));
                         break;
                     default:
                         log.warn("Unmapped match criteria: {}", matchCriteria);
@@ -237,11 +244,14 @@ public class CruxQuery {
      * Translate the provided condition, considered on its own, into a Crux query condition. Handles both single
      * property conditions and nested conditions (though the latter simply recurse back to getPropertyConditions)
      * @param singleCondition to translate (should not contain nested condition)
+     * @param outerCriteria the outer match criteria in which this condition is contained
      * @param namespace by which to qualify the properties in the condition
      * @return {@code List<IPersistentCollection>} giving the appropriate Crux query condition(s)
      * @see #getPropertyConditions(SearchProperties, String, boolean)
      */
-    protected List<IPersistentCollection> getSinglePropertyCondition(PropertyCondition singleCondition, String namespace) {
+    protected List<IPersistentCollection> getSinglePropertyCondition(PropertyCondition singleCondition,
+                                                                     MatchCriteria outerCriteria,
+                                                                     String namespace) {
         SearchProperties nestedConditions = singleCondition.getNestedConditions();
         if (nestedConditions != null) {
             // If the conditions are nested, simply recurse back on getPropertyConditions
@@ -286,12 +296,12 @@ public class CruxQuery {
                 propertyConditions.add(PersistentList.create(predicateComparison));
             } else {
                 // For any others, we need to translate into predicate form, which requires two pieces:
-                //  [e :property variable]  ;; which must be at the root level of the where conditions (not nested)
-                //  [(predicate variable "value")] | [(predicate #"regex" variable)]  ;; which should be embedded in whatever condition applies to it
+                //  [e :property variable]
+                //  [(predicate variable "value")] | [(predicate #"regex" variable)
+                // These two pieces need to be combined in particular ways depending on the outer criteria, see logic
+                // further below for that...
                 Symbol variable = Symbol.intern("v_" + propertyName);
                 Symbol predicate = getPredicateForOperator(comparator);
-                // Add the condition for the property bound to a variable...
-                addVariableForPredicate(variable, propertyRef);
                 List<Object> predicateComparison = new ArrayList<>();
                 predicateComparison.add(predicate);
                 if (REGEX_OPERATOR.equals(predicate)) {
@@ -318,8 +328,23 @@ public class CruxQuery {
                     predicateComparison.add(variable);
                     predicateComparison.add(getValueForComparison(value));
                 }
-                // Note that the predicate list itself needs to be Vector-wrapped
-                propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (an or-join))
+                if (MatchCriteria.ANY.equals(outerCriteria)) {
+                    // Since the variables involved across multiple conditions can be different, and an OR predicate
+                    // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
+                    // two conditions together with an AND predicate
+                    // (and the calling method will further wrap this with an 'or-join')
+                    List<Object> predicateConditions = new ArrayList<>();
+                    predicateConditions.add(AND_OPERATOR);
+                    predicateConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
+                    predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                    propertyConditions.add(PersistentList.create(predicateConditions));
+                } else {
+                    // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
+                    // 'not-join' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not-join)
+                    propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
+                    propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                }
             }
             return propertyConditions;
         }
@@ -374,7 +399,7 @@ public class CruxQuery {
         if (condition != null && !condition.isEmpty()) {
             Object first = condition.get(0);
             if (first instanceof Symbol) {
-                // If the first element is a Symbol, it's an OR, AND or NOT -- create a list
+                // If the first element is a Symbol, it's an OR, OR-JOIN, AND, NOT or NOT-JOIN -- create a list
                 return PersistentList.create(condition);
             } else {
                 // Otherwise (ie. single condition) assume it's a Vector -- create a Vector accordingly
