@@ -37,7 +37,6 @@ public class CruxQuery {
     private static final Symbol AND_OPERATOR = Symbol.intern("and");
     private static final Symbol NOT_OPERATOR = Symbol.intern("not");
     private static final Symbol OR_JOIN = Symbol.intern("or-join");
-    private static final Symbol NOT_JOIN = Symbol.intern("not-join");
     private static final Symbol GT_OPERATOR = Symbol.intern(">");
     private static final Symbol GTE_OPERATOR = Symbol.intern(">=");
     private static final Symbol LT_OPERATOR = Symbol.intern("<");
@@ -63,7 +62,6 @@ public class CruxQuery {
 
     private IPersistentMap query;
     private final List<Symbol> findElements;
-    private final Map<Symbol, IPersistentCollection> variablesForPredicates;
     private final List<IPersistentCollection> conditions;
     private final List<IPersistentVector> sequencing;
     private int limit = Constants.DEFAULT_PAGE_SIZE;
@@ -75,7 +73,6 @@ public class CruxQuery {
     public CruxQuery() {
         query = PersistentArrayMap.EMPTY;
         findElements = new ArrayList<>();
-        variablesForPredicates = new TreeMap<>();
         findElements.add(DOC_ID); // Always have the DocID itself as the first element, to ease parsing of results
         conditions = new ArrayList<>();
         sequencing = new ArrayList<>();
@@ -250,6 +247,7 @@ public class CruxQuery {
                         if (orNested) {
                             // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate
                             predicatedConditions.add(AND_OPERATOR);
+                            predicatedConditions.addAll(allConditions);
                         } else {
                             // otherwise, we can return the conditions directly (nothing more to process on them)
                             return allConditions;
@@ -259,18 +257,22 @@ public class CruxQuery {
                         // (or-join [e] (and [e :property var] [(predicate ... var)]) )
                         predicatedConditions.add(OR_JOIN);
                         predicatedConditions.add(PersistentVector.create(DOC_ID));
+                        predicatedConditions.addAll(allConditions);
                         break;
                     case NONE:
-                        // (not-join [e] [e :property var] [(predicate ... var)] )
-                        predicatedConditions.add(NOT_JOIN);
-                        predicatedConditions.add(PersistentVector.create(DOC_ID));
+                        // (not (or-join [e] ... ) )
+                        predicatedConditions.add(NOT_OPERATOR);
+                        List<Object> orJoin = new ArrayList<>();
+                        orJoin.add(OR_JOIN);
+                        orJoin.add(PersistentVector.create(DOC_ID));
+                        orJoin.addAll(allConditions);
+                        predicatedConditions.add(PersistentList.create(orJoin));
                         break;
                     default:
                         log.warn("Unmapped match criteria: {}", matchCriteria);
                         break;
                 }
                 if (!predicatedConditions.isEmpty()) {
-                    predicatedConditions.addAll(allConditions);
                     List<IPersistentCollection> wrapped = new ArrayList<>();
                     wrapped.add(getCruxCondition(predicatedConditions));
                     return wrapped;
@@ -321,7 +323,8 @@ public class CruxQuery {
                 return getConditionForPropertyRef(propertyRef, comparator, value, outerCriteria, Symbol.intern(simpleName));
             } else {
                 // Any others we should assume are InstanceProperties, which will need namespace AND type AND '.value'
-                // qualification to be searchable
+                // qualification to be searchable (of which there could be multiple, for a single given property, if
+                // we are searching from high up the supertype tree)
                 Set<Keyword> qualifiedSearchProperties;
                 if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS) && !ClassificationMapping.KNOWN_PROPERTIES.contains(simpleName)) {
                     // Once again, if they are classification-specific instance properties, they need further qualification
@@ -335,43 +338,68 @@ public class CruxQuery {
                             repositoryHelper,
                             simpleName,
                             classificationNamespace,
-                            classificationTypes);
+                            classificationTypes,
+                            value);
                 } else {
                     qualifiedSearchProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
                             repositoryHelper,
                             simpleName,
                             namespace,
-                            typeNames);
+                            typeNames,
+                            value);
                 }
-                // Since depending on the types by which we are limiting the search there could be different variations
-                // of the same property name, we need to include criteria to find all of them -- so we must iterate
-                // through and build up a (set of?) condition(s) for each variation of the property
-                List<IPersistentCollection> allPropertyConditions = new ArrayList<>();
-                Symbol symbolForVariable = Symbol.intern(simpleName);
-                List<Object> orJoin = new ArrayList<>();
-                orJoin.add(OR_JOIN);
-                orJoin.add(PersistentVector.create(DOC_ID));
-                for (Keyword qualifiedPropertyRef : qualifiedSearchProperties) {
-                    List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(qualifiedPropertyRef, comparator, value, outerCriteria, symbolForVariable);
-                    if (conditionsForOneProperty.size() > 1) {
-                        // There are cases where the above could return more than one condition, in which case we should
-                        // (and )-wrap it, since we'll be within an or-join
-                        List<Object> andList = new ArrayList<>();
-                        andList.add(AND_OPERATOR);
-                        andList.addAll(conditionsForOneProperty);
-                        orJoin.add(PersistentList.create(andList));
-                    } else {
-                        // This is really just adding the single embedded element, without risking a .get() IndexOutOfBounds
-                        orJoin.addAll(conditionsForOneProperty);
+                if (qualifiedSearchProperties.isEmpty()) {
+                    log.warn("The provided property '{}' (as {}) did not match any of the type definition restrictions: {} -- forcing no results.", simpleName, value, typeNames);
+                    return getNoResultsCondition();
+                } else {
+                    // Since depending on the types by which we are limiting the search there could be different variations
+                    // of the same property name, we need to include criteria to find all of them -- so we must iterate
+                    // through and build up a set of conditions for each variation of the property
+                    List<IPersistentCollection> allPropertyConditions = new ArrayList<>();
+                    Symbol symbolForVariable = Symbol.intern(simpleName);
+                    List<IPersistentCollection> conditionAggregator = new ArrayList<>();
+                    for (Keyword qualifiedPropertyRef : qualifiedSearchProperties) {
+                        List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(qualifiedPropertyRef, comparator, value, outerCriteria, symbolForVariable);
+                        if (conditionsForOneProperty.size() > 1) {
+                            // There are cases where the above could return more than one condition, in which case we should
+                            // (and )-wrap it, since we'll be within an or-join
+                            List<Object> andList = new ArrayList<>();
+                            andList.add(AND_OPERATOR);
+                            andList.addAll(conditionsForOneProperty);
+                            conditionAggregator.add(PersistentList.create(andList));
+                        } else {
+                            // This is really just adding the single embedded element, without risking a .get() IndexOutOfBounds
+                            conditionAggregator.addAll(conditionsForOneProperty);
+                        }
                     }
+                    if (MatchCriteria.ALL.equals(outerCriteria)) {
+                        // If the outer criteria is ALL, then we will need to or-join the combined set of conditions, as
+                        // only one of the property variations needs to match to meet that criteria.
+                        List<Object> orJoin = new ArrayList<>();
+                        orJoin.add(OR_JOIN);
+                        orJoin.add(PersistentVector.create(DOC_ID));
+                        orJoin.addAll(conditionAggregator);
+                        allPropertyConditions.add(PersistentList.create(orJoin));
+                    } else {
+                        // For a NONE, we actually want to ensure that all of the conditions are AND'd, so no need to
+                        // wrap. And for an ANY, there will already be an or-join wrapped around the conditions by the
+                        // caller of this method, so no need to wrap them again here. Therefore, in both cases, we just
+                        // need to put all the conditions together and return them.
+                        allPropertyConditions.addAll(conditionAggregator);
+                    }
+                    return allPropertyConditions;
                 }
-                // Consolidate all of the statements together into the or-join and return it
-                allPropertyConditions.add(PersistentList.create(orJoin));
-                return allPropertyConditions;
             }
         }
     }
 
+    /**
+     * Retrieve the reference to use for an audit header property (these are generally unqualified (not namespaced),
+     * unless they are embedded within a classification).
+     * @param namespace by which to qualify the property (for classifications)
+     * @param propertyName for which to retrieve a reference
+     * @return Keyword
+     */
     protected Keyword getAuditHeaderPropertyRef(String namespace, String propertyName) {
         Keyword propertyRef;
         // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
@@ -386,6 +414,15 @@ public class CruxQuery {
         return propertyRef;
     }
 
+    /**
+     * Retrieve the Crux query condition(s) for the specified property and comparison operations.
+     * @param propertyRef to compare
+     * @param comparator comparison to carry out
+     * @param value against which to compare
+     * @param outerCriteria matching criteria inside of which this condition will exist
+     * @param variable to which to compare
+     * @return {@code List<IPersistentCollection>} of the conditions
+     */
     protected List<IPersistentCollection> getConditionForPropertyRef(Keyword propertyRef,
                                                                      PropertyComparisonOperator comparator,
                                                                      InstancePropertyValue value,
@@ -561,7 +598,7 @@ public class CruxQuery {
         if (sequencingProperty != null) {
             // Translate the provided sequencingProperty name into all of its possible appropriate property name
             // references (depends on the type limiting used for the search)
-            qualifiedSortProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames);
+            qualifiedSortProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames, null);
         }
         if (sequencingOrder == null) {
             // Default to sorting by GUID, if no sorting is defined (for consistent result ordering, paging, etc)
@@ -636,7 +673,6 @@ public class CruxQuery {
             orJoinConditions.add(PersistentVector.create(SORT_PROPERTY));
             for (Keyword propertyRef : qualifiedSortProperties) {
                 orJoinConditions.add(PersistentVector.create(DOC_ID, propertyRef, SORT_PROPERTY));
-                //addNullInclusiveSortConditionForProperty(orJoinConditions, propertyRef);
             }
             conditions.add(PersistentList.create(orJoinConditions));
         }
@@ -666,8 +702,6 @@ public class CruxQuery {
     public IPersistentMap getQuery() {
         // Add the elements to be found:  :find [ e ... ]
         query = query.assoc(Keyword.intern("find"), PersistentVector.create(findElements));
-        // Add all of the variables needed for predicates to the conditions
-        conditions.addAll(variablesForPredicates.values());
         // Add the conditions to the query:  :where [[ ... condition ...], [ ... condition ... ], ... ]
         query = query.assoc(Keyword.intern("where"), PersistentVector.create(conditions));
         // Add the sequencing information to the query:  :order-by [[ ... ]]
@@ -679,10 +713,25 @@ public class CruxQuery {
         return query;
     }
 
+    /**
+     * Add the specified symbol to the list of those that are discovered by the search conditions (if not already in
+     * the list)
+     * @param element to add (if not already in the list)
+     */
     private void addFindElement(Symbol element) {
         if (!findElements.contains(element)) {
             findElements.add(element);
         }
+    }
+
+    /**
+     * Retrieve a condition that will ensure no results are returned by a query.
+     * @return {@code List<IPersistentCollection>}
+     */
+    private List<IPersistentCollection> getNoResultsCondition() {
+        List<IPersistentCollection> conditions = new ArrayList<>();
+        conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
+        return conditions;
     }
 
 }
