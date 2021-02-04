@@ -17,12 +17,11 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchClassifications;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchProperties;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.ffdc.OMRSErrorCode;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityConflictException;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityProxyOnlyException;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.OMRSLogicErrorException;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.RelationshipConflictException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +61,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         super.serverName,
                         repositoryHelper,
                         repositoryValidator,
-                        metadataCollectionId);
+                        metadataCollectionId,
+                        auditLog);
             } catch (Exception e) {
                 throw new OMRSLogicErrorException(OMRSErrorCode.NULL_METADATA_COLLECTION.getMessageDefinition(super.serverName),
                         this.getClass().getName(),
@@ -292,6 +292,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder see CruxOMRSMetadataCollection#findEntities
      * @param pageSize see CruxOMRSMetadataCollection#findEntities
      * @return {@code List<EntityDetail>}
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @see CruxOMRSMetadataCollection#findEntities(String, String, List, SearchProperties, int, List, SearchClassifications, Date, String, SequencingOrder, int)
      */
     public List<EntityDetail> findEntities(String entityTypeGUID,
@@ -303,7 +304,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                            Date asOfTime,
                                            String sequencingProperty,
                                            SequencingOrder sequencingOrder,
-                                           int pageSize) {
+                                           int pageSize) throws TypeErrorException {
         Collection<List<?>> cruxResults = searchCrux(
                 entityTypeGUID,
                 entitySubtypeGUIDs,
@@ -351,6 +352,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @return {@code List<Relationship>} list of the matching relationships
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     public List<Relationship> findRelationshipsForEntity(String entityGUID,
                                                          String relationshipTypeGUID,
@@ -359,7 +361,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                          Date asOfTime,
                                                          String sequencingProperty,
                                                          SequencingOrder sequencingOrder,
-                                                         int pageSize) {
+                                                         int pageSize) throws TypeErrorException {
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
         // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
@@ -401,6 +403,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder see CruxOMRSMetadataCollection#findRelationships
      * @param pageSize see CruxOMRSMetadataCollection#findRelationships
      * @return {@code List<Relationship>}
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @see CruxOMRSMetadataCollection#findRelationships(String, String, List, SearchProperties, int, List, Date, String, SequencingOrder, int)
      */
     public List<Relationship> findRelationships(String relationshipTypeGUID,
@@ -411,7 +414,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 Date asOfTime,
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
-                                                int pageSize) {
+                                                int pageSize) throws TypeErrorException {
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
         // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
@@ -827,6 +830,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     public Collection<List<?>> searchCrux(String typeGuid,
                                           List<String> subtypeGuids,
@@ -838,7 +842,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String sequencingProperty,
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
-                                          String namespace) {
+                                          String namespace) throws TypeErrorException {
         CruxQuery query = new CruxQuery();
         updateQuery(query,
                 typeGuid,
@@ -870,6 +874,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     public Collection<List<?>> searchCrux(ICruxDatasource db,
                                           String typeGuid,
@@ -881,7 +886,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String sequencingProperty,
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
-                                          String namespace) {
+                                          String namespace) throws TypeErrorException {
         CruxQuery query = new CruxQuery();
         updateQuery(query,
                 typeGuid,
@@ -909,6 +914,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     public Collection<List<?>> findEntityRelationships(ICruxDatasource db,
                                                        String entityGUID,
@@ -917,7 +923,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                        List<InstanceStatus> limitResultsByStatus,
                                                        String sequencingProperty,
                                                        SequencingOrder sequencingOrder,
-                                                       int pageSize) {
+                                                       int pageSize) throws TypeErrorException {
         CruxQuery query = new CruxQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         updateQuery(query,
@@ -948,6 +954,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optinoal, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     private void updateQuery(CruxQuery query,
                              String typeGuid,
@@ -959,13 +966,81 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                              String sequencingProperty,
                              SequencingOrder sequencingOrder,
                              int pageSize,
-                             String namespace) {
+                             String namespace) throws TypeErrorException {
         query.addTypeCondition(typeGuid, subtypeGuids);
-        query.addSequencing(sequencingOrder, sequencingProperty, namespace);
+        // Note that we need to pass-through the complete set of type names to include in the search so that we can
+        // further qualify the property names (the same property name could be different in different types).
+        // We will also send through the repositoryHelper to reverse-lookup property names to the types that they
+        // could exist within.
+        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, subtypeGuids, namespace);
+        query.addPropertyConditions(matchProperties, namespace, completeTypeSet, repositoryHelper, repositoryName);
+        query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
+        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addPaging(fromElement, pageSize);
-        query.addPropertyConditions(matchProperties, namespace);
-        query.addClassificationConditions(matchClassifications);
         query.addStatusLimiters(limitResultsByStatus);
+    }
+
+    /**
+     * Retrieve the complete list of type names that have been requested by the search.
+     * @param typeGuid provided to the search, to limit by type
+     * @param subtypeGuids provided to the search, to limit to a set of subtypes
+     * @param namespace by which properties will be qualified (allowing us to see whether the types should be for entities or relationships)
+     * @return {@code Set<String>} of the names of all types and subtypes to include in the search
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     */
+    private Set<String> getCompleteSetOfTypeNamesForSearch(String typeGuid,
+                                                           List<String> subtypeGuids,
+                                                           String namespace) throws TypeErrorException {
+        final String methodName = "getCompleteListOfTypeNamesForSearch";
+        Set<String> complete = new HashSet<>();
+        if (namespace != null) {
+            if (subtypeGuids != null && !subtypeGuids.isEmpty()) {
+                // If subtypes were specified, we can short-circuit to only considering those (and logic is the same
+                // across entity types and relationship types)
+                for (String subtypeGuid : subtypeGuids) {
+                    String typeDefName = repositoryHelper.getTypeDef(repositoryName, "subtypeGuids", subtypeGuid, methodName).getName();
+                    addAllSubtypesToSet(complete, typeDefName);
+                }
+            } else if (typeGuid != null) {
+                // Otherwise we need to consider all sub-types of the provided typeGuid
+                String typeDefName = repositoryHelper.getTypeDef(repositoryName, "typeGuid", typeGuid, methodName).getName();
+                addAllSubtypesToSet(complete, typeDefName);
+            } else {
+                // Otherwise we need to consider all types of the provided kind
+                if (RelationshipMapping.RELATIONSHIP_PROPERTIES_NS.equals(namespace)) {
+                    // We need all relationship types
+                    try {
+                        List<TypeDef> typeDefs = metadataCollection.findTypeDefsByCategory(null, TypeDefCategory.RELATIONSHIP_DEF);
+                        if (typeDefs != null) {
+                            for (TypeDef typeDef : typeDefs) {
+                                String typeDefName = typeDef.getName();
+                                addAllSubtypesToSet(complete, typeDefName);
+                            }
+                        }
+                    } catch (InvalidParameterException | RepositoryErrorException | UserNotAuthorizedException e) {
+                        log.error("Unable to retrieve all relationship typedefs.", e);
+                    }
+                } else {
+                    // Otherwise we need all entity types
+                    String typeDefName = "OpenMetadataRoot";
+                    addAllSubtypesToSet(complete, typeDefName);
+                }
+            }
+        }
+        return complete;
+    }
+
+    /**
+     * Add the names of all of the subtypes of the provided typeDefName to the provided set of subtypes.
+     * @param subtypes to update with names of subtypes
+     * @param typeDefName for which to retrieve all subtypes
+     */
+    private void addAllSubtypesToSet(Set<String> subtypes, String typeDefName) {
+        subtypes.add(typeDefName);  // add the typedef itself, and then its subtypes
+        List<String> subtypesList = repositoryHelper.getSubTypesOf(repositoryName, typeDefName);
+        if (subtypesList != null) {
+            subtypes.addAll(subtypesList);
+        }
     }
 
     /**

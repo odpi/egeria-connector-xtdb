@@ -138,7 +138,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
             }
             mapForClassification.put(Keyword.intern(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
             mapForClassification.put(Keyword.intern(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
-            InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, classification.getProperties(), qualifiedNamespace + "." + CLASSIFICATION_PROPERTIES_NS);
+            InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, classification.getType(), classification.getProperties(), qualifiedNamespace + "." + CLASSIFICATION_PROPERTIES_NS);
             Map<Keyword, Object> propertyMap = ipm.toCrux();
             if (propertyMap != null) {
                 mapForClassification.putAll(propertyMap);

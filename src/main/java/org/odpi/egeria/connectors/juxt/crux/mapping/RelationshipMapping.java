@@ -81,7 +81,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
         EntityProxy two = relationship.getEntityTwoProxy();
         cruxMap.put(ENTITY_ONE_PROXY, EntityProxyMapping.getReference(one.getGUID()));
         cruxMap.put(ENTITY_TWO_PROXY, EntityProxyMapping.getReference(two.getGUID()));
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, relationship.getProperties(), RELATIONSHIP_PROPERTIES_NS);
+        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, relationship.getType(), relationship.getProperties(), RELATIONSHIP_PROPERTIES_NS);
         Map<Keyword, Object> propertyMap = ipm.toCrux();
         if (propertyMap != null) {
             cruxMap.putAll(propertyMap);

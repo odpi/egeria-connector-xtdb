@@ -3,10 +3,7 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EnumPropertyValue;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProvenanceType;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,15 +28,17 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
     /**
      * Construct a mapping from PrimitivePropertyValue (to map to a Crux representation).
      * @param cruxConnector connectivity to Crux
+     * @param instanceType of the instance for which the value needs to be mapped
      * @param propertyName of the property to map
      * @param value from which to map
      * @param namespace by which to qualify properties
      */
     public EnumPropertyValueMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                         String propertyName,
-                                         PrimitivePropertyValue value,
-                                         String namespace) {
-        super(cruxConnector, propertyName, value, namespace);
+                                    InstanceType instanceType,
+                                    String propertyName,
+                                    EnumPropertyValue value,
+                                    String namespace) {
+        super(cruxConnector, instanceType, propertyName, value, namespace);
     }
 
     /**
@@ -50,6 +49,8 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
         if (value instanceof EnumPropertyValue) {
             EnumPropertyValue epv = (EnumPropertyValue) value;
             cruxMap.put(getPropertyValueKeyword(), getEnumPropertyValueForComparison(epv));
+        } else {
+            cruxMap.put(getPropertyValueKeyword(), null);
         }
     }
 
