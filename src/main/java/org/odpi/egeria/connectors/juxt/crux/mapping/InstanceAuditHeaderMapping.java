@@ -2,9 +2,9 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
 import clojure.lang.PersistentVector;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceAuditHeader;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
@@ -12,7 +12,6 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
@@ -107,29 +106,25 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         map.put(Keyword.intern(namespace, N_UPDATE_TIME), iah.getUpdateTime());
         map.put(Keyword.intern(namespace, N_VERSION), iah.getVersion());
 
-        try {
-            // Note that for the type, we will break things out a bit to optimise search:
-            // - the GUID on its own (under 'type.guid')
-            // - the list of supertypes of the instances TypeDef (under 'type.supers')
-            // Then we'll also serialize the full InstanceType information into the N_TYPE property itself.
-            InstanceType type = iah.getType();
-            map.put(Keyword.intern(namespace, N_TYPE + ".guid"), type.getTypeDefGUID());
-            List<TypeDefLink> superTypes = type.getTypeDefSuperTypes();
-            if (superTypes != null) {
-                List<String> stList = new ArrayList<>();
-                for (TypeDefLink superType : superTypes) {
-                    stList.add(superType.getGUID());
-                }
-                map.put(Keyword.intern(namespace, N_TYPE + ".supers"), PersistentVector.create(stList));
+        // Note that for the type, we will break things out a bit to optimise search:
+        // - the GUID on its own (under 'type.guid')
+        // - the list of supertypes of the instances TypeDef (under 'type.supers')
+        // Then we'll also serialize the full InstanceType information into the N_TYPE property itself.
+        InstanceType type = iah.getType();
+        map.put(Keyword.intern(namespace, N_TYPE + ".guid"), type.getTypeDefGUID());
+        List<TypeDefLink> superTypes = type.getTypeDefSuperTypes();
+        if (superTypes != null) {
+            List<String> stList = new ArrayList<>();
+            for (TypeDefLink superType : superTypes) {
+                stList.add(superType.getGUID());
             }
-            map.put(Keyword.intern(namespace, N_TYPE), mapper.writeValueAsString(type));
-            map.put(Keyword.intern(namespace, N_INSTANCE_PROVENANCE_TYPE), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()));
-            map.put(Keyword.intern(namespace, N_CURRENT_STATUS), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()));
-            map.put(Keyword.intern(namespace, N_STATUS_ON_DELETE), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatusOnDelete()));
-            map.put(Keyword.intern(namespace, N_MAPPING_PROPERTIES), mapper.writeValueAsString(iah.getMappingProperties()));
-        } catch (IOException e) {
-            log.error("Unable to translate value to JSON.", e);
+            map.put(Keyword.intern(namespace, N_TYPE + ".supers"), PersistentVector.create(stList));
         }
+        map.put(Keyword.intern(namespace, N_TYPE), getEmbeddedSerializedForm(type));
+        map.put(Keyword.intern(namespace, N_INSTANCE_PROVENANCE_TYPE), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()));
+        map.put(Keyword.intern(namespace, N_CURRENT_STATUS), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()));
+        map.put(Keyword.intern(namespace, N_STATUS_ON_DELETE), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatusOnDelete()));
+        map.put(Keyword.intern(namespace, N_MAPPING_PROPERTIES), getEmbeddedSerializedForm(iah.getMappingProperties()));
 
         return map;
 
@@ -157,66 +152,58 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
             Keyword property = Keyword.intern(namespace, propertyName);
             Object objValue = map.getOrDefault(property, null);
             String value = objValue == null ? null : objValue.toString();
-            try {
-                switch (propertyName) {
-                    case N_HEADER_VERSION:
-                        iah.setHeaderVersion(objValue == null ? 0 : (Long) objValue);
-                        break;
-                    case N_TYPE:
-                        if (value != null) {
-                            iah.setType(mapper.readValue(value, new TypeReference<InstanceType>() {}));
-                        }
-                        break;
-                    case N_INSTANCE_PROVENANCE_TYPE:
-                        iah.setInstanceProvenanceType(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal((Integer) objValue));
-                        break;
-                    case N_METADATA_COLLECTION_ID:
-                        iah.setMetadataCollectionId(value);
-                        break;
-                    case N_METADATA_COLLECTION_NAME:
-                        iah.setMetadataCollectionName(value);
-                        break;
-                    case N_REPLICATED_BY:
-                        iah.setReplicatedBy(value);
-                        break;
-                    case N_INSTANCE_LICENSE:
-                        iah.setInstanceLicense(value);
-                        break;
-                    case N_CREATED_BY:
-                        iah.setCreatedBy(value);
-                        break;
-                    case N_UPDATED_BY:
-                        iah.setUpdatedBy(value);
-                        break;
-                    case N_MAINTAINED_BY:
-                        iah.setMaintainedBy(objValue == null ? null : (List<String>) objValue);
-                        break;
-                    case N_CREATE_TIME:
-                        iah.setCreateTime(objValue == null ? null : (Date) objValue);
-                        break;
-                    case N_UPDATE_TIME:
-                        iah.setUpdateTime(objValue == null ? null : (Date) objValue);
-                        break;
-                    case N_VERSION:
-                        iah.setVersion(objValue == null ? -1 : (Long) objValue);
-                        break;
-                    case N_CURRENT_STATUS:
-                        iah.setStatus(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
-                        break;
-                    case N_STATUS_ON_DELETE:
-                        iah.setStatusOnDelete(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
-                        break;
-                    case N_MAPPING_PROPERTIES:
-                        if (value != null) {
-                            iah.setMappingProperties(mapper.readValue(value, new TypeReference<Map<String, Serializable>>() {}));
-                        }
-                        break;
-                    default:
-                        log.warn("Unmapped InstanceAuditHeader property ({}): {}", property, objValue);
-                        break;
-                }
-            } catch (IOException e) {
-                log.error("Unable to translate value to JSON.", e);
+            switch (propertyName) {
+                case N_HEADER_VERSION:
+                    iah.setHeaderVersion(objValue == null ? 0 : (Long) objValue);
+                    break;
+                case N_TYPE:
+                    iah.setType(getDeserializedValue((IPersistentMap)objValue, mapper.getTypeFactory().constructType(InstanceType.class)));
+                    break;
+                case N_INSTANCE_PROVENANCE_TYPE:
+                    iah.setInstanceProvenanceType(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal((Integer) objValue));
+                    break;
+                case N_METADATA_COLLECTION_ID:
+                    iah.setMetadataCollectionId(value);
+                    break;
+                case N_METADATA_COLLECTION_NAME:
+                    iah.setMetadataCollectionName(value);
+                    break;
+                case N_REPLICATED_BY:
+                    iah.setReplicatedBy(value);
+                    break;
+                case N_INSTANCE_LICENSE:
+                    iah.setInstanceLicense(value);
+                    break;
+                case N_CREATED_BY:
+                    iah.setCreatedBy(value);
+                    break;
+                case N_UPDATED_BY:
+                    iah.setUpdatedBy(value);
+                    break;
+                case N_MAINTAINED_BY:
+                    iah.setMaintainedBy(objValue == null ? null : (List<String>) objValue);
+                    break;
+                case N_CREATE_TIME:
+                    iah.setCreateTime(objValue == null ? null : (Date) objValue);
+                    break;
+                case N_UPDATE_TIME:
+                    iah.setUpdateTime(objValue == null ? null : (Date) objValue);
+                    break;
+                case N_VERSION:
+                    iah.setVersion(objValue == null ? -1 : (Long) objValue);
+                    break;
+                case N_CURRENT_STATUS:
+                    iah.setStatus(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
+                    break;
+                case N_STATUS_ON_DELETE:
+                    iah.setStatusOnDelete(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
+                    break;
+                case N_MAPPING_PROPERTIES:
+                    iah.setMappingProperties(getDeserializedValue((IPersistentMap)objValue, mapper.getTypeFactory().constructMapType(Map.class, String.class, Serializable.class)));
+                    break;
+                default:
+                    log.warn("Unmapped InstanceAuditHeader property ({}): {}", property, objValue);
+                    break;
             }
 
         }
