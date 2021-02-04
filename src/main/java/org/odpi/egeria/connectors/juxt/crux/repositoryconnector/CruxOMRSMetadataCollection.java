@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
+import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.OMRSDynamicTypeMetadataCollectionBase;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
@@ -20,9 +21,7 @@ import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Provides the OMRSMetadataCollection implementation for Crux.
@@ -45,16 +44,19 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
      *                             to build valid type definitions (TypeDefs), entities and relationships.
      * @param repositoryValidator  validator class for checking open metadata repository objects and parameters
      * @param metadataCollectionId unique identifier for the repository
+     * @param auditLog             logging destination
      */
     public CruxOMRSMetadataCollection(CruxOMRSRepositoryConnector parentConnector,
                                       String repositoryName,
                                       OMRSRepositoryHelper repositoryHelper,
                                       OMRSRepositoryValidator repositoryValidator,
-                                      String metadataCollectionId) {
+                                      String metadataCollectionId,
+                                      AuditLog auditLog) {
         super(parentConnector, repositoryName, repositoryHelper, repositoryValidator, metadataCollectionId);
         log.debug("Constructing CruxOMRSMetadataCollection with name: {}", repositoryName);
         parentConnector.setRepositoryName(repositoryName);
         this.cruxRepositoryConnector = parentConnector;
+        setAuditLog(auditLog);
     }
 
     /**
