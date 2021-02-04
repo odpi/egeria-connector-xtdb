@@ -17,10 +17,10 @@ import java.util.Date;
  * <code>
  *     {
  *         ...
- *         :entityProperties/qualifiedName.json "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_STRING\",\"primitiveValue\":\"A Simple Term\"}"
+ *         :entityProperties/qualifiedName.json {:json "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_STRING\",\"primitiveValue\":\"A Simple Term\"}"}
  *         :entityProperties/Referenceable.qualifiedName.value "A Simple Term"
  *         ...
- *         :classifications.Confidentiality.classificationProperties/Confidentiality.level.json "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_INT\",\"primitiveValue\":5}"
+ *         :classifications.Confidentiality.classificationProperties/Confidentiality.level.json {:json "{\"class\":\"PrimitivePropertyValue\",\"instancePropertyCategory\":\"PRIMITIVE\",\"primitiveDefCategory\":\"OM_PRIMITIVE_TYPE_INT\",\"primitiveValue\":5}"}
  *         :classifications.Confidentiality.classificationProperties/Confidentiality.level.value 5
  *         ...
  *     }

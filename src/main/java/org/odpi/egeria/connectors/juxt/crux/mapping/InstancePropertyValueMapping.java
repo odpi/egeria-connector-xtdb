@@ -2,8 +2,8 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
@@ -11,7 +11,6 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -132,7 +131,7 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                     // We'll pull values from the '.json'-qualified portion, given this is a complete JSON serialization
                     // TODO: this will also need to change if we change the serialization
                     Object objValue = entry.getValue();
-                    String value = objValue == null ? null : objValue.toString();
+                    IPersistentMap value = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
                     InstancePropertyValueMapping.addInstancePropertyValueToMap(ipvs, propertyName, value);
                 }
             }
@@ -174,30 +173,23 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * later back into an Egeria object).
      */
     protected void addFullJSONToMap() {
-        try {
-            cruxMap.put(getPropertyTypeKeyword(), mapper.writeValueAsString(value));
-        } catch (IOException e) {
-            log.error("Unable to translate property details into JSON: {}", value, e);
-        }
+        cruxMap.put(getSerializedPropertyKeyword(), getEmbeddedSerializedForm(value));
     }
 
     /**
      * Add the specified value to the map. (Note that this method will generally be overridden by the subclasses to
-     * define how the subclass-specific values are translated appropriately.)
+     * define how the subclass-specific values are translated appropriately.) If it is NOT overridden, the value will
+     * be written in a non-searchable JSON-serialized form.
      */
     protected void addValueToMap() {
-        try {
-            cruxMap.put(getPropertyValueKeyword(), mapper.writeValueAsString(value));
-        } catch (IOException e) {
-            log.error("Unable to translate property value into JSON: {}", value, e);
-        }
+        cruxMap.put(getPropertyValueKeyword(), getEmbeddedSerializedForm(value));
     }
 
     /**
      * Retrieve the qualified Crux name for the type of the property.
      * @return Keyword
      */
-    protected Keyword getPropertyTypeKeyword() {
+    protected Keyword getSerializedPropertyKeyword() {
         return Keyword.intern(namespace, propertyName + ".json");
     }
 
@@ -234,7 +226,7 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * @param propertyName to add
      * @param jsonValue to add
      */
-    public static void addInstancePropertyValueToMap(Map<String, InstancePropertyValue> ipvs, String propertyName, String jsonValue) {
+    public static void addInstancePropertyValueToMap(Map<String, InstancePropertyValue> ipvs, String propertyName, IPersistentMap jsonValue) {
         // Only process the propertyName if it ends with the '.json' qualification
         // (This logic is intentionally in this method as it is called from elsewhere, like ClassificationMapping)
         if (propertyName.endsWith(".json")) {
@@ -250,15 +242,8 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * @param jsonValue to translate
      * @return InstancePropertyValue
      */
-    private static InstancePropertyValue getInstancePropertyValue(String jsonValue) {
-        if (jsonValue != null) {
-            try {
-                return mapper.readValue(jsonValue, new TypeReference<InstancePropertyValue>() {});
-            } catch (IOException e) {
-                log.error("Unable to translate value from JSON: {}", jsonValue, e);
-            }
-        }
-        return null;
+    private static InstancePropertyValue getInstancePropertyValue(IPersistentMap jsonValue) {
+        return getDeserializedValue(jsonValue, mapper.getTypeFactory().constructType(InstancePropertyValue.class));
     }
 
     /**
@@ -300,7 +285,7 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                         // (While this conditional itself will further loop over cached information, it should do so only
                         // in limited cases due to the short-circuiting above)
                         if (propertyDefMatchesValueType(repositoryHelper, repositoryName, typeNameWithProperty, propertyName, value)) {
-                            qualifiedNames.add(getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName));
+                            qualifiedNames.add(candidateRef);
                         }
                     }
                 }

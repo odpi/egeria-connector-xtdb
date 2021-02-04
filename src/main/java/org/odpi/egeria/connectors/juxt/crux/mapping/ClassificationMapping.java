@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
 import clojure.lang.PersistentVector;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
@@ -173,6 +174,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
             if (detectedNamespace != null && detectedNamespace.startsWith(namespace)) {
                 // Only here do we know we have a classification to be mapped...
                 String value = objValue == null ? null : objValue.toString();
+                IPersistentMap embeddedValue = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
                 String classificationName = getClassificationNameFromNamespace(detectedNamespace);
                 String propertyName = property.getName();
                 if (detectedNamespace.endsWith("." + CLASSIFICATION_PROPERTIES_NS)) {
@@ -180,7 +182,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                     if (!classNameToPropertiesMap.containsKey(classificationName)) {
                         classNameToPropertiesMap.put(classificationName, new HashMap<>());
                     }
-                    InstancePropertyValueMapping.addInstancePropertyValueToMap(classNameToPropertiesMap.get(classificationName), propertyName, value);
+                    InstancePropertyValueMapping.addInstancePropertyValueToMap(classNameToPropertiesMap.get(classificationName), propertyName, embeddedValue);
                 } else {
                     // Otherwise it should just be a "normal" property
                     if (!classNameToDetails.containsKey(classificationName)) {
