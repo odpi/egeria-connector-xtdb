@@ -6,6 +6,7 @@ import clojure.lang.Keyword;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -215,7 +216,8 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                 cruxConnector.getRepositoryHelper(),
                 propertyName,
                 namespace,
-                typesToConsider);
+                typesToConsider,
+                null);
         Keyword qualified = null;
         if (names.size() > 1) {
             log.error("Found more than one property in this instanceType ({}) with the name '{}': {}", instanceType.getTypeDefName(), propertyName, names);
@@ -269,25 +271,38 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * @param propertyName of the property for which to qualify type-specific references
      * @param namespace under which to qualify the properties
      * @param limitToTypes limit the type-specific qualifications to only properties that are applicable to these types
+     * @param value that will be used for comparison, to limit the properties to include based on their type
      * @return {@code Set<Keyword>} of the property references
      */
     public static Set<Keyword> getNamesForProperty(String repositoryName,
                                                    OMRSRepositoryHelper repositoryHelper,
                                                    String propertyName,
                                                    String namespace,
-                                                   Set<String> limitToTypes) {
+                                                   Set<String> limitToTypes,
+                                                   InstancePropertyValue value) {
         final String methodName = "getNamesForProperty";
-        // start by determining all valid combinations of propertyName in every type name provided in limitToTypes
+
+        // Start by determining all valid combinations of propertyName in every type name provided in limitToTypes
         Set<String> validTypesForProperty = repositoryHelper.getAllTypeDefsForProperty(repositoryName, propertyName, methodName);
-        log.debug("Found types for property {}: {}", propertyName, validTypesForProperty);
         Set<Keyword> qualifiedNames = new TreeSet<>();
+
         // since the property itself may actually be defined at the super-type level of one of the limited types, we
-        // cannot simply to a set intersection between types but must traverse and take the appropriate (super)type name
+        // cannot simply do a set intersection between types but must traverse and take the appropriate (super)type name
         // for qualification
         for (String typeNameWithProperty : validTypesForProperty) {
-            for (String limitToType : limitToTypes) {
-                if (repositoryHelper.isTypeOf(repositoryName, limitToType, typeNameWithProperty)) {
-                    qualifiedNames.add(getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName));
+            Keyword candidateRef = getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName);
+            if (!qualifiedNames.contains(candidateRef)) { // short-circuit if we already have this one in the list
+                for (String limitToType : limitToTypes) {
+                    // Only if the type definition by which we are limiting is a subtype of this type definition should
+                    // we consider the type definitions' properties
+                    if (repositoryHelper.isTypeOf(repositoryName, limitToType, typeNameWithProperty)) {
+                        // Only if the property's types align do we continue with ensuring that the type itself should be included
+                        // (While this conditional itself will further loop over cached information, it should do so only
+                        // in limited cases due to the short-circuiting above)
+                        if (propertyDefMatchesValueType(repositoryHelper, repositoryName, typeNameWithProperty, propertyName, value)) {
+                            qualifiedNames.add(getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName));
+                        }
+                    }
                 }
             }
         }
@@ -303,6 +318,73 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      */
     private static Keyword getFullyQualifiedPropertyNameForValue(String namespace, String typeName, String propertyName) {
         return Keyword.intern(namespace, typeName + "." + propertyName + ".value");
+    }
+
+    /**
+     * Indicates whether the provided property value is of the same type as the named property in the specified type
+     * definition.
+     * @param repositoryHelper utilities for introspecting type definitions and their properties
+     * @param repositoryName of the repository (for logging)
+     * @param typeDefName of the type definition in which the property is defined
+     * @param propertyName of the property for which to check the type definition
+     * @param value that will be used for comparison, to limit the properties to include based on their type
+     * @return boolean true if the value's type matches the property definition's type, otherwise false (if they do not match)
+     */
+    private static boolean propertyDefMatchesValueType(OMRSRepositoryHelper repositoryHelper,
+                                                       String repositoryName,
+                                                       String typeDefName,
+                                                       String propertyName,
+                                                       InstancePropertyValue value) {
+
+        if (value == null) {
+            // If the value is null, we cannot compare types, so must assume that they would match
+            return true;
+        }
+
+        // Otherwise, determine the type of this property in the model, and only if they match consider including
+        // this property
+        TypeDef typeDef = repositoryHelper.getTypeDefByName(repositoryName, typeDefName);
+        List<TypeDefAttribute> typeDefProperties = typeDef.getPropertiesDefinition();
+        for (TypeDefAttribute typeDefProperty : typeDefProperties) {
+            // Start by finding the property
+            if (typeDefProperty.getAttributeName().equals(propertyName)) {
+                AttributeTypeDef atd = typeDefProperty.getAttributeType();
+                switch (atd.getCategory()) {
+                    case PRIMITIVE:
+                        PrimitiveDef pd = (PrimitiveDef) atd;
+                        PrimitiveDefCategory pdc = pd.getPrimitiveDefCategory();
+                        // In the case of a primitive, the value must also be a primitive and its primitive type
+                        // must match
+                        return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.PRIMITIVE)
+                                && ((PrimitivePropertyValue) value).getPrimitiveDefCategory().equals(pdc));
+                    case ENUM_DEF:
+                        return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.ENUM));
+                    case COLLECTION:
+                        CollectionDef cd = (CollectionDef) atd;
+                        switch (cd.getCollectionDefCategory()) {
+                            // TODO: these may need deeper checks (eg. that the types within the array match, etc)
+                            case OM_COLLECTION_ARRAY:
+                                return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.ARRAY));
+                            case OM_COLLECTION_MAP:
+                                return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.MAP));
+                            case OM_COLLECTION_STRUCT:
+                                return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.STRUCT));
+                            case OM_COLLECTION_UNKNOWN:
+                            default:
+                                log.warn("Unhandled collection type definition category for comparison: {}", cd.getCollectionDefCategory());
+                                break;
+                        }
+                    case UNKNOWN_DEF:
+                    default:
+                        log.warn("Unhandled attribute type definition category for comparison: {}", atd.getCategory());
+                        break;
+                }
+            }
+        }
+
+        // If we have fallen through, the value does not have the same type as the property
+        return false;
+
     }
 
 }

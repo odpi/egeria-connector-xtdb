@@ -18,6 +18,7 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchClassifications;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchProperties;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.ffdc.OMRSErrorCode;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
@@ -60,7 +61,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         super.serverName,
                         repositoryHelper,
                         repositoryValidator,
-                        metadataCollectionId);
+                        metadataCollectionId,
+                        auditLog);
             } catch (Exception e) {
                 throw new OMRSLogicErrorException(OMRSErrorCode.NULL_METADATA_COLLECTION.getMessageDefinition(super.serverName),
                         this.getClass().getName(),
@@ -970,7 +972,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // further qualify the property names (the same property name could be different in different types).
         // We will also send through the repositoryHelper to reverse-lookup property names to the types that they
         // could exist within.
-        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, subtypeGuids);
+        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, subtypeGuids, namespace);
         query.addPropertyConditions(matchProperties, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
@@ -982,22 +984,48 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * Retrieve the complete list of type names that have been requested by the search.
      * @param typeGuid provided to the search, to limit by type
      * @param subtypeGuids provided to the search, to limit to a set of subtypes
+     * @param namespace by which properties will be qualified (allowing us to see whether the types should be for entities or relationships)
      * @return {@code Set<String>} of the names of all types and subtypes to include in the search
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
-    private Set<String> getCompleteSetOfTypeNamesForSearch(String typeGuid, List<String> subtypeGuids) throws TypeErrorException {
+    private Set<String> getCompleteSetOfTypeNamesForSearch(String typeGuid,
+                                                           List<String> subtypeGuids,
+                                                           String namespace) throws TypeErrorException {
         final String methodName = "getCompleteListOfTypeNamesForSearch";
         Set<String> complete = new HashSet<>();
-        if (subtypeGuids != null && !subtypeGuids.isEmpty()) {
-            // If subtypes were specified, we can short-circuit to only considering those
-            for (String subtypeGuid : subtypeGuids) {
-                String typeDefName = repositoryHelper.getTypeDef(repositoryName, "subtypeGuids", subtypeGuid, methodName).getName();
+        if (namespace != null) {
+            if (subtypeGuids != null && !subtypeGuids.isEmpty()) {
+                // If subtypes were specified, we can short-circuit to only considering those (and logic is the same
+                // across entity types and relationship types)
+                for (String subtypeGuid : subtypeGuids) {
+                    String typeDefName = repositoryHelper.getTypeDef(repositoryName, "subtypeGuids", subtypeGuid, methodName).getName();
+                    addAllSubtypesToSet(complete, typeDefName);
+                }
+            } else if (typeGuid != null) {
+                // Otherwise we need to consider all sub-types of the provided typeGuid
+                String typeDefName = repositoryHelper.getTypeDef(repositoryName, "typeGuid", typeGuid, methodName).getName();
                 addAllSubtypesToSet(complete, typeDefName);
+            } else {
+                // Otherwise we need to consider all types of the provided kind
+                if (RelationshipMapping.RELATIONSHIP_PROPERTIES_NS.equals(namespace)) {
+                    // We need all relationship types
+                    try {
+                        List<TypeDef> typeDefs = metadataCollection.findTypeDefsByCategory(null, TypeDefCategory.RELATIONSHIP_DEF);
+                        if (typeDefs != null) {
+                            for (TypeDef typeDef : typeDefs) {
+                                String typeDefName = typeDef.getName();
+                                addAllSubtypesToSet(complete, typeDefName);
+                            }
+                        }
+                    } catch (InvalidParameterException | RepositoryErrorException | UserNotAuthorizedException e) {
+                        log.error("Unable to retrieve all relationship typedefs.", e);
+                    }
+                } else {
+                    // Otherwise we need all entity types
+                    String typeDefName = "OpenMetadataRoot";
+                    addAllSubtypesToSet(complete, typeDefName);
+                }
             }
-        } else {
-            // Otherwise we need to consider all sub-types of the provided typeGuid (or if even that's missing, of OpenMetadataRoot)
-            String typeDefName = typeGuid == null ? "OpenMetadataRoot" : repositoryHelper.getTypeDef(repositoryName, "typeGuid", typeGuid, methodName).getName();
-            addAllSubtypesToSet(complete, typeDefName);
         }
         return complete;
     }
