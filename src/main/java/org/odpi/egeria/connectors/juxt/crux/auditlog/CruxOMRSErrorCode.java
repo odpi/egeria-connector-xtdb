@@ -49,6 +49,11 @@ public enum CruxOMRSErrorCode implements ExceptionMessageSet {
             "The Crux API client was not successfully initialized to \"{0}\"",
             "The system was unable to login to or access the Crux repository via REST API.",
             "Check your authorization details are accurate, the Crux environment started, and is network-accessible."),
+    REGEX_NOT_IMPLEMENTED(501, "OMRS-CRUX-REPOSITORY-501-001 ",
+            "Repository {0} is not able to support the regular expression \"{1}\"",
+            "This repository has a fixed subset of regular expressions it can support.",
+            "No action required, this is a limitation of the technology. To search using such regular expressions, the metadata of interest" +
+                    " must be synchronized to a cohort repository that can support such regular expressions."),
     ;
 
     private final ExceptionMessageDefinition messageDefinition;

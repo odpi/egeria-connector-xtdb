@@ -45,6 +45,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     public static final Keyword CURRENT_STATUS = Keyword.intern(N_CURRENT_STATUS);
     public static final Keyword TYPE_DEF_GUID = Keyword.intern(N_TYPE + ".guid");
     public static final Keyword SUPERTYPE_DEF_GUIDS = Keyword.intern(N_TYPE + ".supers");
+    public static final Keyword TYPE_DEF_CATEGORY = Keyword.intern(N_TYPE + ".category");
 
     public static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
@@ -120,6 +121,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
             }
             map.put(Keyword.intern(namespace, N_TYPE + ".supers"), PersistentVector.create(stList));
         }
+        map.put(Keyword.intern(namespace, N_TYPE + ".category"), type.getTypeDefCategory().getOrdinal());
         map.put(Keyword.intern(namespace, N_TYPE), getEmbeddedSerializedForm(type));
         map.put(Keyword.intern(namespace, N_INSTANCE_PROVENANCE_TYPE), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()));
         map.put(Keyword.intern(namespace, N_CURRENT_STATUS), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()));

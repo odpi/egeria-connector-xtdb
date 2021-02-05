@@ -65,6 +65,7 @@
     <properties>
         <open-metadata.version>2.7-SNAPSHOT</open-metadata.version>
         <crux.version>21.01-1.14.0-beta</crux.version>
+        <crux-alpha.version>21.01-1.14.0-alpha</crux-alpha.version>
         <clojure.version>1.10.2</clojure.version>
         <jackson.version>2.12.1</jackson.version>
         <slf4j.version>1.7.30</slf4j.version>
@@ -101,6 +102,12 @@
                 <groupId>juxt</groupId>
                 <artifactId>crux-core</artifactId>
                 <version>${crux.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>juxt</groupId>
+                <artifactId>crux-lucene</artifactId>
+                <version>${crux-alpha.version}</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
@@ -146,6 +153,10 @@
         <dependency>
             <groupId>juxt</groupId>
             <artifactId>crux-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>juxt</groupId>
+            <artifactId>crux-lucene</artifactId>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -407,10 +418,8 @@
                                 <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
                                 <!-- Used with slf4j as default implementation for chassis & apps (more configurable in xml)-->
                                 <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-simple:*</ignoredUnusedDeclaredDependency>
-                                <!-- Ignore these as used for packaging and / or testing -->
-                                <ignoredUnusedDeclaredDependency>org.odpi.egeria:egeria-connector-ibm-igc-adapter:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.odpi.egeria:egeria-connector-ibm-datastage-adapter:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.odpi.egeria:egeria-connector-ibm-information-server-test:*</ignoredUnusedDeclaredDependency>
+                                <!-- Ignore these as usage depends on runtime configuration -->
+                                <ignoredUnusedDeclaredDependency>juxt:crux-lucene:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                         </configuration>
                     </execution>
