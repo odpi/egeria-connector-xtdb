@@ -158,11 +158,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "getRelationshipsForEntity";
         super.getRelationshipsForEntityParameterValidation(userId, entityGUID, relationshipTypeGUID, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
-        // TODO: reverted this back to match the in-memory implementation -- does it cause other problems?
-        // Note: we are doing this against EntitySummary to cover both EntityDetail and EntityProxy (both are involved
-        // in relationships), but we call the internal repository directly rather than the MetadataCollection method as
-        // the MetadataCollection method will validate that the EntitySummary is active (non-deleted) while this method
-        // should do no such validation prior to retrieving the relationships
         EntitySummary entity = this.getEntitySummary(userId, entityGUID);
 
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
@@ -313,7 +308,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
     /**
      * {@inheritDoc}
-
+     */
     @Override
     public List<EntityDetail> findEntitiesByPropertyValue(String userId,
                                                           String entityTypeGUID,
@@ -330,22 +325,24 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             PropertyErrorException,
             PagingErrorException,
+            FunctionNotSupportedException,
             UserNotAuthorizedException {
-
-        final String methodName = "findEntitiesByPropertyValue";
 
         super.findEntitiesByPropertyValueParameterValidation(userId, entityTypeGUID, searchCriteria, fromEntityElement, limitResultsByStatus, limitResultsByClassification, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
-        // TODO: implement...
-        //  Likely the best option would be the built-in Lucene indexing (in alpha state): https://opencrux.com/reference/lucene.html
-        //  However, using the simplest 'wildcard-text-search' option to go across all attributes will likely
-        //  inadvertently include searching against non-String attributes and (more crucially) any serialised JSON data
-        //  ... so we may anyway still need to do TypeDef-interrogation to see which properties to search and either
-        //  wrap them all with an OR (and 'text-search' predicates), or resort to calling Java's .match() directly
-        //  (if this is even a possibility with Crux?)
-        return null;
+        SearchClassifications searchClassifications = repositoryHelper.getSearchClassificationsFromList(limitResultsByClassification);
 
-    }*/
+        return cruxRepositoryConnector.findEntitiesByText(entityTypeGUID,
+                searchCriteria,
+                fromEntityElement,
+                limitResultsByStatus,
+                searchClassifications,
+                asOfTime,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize);
+
+    }
 
     /**
      * {@inheritDoc}
@@ -478,7 +475,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
     /**
      * {@inheritDoc}
-
+     */
     @Override
     public List<Relationship> findRelationshipsByPropertyValue(String userId,
                                                                String relationshipTypeGUID,
@@ -494,22 +491,21 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             PropertyErrorException,
             PagingErrorException,
+            FunctionNotSupportedException,
             UserNotAuthorizedException {
-
-        final String methodName = "findRelationshipsByPropertyValue";
 
         super.findRelationshipsByPropertyValueParameterValidation(userId, relationshipTypeGUID, searchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
 
-        // TODO: implement...
-        //  Likely the best option would be the built-in Lucene indexing (in alpha state): https://opencrux.com/reference/lucene.html
-        //  However, using the simplest 'wildcard-text-search' option to go across all attributes will likely
-        //  inadvertently include searching against non-String attributes and (more crucially) any serialised JSON data
-        //  ... so we may anyway still need to do TypeDef-interrogation to see which properties to search and either
-        //  wrap them all with an OR (and 'text-search' predicates), or resort to calling Java's .match() directly
-        //  (if this is even a possibility with Crux?)
-        return null;
+        return cruxRepositoryConnector.findRelationshipsByText(relationshipTypeGUID,
+                searchCriteria,
+                fromRelationshipElement,
+                limitResultsByStatus,
+                asOfTime,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize);
 
-    }*/
+    }
 
     /**
      * {@inheritDoc}
@@ -863,7 +859,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setStatusOnDelete(entity.getStatus());
         updatedEntity.setStatus(InstanceStatus.DELETED);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -888,8 +883,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedEntityGUID, parameterName, methodName);
 
-        // TODO: shouldn't this operate against any EntitySummary, since it may be a proxy that someone
-        //  wants to purge?
         EntityDetail entity;
         try {
             entity = cruxRepositoryConnector.getEntity(deletedEntityGUID, null, false);
@@ -966,7 +959,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         EntityDetail restoredEntity = new EntityDetail(entity);
         restoredEntity.setStatus(entity.getStatusOnDelete());
         restoredEntity.setStatusOnDelete(null);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         restoredEntity = repositoryHelper.incrementVersion(userId, entity, restoredEntity);
 
         return cruxRepositoryConnector.updateEntity(restoredEntity);

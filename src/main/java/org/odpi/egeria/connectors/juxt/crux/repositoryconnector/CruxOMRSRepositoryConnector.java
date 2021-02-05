@@ -91,7 +91,11 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             //  store as a default configuration (?)
             log.info("Setting up a default in-memory crux node...");
             try {
-                cruxAPI = Crux.startNode();
+                // TODO: receive these options through the connection properties
+                Map<String, Map<String, String>> configOptions = new HashMap<>();
+                configOptions.put("crux.lucene/lucene-store", new HashMap<>());
+                configOptions.get("crux.lucene/lucene-store").put("db-dir", "crux-lucene");
+                cruxAPI = Crux.startNode(configOptions);
                 log.debug(" ... node: {}", cruxAPI);
             } catch (Exception e) {
                 throw new ConnectorCheckedException(CruxOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
@@ -306,6 +310,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                            SequencingOrder sequencingOrder,
                                            int pageSize) throws TypeErrorException {
         Collection<List<?>> cruxResults = searchCrux(
+                TypeDefCategory.ENTITY_DEF,
                 entityTypeGUID,
                 entitySubtypeGUIDs,
                 matchProperties,
@@ -319,6 +324,58 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 EntityDetailMapping.ENTITY_PROPERTIES_NS
         );
         log.debug("Found results: {}", cruxResults);
+        return translateEntityResults(cruxResults, asOfTime);
+    }
+
+    /**
+     * Search based on the provided parameters.
+     * @param entityTypeGUID see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param searchCriteria see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param fromEntityElement see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param limitResultsByStatus see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param matchClassifications see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param asOfTime see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param sequencingProperty see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param sequencingOrder see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param pageSize see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @return {@code List<EntityDetail>}
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the regular expression defined in searchCriteria cannot be efficiently searched across all text properties
+     * @see CruxOMRSMetadataCollection#findEntitiesByPropertyValue(String, String, String, int, List, List, Date, String, SequencingOrder, int)
+     */
+    public List<EntityDetail> findEntitiesByText(String entityTypeGUID,
+                                                 String searchCriteria,
+                                                 int fromEntityElement,
+                                                 List<InstanceStatus> limitResultsByStatus,
+                                                 SearchClassifications matchClassifications,
+                                                 Date asOfTime,
+                                                 String sequencingProperty,
+                                                 SequencingOrder sequencingOrder,
+                                                 int pageSize) throws TypeErrorException, FunctionNotSupportedException {
+        Collection<List<?>> cruxResults = searchCruxLucene(
+                TypeDefCategory.ENTITY_DEF,
+                entityTypeGUID,
+                searchCriteria,
+                fromEntityElement,
+                limitResultsByStatus,
+                matchClassifications,
+                asOfTime,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                EntityDetailMapping.ENTITY_PROPERTIES_NS
+        );
+        log.debug("Found results: {}", cruxResults);
+        return translateEntityResults(cruxResults, asOfTime);
+    }
+
+    /**
+     * Translate the provided list of Crux document references into a list of full EntityDetail results.
+     * @param cruxResults list of Crux document references (ie. from a search)
+     * @param asOfTime point in time view of the data (or null for current)
+     * @return {@code List<EntityDetail>} list of Egeria representation of the results
+     */
+    private List<EntityDetail> translateEntityResults(Collection<List<?>> cruxResults, Date asOfTime) {
         List<EntityDetail> results = null;
         if (cruxResults != null) {
             results = new ArrayList<>();
@@ -426,9 +483,66 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         }
 
         Collection<List<?>> cruxResults = searchCrux(db,
+                TypeDefCategory.RELATIONSHIP_DEF,
                 relationshipTypeGUID,
                 relationshipSubtypeGUIDs,
                 matchProperties,
+                fromRelationshipElement,
+                limitResultsByStatus,
+                null,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
+        );
+
+        log.debug("Found results: {}", cruxResults);
+        List<Relationship> results = resultsToList(db, cruxResults);
+
+        // Ensure that we close the open DB resource now that we're finished with it
+        closeDb(db);
+
+        return results;
+
+    }
+
+    /**
+     * Search based on the provided parameters.
+     * @param relationshipTypeGUID see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param searchCriteria see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param fromRelationshipElement see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param limitResultsByStatus see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param asOfTime see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param sequencingProperty see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param sequencingOrder see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param pageSize see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @return {@code List<Relationship>}
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the regular expression defined in searchCriteria cannot be efficiently searched across all text properties
+     * @see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue(String, String, String, int, List, Date, String, SequencingOrder, int)
+     */
+    public List<Relationship> findRelationshipsByText(String relationshipTypeGUID,
+                                                      String searchCriteria,
+                                                      int fromRelationshipElement,
+                                                      List<InstanceStatus> limitResultsByStatus,
+                                                      Date asOfTime,
+                                                      String sequencingProperty,
+                                                      SequencingOrder sequencingOrder,
+                                                      int pageSize) throws TypeErrorException, FunctionNotSupportedException {
+
+        // Since a relationship involves not only the relationship object, but also some details from each proxy,
+        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
+        ICruxDatasource db;
+        if (asOfTime != null) {
+            db = cruxAPI.openDB(asOfTime);
+        } else {
+            db = cruxAPI.openDB();
+        }
+
+        Collection<List<?>> cruxResults = searchCruxLucene(db,
+                TypeDefCategory.RELATIONSHIP_DEF,
+                relationshipTypeGUID,
+                searchCriteria,
                 fromRelationshipElement,
                 limitResultsByStatus,
                 null,
@@ -453,7 +567,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param db already opened point-in-time view of the database
      * @param cruxResults list of document IDs, eg. from a search
      * @return {@code List<Relationship>}
-     * @see #searchCrux(ICruxDatasource, String, List, SearchProperties, int, List, SearchClassifications, String, SequencingOrder, int, String)
+     * @see #searchCrux(ICruxDatasource, TypeDefCategory, String, List, SearchProperties, int, List, SearchClassifications, String, SequencingOrder, int, String)
      * @see #findEntityRelationships(ICruxDatasource, String, String, int, List, String, SequencingOrder, int)
      */
     private List<Relationship> resultsToList(ICruxDatasource db, Collection<List<?>> cruxResults) {
@@ -818,6 +932,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
     /**
      * Search Crux based on the provided parameters (should work across both Entities and Relationships).
+     * @param category to limit the search to either entities or relationships (required)
      * @param typeGuid to limit the search by type (optional)
      * @param subtypeGuids to limit the search to a set of subtypes (optional)
      * @param matchProperties by which to limit the results (optional)
@@ -832,7 +947,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
-    public Collection<List<?>> searchCrux(String typeGuid,
+    public Collection<List<?>> searchCrux(TypeDefCategory category,
+                                          String typeGuid,
                                           List<String> subtypeGuids,
                                           SearchProperties matchProperties,
                                           int fromElement,
@@ -845,6 +961,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String namespace) throws TypeErrorException {
         CruxQuery query = new CruxQuery();
         updateQuery(query,
+                category,
                 typeGuid,
                 subtypeGuids,
                 matchProperties,
@@ -863,6 +980,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * Search Crux based on the provided parameters, using an already-opened point-in-time view of the database (should
      * work across both Entities and Relationships).
      * @param db already opened point-in-time view of the database
+     * @param category to limit the search to either entities or relationships (required)
      * @param typeGuid to limit the search by type (optional)
      * @param subtypeGuids to limit the search to a set of subtypes (optional)
      * @param matchProperties by which to limit the results (optional)
@@ -877,6 +995,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     public Collection<List<?>> searchCrux(ICruxDatasource db,
+                                          TypeDefCategory category,
                                           String typeGuid,
                                           List<String> subtypeGuids,
                                           SearchProperties matchProperties,
@@ -889,9 +1008,100 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String namespace) throws TypeErrorException {
         CruxQuery query = new CruxQuery();
         updateQuery(query,
+                category,
                 typeGuid,
                 subtypeGuids,
                 matchProperties,
+                fromElement,
+                limitResultsByStatus,
+                matchClassifications,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                namespace);
+        log.debug("Querying with: {}", query.getQuery());
+        return db.query(query.getQuery());
+    }
+
+    /**
+     * Search all text properties in Crux based on the provided parameters (should work across both Entities and
+     * Relationships).
+     * @param category to limit the search to either entities or relationships (required)
+     * @param typeGuid to limit the search by type (optional)
+     * @param searchCriteria by which to limit the results (required, must be a Java regular expression)
+     * @param fromElement starting element for paging
+     * @param limitResultsByStatus by which to limit results (optional)
+     * @param matchClassifications by which to limit entity results (must be null for relationships) (optional)
+     * @param asOfTime for a historical search (optional, null will give current results)
+     * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
+     * @param pageSize maximum number of results per page
+     * @param namespace by which to qualify the matchProperties
+     * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the searchCriteria uses a complex regular expression that cannot efficiently be searched across all text fields
+     */
+    public Collection<List<?>> searchCruxLucene(TypeDefCategory category,
+                                                String typeGuid,
+                                                String searchCriteria,
+                                                int fromElement,
+                                                List<InstanceStatus> limitResultsByStatus,
+                                                SearchClassifications matchClassifications,
+                                                Date asOfTime,
+                                                String sequencingProperty,
+                                                SequencingOrder sequencingOrder,
+                                                int pageSize,
+                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
+        CruxQuery query = new CruxQuery();
+        updateTextQuery(query,
+                category,
+                typeGuid,
+                searchCriteria,
+                fromElement,
+                limitResultsByStatus,
+                matchClassifications,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize,
+                namespace);
+        log.debug("Querying with: {}", query.getQuery());
+        return cruxAPI.db(asOfTime).query(query.getQuery());
+    }
+
+    /**
+     * Search all text properties in Crux based on the provided parameters, using an already-opened point-in-time view
+     * of the database (should work across both Entities and Relationships).
+     * @param db already opened point-in-time view of the database
+     * @param category to limit the search to either entities or relationships (required)
+     * @param typeGuid to limit the search by type (optional)
+     * @param searchCriteria by which to limit the results (required, must be a Java regular expression)
+     * @param fromElement starting element for paging
+     * @param limitResultsByStatus by which to limit results (optional)
+     * @param matchClassifications by which to limit entity results (must be null for relationships) (optional)
+     * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
+     * @param pageSize maximum number of results per page
+     * @param namespace by which to qualify the matchProperties
+     * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the searchCriteria uses a complex regular expression that cannot efficiently be searched across all text fields
+     */
+    public Collection<List<?>> searchCruxLucene(ICruxDatasource db,
+                                                TypeDefCategory category,
+                                                String typeGuid,
+                                                String searchCriteria,
+                                                int fromElement,
+                                                List<InstanceStatus> limitResultsByStatus,
+                                                SearchClassifications matchClassifications,
+                                                String sequencingProperty,
+                                                SequencingOrder sequencingOrder,
+                                                int pageSize,
+                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
+        CruxQuery query = new CruxQuery();
+        updateTextQuery(query,
+                category,
+                typeGuid,
+                searchCriteria,
                 fromElement,
                 limitResultsByStatus,
                 matchClassifications,
@@ -927,6 +1137,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         CruxQuery query = new CruxQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         updateQuery(query,
+                TypeDefCategory.RELATIONSHIP_DEF,
                 relationshipTypeGUID,
                 null,
                 null,
@@ -944,6 +1155,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     /**
      * Update the provided query with the specified parameters.
      * @param query into which to add conditions
+     * @param category to limit the search to either entities or relationships (required)
      * @param typeGuid to limit the search by type (optional)
      * @param subtypeGuids to limit the search to a set of subtypes (optional)
      * @param matchProperties by which to limit the results (optional)
@@ -951,12 +1163,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByStatus by which to limit results (optional)
      * @param matchClassifications by which to limit entity results (must be null for relationships) (optional)
      * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
-     * @param sequencingOrder by which to order results (optinoal, will default to GUID)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     private void updateQuery(CruxQuery query,
+                             TypeDefCategory category,
                              String typeGuid,
                              List<String> subtypeGuids,
                              SearchProperties matchProperties,
@@ -968,6 +1181,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                              int pageSize,
                              String namespace) throws TypeErrorException {
         query.addTypeCondition(typeGuid, subtypeGuids);
+        query.addTypeDefCategoryCondition(category);
         // Note that we need to pass-through the complete set of type names to include in the search so that we can
         // further qualify the property names (the same property name could be different in different types).
         // We will also send through the repositoryHelper to reverse-lookup property names to the types that they
@@ -975,6 +1189,43 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, subtypeGuids, namespace);
         query.addPropertyConditions(matchProperties, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
+        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
+        query.addPaging(fromElement, pageSize);
+        query.addStatusLimiters(limitResultsByStatus);
+    }
+
+    /**
+     * Update the provided query with the specified parameters for a free-form text search across all text fields.
+     * @param query into which to add conditions
+     * @param category to limit the search to either entities or relationships (required)
+     * @param typeGuid to limit the search by type (optional)
+     * @param searchCriteria defining the textual regular expression to use to match against all text fields
+     * @param fromElement starting element for paging
+     * @param limitResultsByStatus by which to limit results (optional)
+     * @param matchClassifications by which to limit entity results (must be null for relationships) (optional)
+     * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
+     * @param sequencingOrder by which to order results (optional, will default to GUID)
+     * @param pageSize maximum number of results per page
+     * @param namespace by which to qualify the sequencing property (if any)
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the searchCriteria uses a complex regular expression that cannot efficiently be searched across all text fields
+     */
+    private void updateTextQuery(CruxQuery query,
+                                 TypeDefCategory category,
+                                 String typeGuid,
+                                 String searchCriteria,
+                                 int fromElement,
+                                 List<InstanceStatus> limitResultsByStatus,
+                                 SearchClassifications matchClassifications,
+                                 String sequencingProperty,
+                                 SequencingOrder sequencingOrder,
+                                 int pageSize,
+                                 String namespace) throws TypeErrorException, FunctionNotSupportedException {
+        query.addTypeCondition(typeGuid, null);
+        query.addTypeDefCategoryCondition(category);
+        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, null, namespace);
+        query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
+        query.addWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addPaging(fromElement, pageSize);
         query.addStatusLimiters(limitResultsByStatus);

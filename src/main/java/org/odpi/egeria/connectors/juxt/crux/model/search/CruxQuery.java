@@ -3,12 +3,15 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.*;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.FunctionNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,12 +30,17 @@ public class CruxQuery {
     private static final Symbol CREATE_TIME = Symbol.intern("ct");
     private static final Symbol UPDATE_TIME = Symbol.intern("ut");
     private static final Symbol SORT_PROPERTY = Symbol.intern("sp");
+    private static final Symbol MATCHED_VALUE = Symbol.intern("v");
+    private static final Symbol MATCHED_ATTRIBUTE = Symbol.intern("a");
+    private static final Symbol MATCHED_SCORE = Symbol.intern("s");
 
     // Sort orders
     private static final Keyword SORT_ASCENDING = Keyword.intern("asc");
     private static final Keyword SORT_DESCENDING = Keyword.intern("desc");
 
     // Predicates (for comparisons)
+    private static final Symbol IDENTITY = Symbol.intern("identity");
+    private static final Symbol WILDCARD_TEXT_SEARCH = Symbol.intern("wildcard-text-search");
     private static final Symbol OR_OPERATOR = Symbol.intern("or");
     private static final Symbol AND_OPERATOR = Symbol.intern("and");
     private static final Symbol NOT_OPERATOR = Symbol.intern("not");
@@ -123,6 +131,86 @@ public class CruxQuery {
                 orConditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, typeGuid));
             }
             conditions.add(PersistentList.create(orConditions));
+        }
+    }
+
+    /**
+     * Add a condition to limit the results to those with the provided type definition category (ie. only entities or
+     * only relationships).
+     * @param category by which to limit results
+     */
+    public void addTypeDefCategoryCondition(TypeDefCategory category) {
+        if (category != null) {
+            conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY, category.getOrdinal()));
+        }
+    }
+
+    /**
+     * Adds conditions to the search to find any text field that matches the supplied criteria.
+     * @param regexCriteria defining what should be matched
+     * @param repositoryHelper through which we can check the regular expressions in the criteria
+     * @param repositoryName of the repository (for logging)
+     * @throws FunctionNotSupportedException if the regular expression provided in the criteria cannot be efficiently searched
+     */
+    public void addWildcardTextCondition(String regexCriteria,
+                                         OMRSRepositoryHelper repositoryHelper,
+                                         String repositoryName) throws FunctionNotSupportedException {
+        final String methodName = "addWildcardTextCondition";
+        // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
+        // will be to add the Lucene condition first, to narrow the results as far as we can via the index, but
+        // then to add a secondary condition with the regex to further narrow the results -- and use as the property
+        // for this secondary condition the matching value we get back from the Lucene search, so that we only attempt
+        // the regex match on the already-limited results from Lucene (hopefully)
+        // It is still necessary to do this further regex check after the Lucene index hit because the Lucene index
+        // gives case-insensitive results on its own...
+        if (regexCriteria != null && !regexCriteria.equals("")) {
+            if (repositoryHelper.isExactMatchRegex(regexCriteria)
+                    || repositoryHelper.isStartsWithRegex(regexCriteria)
+                    || repositoryHelper.isContainsRegex(regexCriteria)
+                    || repositoryHelper.isEndsWithRegex(regexCriteria)) {
+                // Note that only these basic regex conditions allow us to easily unqualify to a plain string that we
+                // can use to hit the Lucene index, so these will be the only ones we attempt to support
+                String searchString = repositoryHelper.getUnqualifiedLiteralString(regexCriteria);
+                // Note that we need to wrap these conditions into an or-join so that we can de-duplicate the resulting
+                // documents (if the same document has multiple attributes that all match the search criteria, we will
+                // get one result for every match -- so the same document multiple times. The or-join prevents this).
+                // (or-join [e] (and ... ) )
+                List<Object> wrapped = new ArrayList<>();
+                wrapped.add(OR_JOIN);
+                wrapped.add(PersistentVector.create(DOC_ID));
+                List<Object> andCond = new ArrayList<>();
+                andCond.add(AND_OPERATOR);
+                // Create the lucene query:
+                // [(wildcard-text-search "text") [[e v a s]]
+                List<Object> luceneCriteria = new ArrayList<>();
+                luceneCriteria.add(WILDCARD_TEXT_SEARCH);
+                luceneCriteria.add(searchString);
+                IPersistentVector destructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
+                List<IPersistentCollection> luceneQuery = new ArrayList<>();
+                luceneQuery.add(PersistentList.create(luceneCriteria));
+                luceneQuery.add(destructured);
+                // ... (and [(wildcard-text-search "text") [[e v a s]]
+                andCond.add(PersistentVector.create(luceneQuery));
+                // Add the further regular expression match:
+                // [(re-matches #"regex" v)]
+                List<Object> regexConditions = new ArrayList<>();
+                Pattern regex = Pattern.compile(regexCriteria);
+                regexConditions.add(REGEX_OPERATOR);
+                regexConditions.add(regex);
+                regexConditions.add(MATCHED_VALUE);
+                // ... (and [(wildcard-text-search "text") [[e v a s]] [(re-matches #"regex" v)])
+                andCond.add(PersistentVector.create(PersistentList.create(regexConditions)));
+                wrapped.add(PersistentList.create(andCond));
+                // All together:
+                // (or-join [e] (and [(wildcard-text-search "text") [[e v a s]] [(re-matches #"regex" v)]))
+                conditions.add(PersistentList.create(wrapped));
+            } else {
+                // We will only attempt to support the scenarios above, where we can take the strategy outlined.
+                // An arbitrary Java regex run against the entire data store is just too much thrashing, and too limited
+                // a use case to try to support -- so we'll throw a FunctionNotSupportedException for anything else
+                throw new FunctionNotSupportedException(CruxOMRSErrorCode.REGEX_NOT_IMPLEMENTED.getMessageDefinition(repositoryName, regexCriteria),
+                        this.getClass().getName(), methodName);
+            }
         }
     }
 
