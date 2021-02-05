@@ -39,7 +39,6 @@ public class CruxQuery {
     private static final Keyword SORT_DESCENDING = Keyword.intern("desc");
 
     // Predicates (for comparisons)
-    private static final Symbol IDENTITY = Symbol.intern("identity");
     private static final Symbol WILDCARD_TEXT_SEARCH = Symbol.intern("wildcard-text-search");
     private static final Symbol OR_OPERATOR = Symbol.intern("or");
     private static final Symbol AND_OPERATOR = Symbol.intern("and");
@@ -53,6 +52,11 @@ public class CruxQuery {
     private static final Symbol NOT_NULL_OPERATOR = Symbol.intern("some?");
     private static final Symbol REGEX_OPERATOR = Symbol.intern("re-matches");
     private static final Symbol IN_OPERATOR = null; // TODO
+
+    // String predicates
+    private static final Symbol STARTS_WITH = Symbol.intern("clojure.string/starts-with?");
+    private static final Symbol CONTAINS = Symbol.intern("clojure.string/includes?");
+    private static final Symbol ENDS_WITH = Symbol.intern("clojure.string/ends-with?");
 
     private static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
     private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
@@ -72,18 +76,21 @@ public class CruxQuery {
     private final List<Symbol> findElements;
     private final List<IPersistentCollection> conditions;
     private final List<IPersistentVector> sequencing;
-    private int limit = Constants.DEFAULT_PAGE_SIZE;
+    private int limit;
     private int offset = 0;
 
     /**
      * Default constructor for a new query.
+     * @param defaultPageSize to use if no other is specified via addPaging
+     * @see #addPaging(int, int)
      */
-    public CruxQuery() {
+    public CruxQuery(int defaultPageSize) {
         query = PersistentArrayMap.EMPTY;
         findElements = new ArrayList<>();
         findElements.add(DOC_ID); // Always have the DocID itself as the first element, to ease parsing of results
         conditions = new ArrayList<>();
         sequencing = new ArrayList<>();
+        limit = defaultPageSize;
     }
 
     /**
@@ -171,6 +178,13 @@ public class CruxQuery {
                 // Note that only these basic regex conditions allow us to easily unqualify to a plain string that we
                 // can use to hit the Lucene index, so these will be the only ones we attempt to support
                 String searchString = repositoryHelper.getUnqualifiedLiteralString(regexCriteria);
+                if (repositoryHelper.isStartsWithRegex(regexCriteria)) {
+                    searchString = searchString + "*";
+                } else if (repositoryHelper.isEndsWithRegex(regexCriteria)) {
+                    searchString = "*" + searchString;
+                } else if (repositoryHelper.isContainsRegex(regexCriteria)) {
+                    searchString = "*" + searchString + "*";
+                }
                 // Note that we need to wrap these conditions into an or-join so that we can de-duplicate the resulting
                 // documents (if the same document has multiple attributes that all match the search criteria, we will
                 // get one result for every match -- so the same document multiple times. The or-join prevents this).
@@ -408,7 +422,7 @@ public class CruxQuery {
                 // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
                 // InstanceValueProperties but simple native types
                 Keyword propertyRef = getAuditHeaderPropertyRef(namespace, simpleName);
-                return getConditionForPropertyRef(propertyRef, comparator, value, outerCriteria, Symbol.intern(simpleName));
+                return getConditionForPropertyRef(propertyRef, comparator, value, outerCriteria, Symbol.intern(simpleName), repositoryHelper);
             } else {
                 // Any others we should assume are InstanceProperties, which will need namespace AND type AND '.value'
                 // qualification to be searchable (of which there could be multiple, for a single given property, if
@@ -447,7 +461,7 @@ public class CruxQuery {
                     Symbol symbolForVariable = Symbol.intern(simpleName);
                     List<IPersistentCollection> conditionAggregator = new ArrayList<>();
                     for (Keyword qualifiedPropertyRef : qualifiedSearchProperties) {
-                        List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(qualifiedPropertyRef, comparator, value, outerCriteria, symbolForVariable);
+                        List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(qualifiedPropertyRef, comparator, value, outerCriteria, symbolForVariable, repositoryHelper);
                         if (conditionsForOneProperty.size() > 1) {
                             // There are cases where the above could return more than one condition, in which case we should
                             // (and )-wrap it, since we'll be within an or-join
@@ -509,23 +523,22 @@ public class CruxQuery {
      * @param value against which to compare
      * @param outerCriteria matching criteria inside of which this condition will exist
      * @param variable to which to compare
+     * @param repositoryHelper through which we can introspect regular expressions
      * @return {@code List<IPersistentCollection>} of the conditions
      */
     protected List<IPersistentCollection> getConditionForPropertyRef(Keyword propertyRef,
                                                                      PropertyComparisonOperator comparator,
                                                                      InstancePropertyValue value,
                                                                      MatchCriteria outerCriteria,
-                                                                     Symbol variable) {
+                                                                     Symbol variable,
+                                                                     OMRSRepositoryHelper repositoryHelper) {
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
             // For equality we can compare directly to the value
-            propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+            propertyConditions.add(getEqualsConditions(propertyRef, value));
         } else if (comparator.equals(PropertyComparisonOperator.NEQ)) {
             // Similarly for inequality, just by wrapping in a NOT predicate
-            List<Object> predicateComparison = new ArrayList<>();
-            predicateComparison.add(NOT_OPERATOR);
-            predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
-            propertyConditions.add(PersistentList.create(predicateComparison));
+            propertyConditions.add(getNotEqualsConditions(propertyRef, value));
         } else {
             // For any others, we need to translate into predicate form, which requires two pieces:
             //  [e :property variable]
@@ -534,50 +547,123 @@ public class CruxQuery {
             // further below for that...
             Symbol predicate = getPredicateForOperator(comparator);
             List<Object> predicateComparison = new ArrayList<>();
-            predicateComparison.add(predicate);
+            boolean alreadyCovered = false;
             if (REGEX_OPERATOR.equals(predicate)) {
-                // TODO: for now this treats all string comparisons as raw regexes -- this is likely to be the most complete
-                //  functionality, but may also be the slowest for common scenarios like 'exact-match' but also possibly
-                //  for 'contains', 'starts-with', etc.
-                //  It may be worthwhile splitting out the most common scenarios for direct Clojure operations like
-                //  just using the EQ approach above for exact-match, then the Clojure string predicates like
-                //  clojure.string.ends-with?, clojure.string.includes? and clojure.string.starts-with? and only fall-back
-                //  to the below options if the received property is a string and not one of these simple (common) regexes
-                // For regexes, we need a (predicate #"value" variable) pattern
                 Object compareTo = getValueForComparison(value);
                 if (compareTo instanceof String) {
-                    // Compile a Pattern for the regex
-                    Pattern regex = Pattern.compile((String) compareTo);
-                    predicateComparison.add(regex);
-                    predicateComparison.add(variable);
+                    String regexSearchString = (String) compareTo;
+                    if (repositoryHelper.isExactMatchRegex(regexSearchString, false)) {
+                        // If we are looking for an exact match, we will short-circuit out of this predicate-based
+                        // query and just do an equality condition -- should be faster
+                        String unqualifiedLiteralString = repositoryHelper.getUnqualifiedLiteralString(regexSearchString);
+                        propertyConditions.add(getEqualsConditions(propertyRef, unqualifiedLiteralString));
+                        alreadyCovered = true;
+                    } else {
+                        // Otherwise we will retrieve an optimal predicate-based comparison depending on the
+                        // regex requested
+                        predicateComparison = getRegexCondition(regexSearchString, variable, repositoryHelper);
+                    }
                 } else {
                     log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
                 }
             } else {
                 // For everything else, we need a (predicate variable value) pattern
                 // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
+                predicateComparison.add(predicate);
                 predicateComparison.add(variable);
                 predicateComparison.add(getValueForComparison(value));
             }
-            // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (an or-join))
-            if (MatchCriteria.ANY.equals(outerCriteria)) {
-                // Since the variables involved across multiple conditions can be different, and an OR predicate
-                // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
-                // two conditions together with an AND predicate
-                // (and the calling method will further wrap this with an 'or-join')
-                List<Object> predicateConditions = new ArrayList<>();
-                predicateConditions.add(AND_OPERATOR);
-                predicateConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
-                predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-                propertyConditions.add(PersistentList.create(predicateConditions));
-            } else {
-                // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
-                // 'not-join' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not-join)
-                propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
-                propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+            if (!alreadyCovered) {
+                // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (an or-join))
+                if (MatchCriteria.ANY.equals(outerCriteria)) {
+                    // Since the variables involved across multiple conditions can be different, and an OR predicate
+                    // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
+                    // two conditions together with an AND predicate
+                    // (and the calling method will further wrap this with an 'or-join')
+                    List<Object> predicateConditions = new ArrayList<>();
+                    predicateConditions.add(AND_OPERATOR);
+                    predicateConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
+                    predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                    propertyConditions.add(PersistentList.create(predicateConditions));
+                } else {
+                    // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
+                    // 'not-join' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not-join)
+                    propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
+                    propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                }
             }
         }
         return propertyConditions;
+    }
+
+    /**
+     * Retrieve conditions to match where the provided property's value equals the provided value.
+     * @param propertyRef whose value should be compared
+     * @param value to compare against
+     * @return IPersistentCollection giving the conditions
+     */
+    protected IPersistentCollection getEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
+        return PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value));
+    }
+
+    /**
+     * Retrieve conditions to match where the provided property's value equals the provided string value.
+     * @param propertyRef whose value should be compared
+     * @param value to compare against
+     * @return IPersistentCollection giving the conditions
+     */
+    protected IPersistentCollection getEqualsConditions(Keyword propertyRef, String value) {
+        return PersistentVector.create(DOC_ID, propertyRef, value);
+    }
+
+    /**
+     * Retrieve conditions to match where the provided property's value does not equal the provided value.
+     * @param propertyRef whose value should be compared
+     * @param value to compare against
+     * @return IPersistentCollection giving the conditions
+     */
+    protected IPersistentCollection getNotEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
+        List<Object> predicateComparison = new ArrayList<>();
+        predicateComparison.add(NOT_OPERATOR);
+        predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+        return PersistentList.create(predicateComparison);
+    }
+
+    /**
+     * Retrieve conditions to match the provided regular expression against the provided variable's value.
+     * @param regexSearchString regular expression to match against
+     * @param variable whose value should be compared against
+     * @param repositoryHelper through which we can introspect regular expressions
+     * @return {@code List<Object>} of the condition
+     */
+    protected List<Object> getRegexCondition(String regexSearchString,
+                                             Symbol variable,
+                                             OMRSRepositoryHelper repositoryHelper) {
+        List<Object> predicateComparison = new ArrayList<>();
+        // The equality case should already have been handled before coming into this method: we will now use
+        // Clojure's built-in string comparisons for simple regexes (startsWith, contains, endsWith), and only
+        // fall-back to a full regex comparison if the requested regex is for case-insensitive matches or some
+        // more complicated expression
+        if (repositoryHelper.isStartsWithRegex(regexSearchString, false)) {
+            predicateComparison.add(STARTS_WITH);
+            predicateComparison.add(variable);
+            predicateComparison.add(repositoryHelper.getUnqualifiedLiteralString(regexSearchString));
+        } else if (repositoryHelper.isContainsRegex(regexSearchString, false)) {
+            predicateComparison.add(CONTAINS);
+            predicateComparison.add(variable);
+            predicateComparison.add(repositoryHelper.getUnqualifiedLiteralString(regexSearchString));
+        } else if (repositoryHelper.isEndsWithRegex(regexSearchString, false)) {
+            predicateComparison.add(ENDS_WITH);
+            predicateComparison.add(variable);
+            predicateComparison.add(repositoryHelper.getUnqualifiedLiteralString(regexSearchString));
+        } else {
+            // For all other regexes, we need a (predicate #"value" variable) pattern, so compile one
+            Pattern regex = Pattern.compile(regexSearchString);
+            predicateComparison.add(REGEX_OPERATOR);
+            predicateComparison.add(regex);
+            predicateComparison.add(variable);
+        }
+        return predicateComparison;
     }
 
     /**
