@@ -722,7 +722,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setStatus(newStatus);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -767,7 +766,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setProperties(properties);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1067,7 +1065,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         }
 
         EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, entity, newClassification, methodName);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1102,7 +1099,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
 
         EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName, entity, classificationName, methodName);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1148,7 +1144,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 entity,
                 newClassification,
                 methodName);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1484,7 +1479,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         List<List<?>> statements = cruxRepositoryConnector.getPurgeEntityStatements(entity.getGUID());
         statements.addAll(cruxRepositoryConnector.getCreateEntityStatements(updatedEntity));
-        cruxRepositoryConnector.runMultiStatementTx(statements);
+        cruxRepositoryConnector.runSynchronousTx(statements);
 
         return updatedEntity;
 
@@ -1529,7 +1524,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         EntityDetail updatedEntity = new EntityDetail(entity);
         InstanceType newInstanceType = repositoryHelper.getNewInstanceType(repositoryName, newTypeDefSummary);
         updatedEntity.setType(newInstanceType);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1571,7 +1565,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         updatedEntity.setMetadataCollectionId(newHomeMetadataCollectionId);
         updatedEntity.setMetadataCollectionName(newHomeMetadataCollectionName);
         updatedEntity.setInstanceProvenanceType(InstanceProvenanceType.LOCAL_COHORT);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
@@ -1608,7 +1601,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         List<List<?>> statements = cruxRepositoryConnector.getPurgeRelationshipStatements(relationshipGUID);
         statements.addAll(cruxRepositoryConnector.getCreateRelationshipStatements(updatedRelationship));
-        cruxRepositoryConnector.runMultiStatementTx(statements);
+        cruxRepositoryConnector.runSynchronousTx(statements);
 
         return updatedRelationship;
 
@@ -1861,7 +1854,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
                 if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
                     updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
-                    // TODO: should we not add the calling user to the 'maintainedBy' list?
                     cruxRepositoryConnector.updateEntity(updatedEntity);
                 } else {
                     cruxRepositoryConnector.saveReferenceCopy(entity);
@@ -1913,7 +1905,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
                 if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
                     updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
-                    // TODO: should we not add the calling user to the 'maintainedBy' list?
                     cruxRepositoryConnector.updateEntity(updatedEntity);
                 } else {
                     cruxRepositoryConnector.saveReferenceCopy(entity);
@@ -1969,7 +1960,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityTwoProxy()));
         }
         statements.addAll(cruxRepositoryConnector.getSaveReferenceCopyStatements(relationship));
-        cruxRepositoryConnector.runMultiStatementTx(statements);
+        cruxRepositoryConnector.runSynchronousTx(statements);
 
     }
 

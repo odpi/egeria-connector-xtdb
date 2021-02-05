@@ -129,7 +129,6 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                 String propertyName = property.getName();
                 if (propertyName.endsWith(".json")) {
                     // We'll pull values from the '.json'-qualified portion, given this is a complete JSON serialization
-                    // TODO: this will also need to change if we change the serialization
                     Object objValue = entry.getValue();
                     IPersistentMap value = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
                     InstancePropertyValueMapping.addInstancePropertyValueToMap(ipvs, propertyName, value);

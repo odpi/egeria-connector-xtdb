@@ -36,9 +36,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
     private static final Logger log = LoggerFactory.getLogger(CruxOMRSRepositoryConnector.class);
 
-    // TODO: as this is required, probably best to receive it as a configurable parameter
-    private static final Duration timeout = Duration.ofSeconds(30);
-
+    private Duration timeout = Duration.ofSeconds(Constants.DEFAULT_TIMEOUT);
+    private String luceneDir = Constants.LUCENE_INDEX_DIR;
+    private int defaultPageSize = Constants.DEFAULT_PAGE_SIZE;
     private ICruxAPI cruxAPI = null;
 
     /**
@@ -83,6 +83,26 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTING.getMessageDefinition());
 
+        // Retrieve any configuration overrides from the configuration properties
+        Map<String, Object> configProperties = connectionProperties.getConfigurationProperties();
+        if (configProperties != null) {
+            Object configTimeout = configProperties.getOrDefault(CruxOMRSRepositoryConnectorProvider.DEFAULT_TIMEOUT, null);
+            if (configTimeout instanceof Integer) {
+                timeout = Duration.ofSeconds((Integer) configTimeout);
+            }
+            Object configLucene = configProperties.getOrDefault(CruxOMRSRepositoryConnectorProvider.LUCENE_INDEX_DIR, null);
+            if (configLucene instanceof String) {
+                String directory = (String) configLucene;
+                if (!directory.equals("")) {
+                    luceneDir = directory;
+                }
+            }
+            Object configPageSize = configProperties.getOrDefault(CruxOMRSRepositoryConnectorProvider.DEFAULT_PAGE_SIZE, null);
+            if (configPageSize instanceof Integer) {
+                defaultPageSize = (Integer) configPageSize;
+            }
+        }
+
         EndpointProperties endpointProperties = connectionProperties.getEndpoint();
         if (endpointProperties == null) {
             // If there is no endpoint defined, then we are creating a local instance of Crux
@@ -91,10 +111,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             //  store as a default configuration (?)
             log.info("Setting up a default in-memory crux node...");
             try {
-                // TODO: receive these options through the connection properties
                 Map<String, Map<String, String>> configOptions = new HashMap<>();
                 configOptions.put("crux.lucene/lucene-store", new HashMap<>());
-                configOptions.get("crux.lucene/lucene-store").put("db-dir", "crux-lucene");
+                configOptions.get("crux.lucene/lucene-store").put("db-dir", luceneDir);
                 cruxAPI = Crux.startNode(configOptions);
                 log.debug(" ... node: {}", cruxAPI);
             } catch (Exception e) {
@@ -721,7 +740,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             restored.setVersion(currentVersion + 1);
             restored.setUpdateTime(new Date());
             restored.setUpdatedBy(userId);
-            // TODO: should we not add the calling user to the 'maintainedBy' list?
+            List<String> maintainedBy = restored.getMaintainedBy();
+            if (maintainedBy != null && !maintainedBy.contains(userId)) {
+                maintainedBy.add(userId);
+            }
             // Then submit this version back into Crux as an update, and return the result
             return updateEntity(restored);
         }
@@ -959,7 +981,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
                                           String namespace) throws TypeErrorException {
-        CruxQuery query = new CruxQuery();
+        CruxQuery query = new CruxQuery(defaultPageSize);
         updateQuery(query,
                 category,
                 typeGuid,
@@ -1006,7 +1028,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
                                           String namespace) throws TypeErrorException {
-        CruxQuery query = new CruxQuery();
+        CruxQuery query = new CruxQuery(defaultPageSize);
         updateQuery(query,
                 category,
                 typeGuid,
@@ -1052,7 +1074,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
                                                 String namespace) throws TypeErrorException, FunctionNotSupportedException {
-        CruxQuery query = new CruxQuery();
+        CruxQuery query = new CruxQuery(defaultPageSize);
         updateTextQuery(query,
                 category,
                 typeGuid,
@@ -1097,7 +1119,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
                                                 String namespace) throws TypeErrorException, FunctionNotSupportedException {
-        CruxQuery query = new CruxQuery();
+        CruxQuery query = new CruxQuery(defaultPageSize);
         updateTextQuery(query,
                 category,
                 typeGuid,
@@ -1134,7 +1156,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                        String sequencingProperty,
                                                        SequencingOrder sequencingOrder,
                                                        int pageSize) throws TypeErrorException {
-        CruxQuery query = new CruxQuery();
+        CruxQuery query = new CruxQuery(defaultPageSize);
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         updateQuery(query,
                 TypeDefCategory.RELATIONSHIP_DEF,
@@ -1299,11 +1321,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param statements to submit in the same transaction
      * @return {@code Map<Keyword, ?>} transaction details
      */
-    public Map<Keyword, ?> runMultiStatementTx(List<List<?>> statements) {
-        return runSynchronousTx(statements);
-    }
-
-    private Map<Keyword, ?> runSynchronousTx(List<List<?>> statements) {
+    public Map<Keyword, ?> runSynchronousTx(List<List<?>> statements) {
         log.debug("Synchronously transacting with: {}", statements);
         Map<Keyword, ?> tx = cruxAPI.submitTx(statements);
         return cruxAPI.awaitTx(tx, timeout);
