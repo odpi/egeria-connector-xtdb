@@ -25,7 +25,7 @@ import java.util.*;
  * that these two properties are kept aligned with each other at all times.
  *
  * Furthermore, the naming for the '.value' point used for searching must retain within its overall property name the
- * qualification of which TypeDef defined that property. This is to ensure that different TypeDefs that use the same
+ * qualification of which TypeDef defined that property. This is to ensure that different TypeDefinitions that use the same
  * property name, but which have different types (eg. position being a string vs an integer) can be distinguished. This
  * is necessary at a minimum because otherwise we will hit ClassCastExceptions in Clojure due to trying to compare the
  * same property with fundamentally different values (string vs int) if the property name is not qualified with the
@@ -87,29 +87,29 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                                                                                        String propertyName,
                                                                                        InstancePropertyValue value,
                                                                                        String namespace) {
-        InstancePropertyValueMapping ipvm;
+        InstancePropertyValueMapping mapping;
         if (value != null) {
             InstancePropertyCategory category = value.getInstancePropertyCategory();
             switch (category) {
                 case PRIMITIVE:
-                    ipvm = new PrimitivePropertyValueMapping(cruxConnector, instanceType, propertyName, (PrimitivePropertyValue) value, namespace);
+                    mapping = new PrimitivePropertyValueMapping(cruxConnector, instanceType, propertyName, (PrimitivePropertyValue) value, namespace);
                     break;
                 case ENUM:
-                    ipvm = new EnumPropertyValueMapping(cruxConnector, instanceType, propertyName, (EnumPropertyValue) value, namespace);
+                    mapping = new EnumPropertyValueMapping(cruxConnector, instanceType, propertyName, (EnumPropertyValue) value, namespace);
                     break;
                 case MAP:
                 case ARRAY:
                 case STRUCT:
                 case UNKNOWN:
                 default:
-                    ipvm = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, value, namespace);
+                    mapping = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, value, namespace);
                     break;
             }
         } else {
             // Even if the value is null, create a mapping for it (so we explicitly set the property to null for searching)
-            ipvm = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, null, namespace);
+            mapping = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, null, namespace);
         }
-        return ipvm;
+        return mapping;
     }
 
     /**
@@ -121,7 +121,7 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      */
     public static Map<String, InstancePropertyValue> getInstancePropertyValuesFromMap(Map<Keyword, Object> cruxMap,
                                                                                       String namespace) {
-        Map<String, InstancePropertyValue> ipvs = new HashMap<>();
+        Map<String, InstancePropertyValue> propertyValues = new HashMap<>();
         for (Map.Entry<Keyword, Object> entry : cruxMap.entrySet()) {
             Keyword property = entry.getKey();
             String detectedNamespace = property.getNamespace();
@@ -131,11 +131,11 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                     // We'll pull values from the '.json'-qualified portion, given this is a complete JSON serialization
                     Object objValue = entry.getValue();
                     IPersistentMap value = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
-                    InstancePropertyValueMapping.addInstancePropertyValueToMap(ipvs, propertyName, value);
+                    InstancePropertyValueMapping.addInstancePropertyValueToMap(propertyValues, propertyName, value);
                 }
             }
         }
-        return ipvs;
+        return propertyValues;
     }
 
     /**
@@ -197,7 +197,7 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * @return Keyword
      */
     protected Keyword getPropertyValueKeyword() {
-        // Note that different TypeDefs may include the same attribute name, but with different types (eg. 'position'
+        // Note that different TypeDefinitions may include the same attribute name, but with different types (eg. 'position'
         // meaning order (int) as well as role (string) -- we must therefore fully-qualify the propertyName with the
         // name of the typedef in which it is defined -- and that must be done here so that it flows down to any
         // subclasses as well.
@@ -221,18 +221,18 @@ public class InstancePropertyValueMapping extends AbstractMapping {
 
     /**
      * Add the specified value for the specified property name to the provided map of values.
-     * @param ipvs map of values
+     * @param propertyValues map of values
      * @param propertyName to add
      * @param jsonValue to add
      */
-    public static void addInstancePropertyValueToMap(Map<String, InstancePropertyValue> ipvs, String propertyName, IPersistentMap jsonValue) {
+    public static void addInstancePropertyValueToMap(Map<String, InstancePropertyValue> propertyValues, String propertyName, IPersistentMap jsonValue) {
         // Only process the propertyName if it ends with the '.json' qualification
         // (This logic is intentionally in this method as it is called from elsewhere, like ClassificationMapping)
         if (propertyName.endsWith(".json")) {
             // Need to remove the '.json' qualifier before mapping to the Egeria property name
             String actualPropertyName = propertyName.substring(0, propertyName.length() - 5);
             InstancePropertyValue ipv = getInstancePropertyValue(jsonValue);
-            ipvs.put(actualPropertyName, ipv);
+            propertyValues.put(actualPropertyName, ipv);
         }
     }
 

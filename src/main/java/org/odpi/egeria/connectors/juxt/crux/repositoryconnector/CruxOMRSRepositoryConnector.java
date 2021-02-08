@@ -764,7 +764,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
      *     :crux.tx/tx-id 2,
      *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-     *     :crux.db/content-hash #crux/id "80cdbac164c61913dee8e391db249db941fb053a"
+     *     :crux.db/content-hash #crux/id "..."
      * }
      * </code>
      * @param reference indicating the primary key of the object for which to retrieve the transaction history.
@@ -785,7 +785,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
      *     :crux.tx/tx-id 2,
      *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-     *     :crux.db/content-hash #crux/id "80cdbac164c61913dee8e391db249db941fb053a"
+     *     :crux.db/content-hash #crux/id "..."
      * }
      * </code>
      * @param db from which to retrieve the transaction history
@@ -1241,9 +1241,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 if (RelationshipMapping.RELATIONSHIP_PROPERTIES_NS.equals(namespace)) {
                     // We need all relationship types
                     try {
-                        List<TypeDef> typeDefs = metadataCollection.findTypeDefsByCategory(null, TypeDefCategory.RELATIONSHIP_DEF);
-                        if (typeDefs != null) {
-                            for (TypeDef typeDef : typeDefs) {
+                        List<TypeDef> typeDefinitions = metadataCollection.findTypeDefsByCategory(null, TypeDefCategory.RELATIONSHIP_DEF);
+                        if (typeDefinitions != null) {
+                            for (TypeDef typeDef : typeDefinitions) {
                                 String typeDefName = typeDef.getName();
                                 addAllSubtypesToSet(complete, typeDefName);
                             }

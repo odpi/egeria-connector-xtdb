@@ -114,7 +114,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
         } else if (type.equals(TypeDefCategory.RELATIONSHIP_DEF)) {
             return getGuid(RelationshipMapping.INSTANCE_REF_PREFIX, ih.getGUID());
         } else {
-            log.warn("Attempted to retrieve a GUID reference to a non-referenceable type -- returning null: {}", ih);
+            log.warn("Attempted to retrieve a GUID reference to a non-reference-able type -- returning null: {}", ih);
             return null;
         }
     }
