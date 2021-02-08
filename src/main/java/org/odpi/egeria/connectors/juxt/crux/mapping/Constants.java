@@ -19,11 +19,14 @@ public class Constants {
     public static final Keyword CRUX_PK = Keyword.intern("crux.db", "id");
     public static final Keyword CRUX_TX_TIME = Keyword.intern("crux.tx", "tx-time");
     public static final Keyword CRUX_VALID_TIME = Keyword.intern("crux.db", "valid-time");
-    public static final int DEFAULT_PAGE_SIZE = 50; // TODO: probably makes more sense to make this a configurable option for the connector
+
+    // These can be overridden through the connector configuration
+    public static final int DEFAULT_TIMEOUT = 10;
+    public static final String LUCENE_INDEX_DIR = "crux-lucene";
+    public static final int DEFAULT_PAGE_SIZE = 50;
 
     // Shared operations
     public static final Keyword CRUX_PUT = Keyword.intern("crux.tx", "put");
-    public static final Keyword CRUX_DELETE = Keyword.intern("crux.tx", "delete");
     public static final Keyword CRUX_EVICT = Keyword.intern("crux.tx", "evict");
 
     /**
