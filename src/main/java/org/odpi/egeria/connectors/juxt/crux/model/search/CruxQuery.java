@@ -9,7 +9,7 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.*;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.FunctionNotSupportedException;
 import org.slf4j.Logger;
@@ -57,6 +57,7 @@ public class CruxQuery {
     private static final Symbol STARTS_WITH = Symbol.intern("clojure.string/starts-with?");
     private static final Symbol CONTAINS = Symbol.intern("clojure.string/includes?");
     private static final Symbol ENDS_WITH = Symbol.intern("clojure.string/ends-with?");
+    private static final Symbol STR_OPERATOR = Symbol.intern("str");
 
     private static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
     private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
@@ -70,6 +71,31 @@ public class CruxQuery {
         map.put(PropertyComparisonOperator.LIKE, REGEX_OPERATOR);
         map.put(PropertyComparisonOperator.IN, IN_OPERATOR);
         return map;
+    }
+
+    private static final List<String> LUCENE_SPECIAL_CHARS = createLuceneSpecialCharsList();
+    private static List<String> createLuceneSpecialCharsList() {
+        List<String> list = new ArrayList<>();
+        list.add("+");
+        list.add("-");
+        list.add("&&");
+        list.add("||");
+        list.add("!");
+        list.add("(");
+        list.add(")");
+        list.add("{");
+        list.add("}");
+        list.add("[");
+        list.add("]");
+        list.add("^");
+        list.add("\"");
+        list.add("~");
+        list.add("*");
+        list.add("?");
+        list.add(":");
+        list.add("\\");
+        list.add("/");
+        return list;
     }
 
     private IPersistentMap query;
@@ -153,16 +179,75 @@ public class CruxQuery {
     }
 
     /**
-     * Adds conditions to the search to find any text field that matches the supplied criteria.
+     * Add conditions to the search to find any text field that matches the supplied criteria (without a separate Lucene
+     * index).
+     * @param regexCriteria defining what should be matched
+     * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
+     * @param namespace by which to qualify the properties
+     * @param repositoryHelper through which we can introspect the type definitions and their properties
+     * @param repositoryName of the repository (for logging)
+     */
+    public void addWildcardTextCondition(String regexCriteria,
+                                         Set<String> typesToInclude,
+                                         String namespace,
+                                         OMRSRepositoryHelper repositoryHelper,
+                                         String repositoryName) {
+
+        final String methodName = "addWildcardTextCondition";
+
+        PrimitivePropertyValue string = new PrimitivePropertyValue();
+        string.setPrimitiveDefCategory(PrimitiveDefCategory.OM_PRIMITIVE_TYPE_STRING);
+        string.setPrimitiveValue(regexCriteria);
+
+        // Build up a Set of all of the unique string properties across all of the types that are to be included for
+        // the search
+        Set<Keyword> stringProperties = new HashSet<>();
+        for (String typeDefName : typesToInclude) {
+            TypeDef typeDef = repositoryHelper.getTypeDefByName(repositoryName, typeDefName);
+            if (typeDef != null) {
+                List<TypeDefAttribute> properties = repositoryHelper.getAllPropertiesForTypeDef(repositoryName, typeDef, methodName);
+                for (TypeDefAttribute property : properties) {
+                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                            repositoryHelper,
+                            property.getAttributeName(),
+                            namespace,
+                            typesToInclude,
+                            string);
+                    stringProperties.addAll(propertyRefs);
+                }
+            }
+        }
+
+        List<Object> wrapped = new ArrayList<>();
+        wrapped.add(OR_JOIN);
+        wrapped.add(PersistentVector.create(DOC_ID));
+        // For each string attribute, add an "or" condition that matches against the provided regex
+        for (Keyword propertyRef : stringProperties) {
+            Symbol var = Symbol.intern("v");
+            List<IPersistentCollection> conditions = getConditionForPropertyRef(propertyRef,
+                    PropertyComparisonOperator.LIKE,
+                    string,
+                    MatchCriteria.ANY,
+                    var,
+                    repositoryHelper);
+            wrapped.addAll(conditions);
+        }
+        conditions.add(PersistentList.create(wrapped));
+
+    }
+
+    /**
+     * Adds conditions to the search to find any text field that matches the supplied criteria (leveraging a separate
+     * Lucene index).
      * @param regexCriteria defining what should be matched
      * @param repositoryHelper through which we can check the regular expressions in the criteria
      * @param repositoryName of the repository (for logging)
      * @throws FunctionNotSupportedException if the regular expression provided in the criteria cannot be efficiently searched
      */
-    public void addWildcardTextCondition(String regexCriteria,
-                                         OMRSRepositoryHelper repositoryHelper,
-                                         String repositoryName) throws FunctionNotSupportedException {
-        final String methodName = "addWildcardTextCondition";
+    public void addWildcardLuceneCondition(String regexCriteria,
+                                           OMRSRepositoryHelper repositoryHelper,
+                                           String repositoryName) throws FunctionNotSupportedException {
+        final String methodName = "addWildcardLuceneCondition";
         // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
         // will be to add the Lucene condition first, to narrow the results as far as we can via the index, but
         // then to add a secondary condition with the regex to further narrow the results -- and use as the property
@@ -179,11 +264,11 @@ public class CruxQuery {
                 // can use to hit the Lucene index, so these will be the only ones we attempt to support
                 String searchString = repositoryHelper.getUnqualifiedLiteralString(regexCriteria);
                 if (repositoryHelper.isStartsWithRegex(regexCriteria)) {
-                    searchString = searchString + "*";
+                    searchString = escapeLuceneSpecialCharacters(searchString) + "*";
                 } else if (repositoryHelper.isEndsWithRegex(regexCriteria)) {
-                    searchString = "*" + searchString;
+                    searchString = "*" + escapeLuceneSpecialCharacters(searchString);
                 } else if (repositoryHelper.isContainsRegex(regexCriteria)) {
-                    searchString = "*" + searchString + "*";
+                    searchString = "*" + escapeLuceneSpecialCharacters(searchString) + "*";
                 }
                 // Note that we need to wrap these conditions into an or-join so that we can de-duplicate the resulting
                 // documents (if the same document has multiple attributes that all match the search criteria, we will
@@ -532,7 +617,10 @@ public class CruxQuery {
                                                                      MatchCriteria outerCriteria,
                                                                      Symbol variable,
                                                                      OMRSRepositoryHelper repositoryHelper) {
+
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
+        List<IPersistentVector> predicateConditions = new ArrayList<>();
+
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
             // For equality we can compare directly to the value
             propertyConditions.add(getEqualsConditions(propertyRef, value));
@@ -540,10 +628,18 @@ public class CruxQuery {
             // Similarly for inequality, just by wrapping in a NOT predicate
             propertyConditions.add(getNotEqualsConditions(propertyRef, value));
         } else {
-            // For any others, we need to translate into predicate form, which requires two pieces:
-            //  [e :property variable]
-            //  [(predicate variable "value")] | [(predicate #"regex" variable)
-            // These two pieces need to be combined in particular ways depending on the outer criteria, see logic
+            // For any others, we need to translate into predicate form, which requires 2-3 pieces:
+            //  [e :property variable]            - always needed, to define how to map the property's value to a variable
+            IPersistentVector propertyToVariable = PersistentVector.create(DOC_ID, propertyRef, variable);
+            //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
+            Symbol nonNullStringVar = Symbol.intern("sv");
+            List<Object> forceString = new ArrayList<>();
+            forceString.add(STR_OPERATOR);
+            forceString.add(variable);
+            IPersistentVector enforceNonNullStringValue = PersistentVector.create(PersistentList.create(forceString), nonNullStringVar);
+            //  [(predicate variable "value")]    - for a non-string predicate
+            //  [(predicate #"regex" s_variable)] - for a regex-based (string) predicate
+            // These 2-3 pieces need to be combined in particular ways depending on the outer criteria, see logic
             // further below for that...
             Symbol predicate = getPredicateForOperator(comparator);
             List<Object> predicateComparison = new ArrayList<>();
@@ -561,7 +657,11 @@ public class CruxQuery {
                     } else {
                         // Otherwise we will retrieve an optimal predicate-based comparison depending on the
                         // regex requested
-                        predicateComparison = getRegexCondition(regexSearchString, variable, repositoryHelper);
+                        //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
+                        predicateConditions.add(enforceNonNullStringValue);
+                        //  [(predicate #"regex" s_variable)] - for a regex-based (string) predicate
+                        predicateComparison = getRegexCondition(regexSearchString, nonNullStringVar, repositoryHelper);
+                        predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
                     }
                 } else {
                     log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
@@ -569,9 +669,11 @@ public class CruxQuery {
             } else {
                 // For everything else, we need a (predicate variable value) pattern
                 // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
+                //  [(predicate variable "value")] - for a non-string predicate
                 predicateComparison.add(predicate);
                 predicateComparison.add(variable);
                 predicateComparison.add(getValueForComparison(value));
+                predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             }
             if (!alreadyCovered) {
                 // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (an or-join))
@@ -580,16 +682,16 @@ public class CruxQuery {
                     // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
                     // two conditions together with an AND predicate
                     // (and the calling method will further wrap this with an 'or-join')
-                    List<Object> predicateConditions = new ArrayList<>();
-                    predicateConditions.add(AND_OPERATOR);
-                    predicateConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
-                    predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-                    propertyConditions.add(PersistentList.create(predicateConditions));
+                    List<Object> andWrapper = new ArrayList<>();
+                    andWrapper.add(AND_OPERATOR);
+                    andWrapper.add(propertyToVariable);
+                    andWrapper.addAll(predicateConditions);
+                    propertyConditions.add(PersistentList.create(andWrapper));
                 } else {
                     // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
                     // 'not-join' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not-join)
-                    propertyConditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
-                    propertyConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                    propertyConditions.add(propertyToVariable);
+                    propertyConditions.addAll(predicateConditions);
                 }
             }
         }
@@ -906,6 +1008,19 @@ public class CruxQuery {
         List<IPersistentCollection> conditions = new ArrayList<>();
         conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
         return conditions;
+    }
+
+    /**
+     * Escape any of Lucene's special characters in the provided input string.
+     * @param input to escape
+     * @return String with escapes inserted for any special characters
+     */
+    private String escapeLuceneSpecialCharacters(String input) {
+        String revised = input;
+        for (String s : LUCENE_SPECIAL_CHARS) {
+            revised = revised.replace(s, "\\" + s);
+        }
+        return input;
     }
 
 }

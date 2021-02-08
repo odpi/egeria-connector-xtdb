@@ -828,11 +828,31 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateInstanceStatusForDelete(repositoryName, entity, methodName);
 
         try {
+            // Note: we should only attempt to remove relationships which are not already deleted, so we will limit
+            // our cascade search to all statuses _except_ DELETED
+            List<InstanceStatus> limitByStatus = new ArrayList<>();
+            limitByStatus.add(InstanceStatus.ACTIVE);
+            limitByStatus.add(InstanceStatus.DRAFT);
+            limitByStatus.add(InstanceStatus.UNKNOWN);
+            limitByStatus.add(InstanceStatus.PREPARED);
+            limitByStatus.add(InstanceStatus.PROPOSED);
+            limitByStatus.add(InstanceStatus.APPROVED);
+            limitByStatus.add(InstanceStatus.REJECTED);
+            limitByStatus.add(InstanceStatus.APPROVED_CONCEPT);
+            limitByStatus.add(InstanceStatus.UNDER_DEVELOPMENT);
+            limitByStatus.add(InstanceStatus.DEVELOPMENT_COMPLETE);
+            limitByStatus.add(InstanceStatus.APPROVED_FOR_DEPLOYMENT);
+            limitByStatus.add(InstanceStatus.STANDBY);
+            limitByStatus.add(InstanceStatus.FAILED);
+            limitByStatus.add(InstanceStatus.DISABLED);
+            limitByStatus.add(InstanceStatus.COMPLETE);
+            limitByStatus.add(InstanceStatus.DEPRECATED);
+            limitByStatus.add(InstanceStatus.OTHER);
             List<Relationship> relationships = this.getRelationshipsForEntity(userId,
                     obsoleteEntityGUID,
                     null,
                     0,
-                    null,
+                    limitByStatus,
                     null,
                     null,
                     null,
