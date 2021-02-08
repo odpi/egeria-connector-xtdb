@@ -18,8 +18,8 @@ history (temporal `asOfTime` queries across its entire metadata landscape).
 
 The quick version (same for all connectors):
 
-1. Download the latest Crux connector from: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/egeria-connector-crux/0.1-SNAPSHOT/egeria-connector-crux-0.1-SNAPSHOT-jar-with-dependencies.jar
-1. Download the latest Egeria core from: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/server-chassis-spring/2.6-SNAPSHOT/server-chassis-spring-2.6-SNAPSHOT.jar
+1. Download the latest Crux connector from: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/egeria-connector-crux/1.0-SNAPSHOT/egeria-connector-crux-1.0-SNAPSHOT-jar-with-dependencies.jar
+1. Download the latest Egeria core from: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/server-chassis-spring/2.7-SNAPSHOT/server-chassis-spring-2.7-SNAPSHOT.jar
 1. Rename the downloaded Egeria core file to `egeria-server-chassis-spring.jar`.
 1. Download the `truststore.p12` file from: https://github.com/odpi/egeria/blob/master/truststore.p12
 1. Run the following command to start Egeria from the command-line, waiting for the final line of output indicating the
@@ -95,7 +95,9 @@ For example payloads and endpoints, see the [Postman samples](samples).
     ```
 
     Note that you must provide the `connectorProvider` parameter, set to the name of the Crux
-    connectorProvider class (value as given above).
+    connectorProvider class (value as given above), and that this particular configuration will only start an in-memory
+    version of the connector. As there are a number of options for persistence, see that additional configuration detail
+    in the more detailed instructions below.
 
 1. The connector should now be configured, and you should now be able
    to start the instance by POSTing something like the following:
@@ -122,7 +124,7 @@ To download a pre-built version of the connector, use either of the following UR
 officially-released version or the latest snapshot):
 
 - Release: https://odpi.jfrog.io/odpi/egeria-release-local/org/odpi/egeria/egeria-connector-crux/0.1/egeria-connector-crux-0.1-jar-with-dependencies.jar
-- Snapshot: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/egeria-connector-crux/0.1-SNAPSHOT/egeria-connector-crux-0.1-SNAPSHOT-jar-with-dependencies.jar
+- Snapshot: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/egeria-connector-crux/1.0-SNAPSHOT/egeria-connector-crux-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 #### Building the connectors yourself
 
@@ -132,6 +134,95 @@ build through Maven using `mvn clean install`. After building, the connector is 
 ```text
 target/egeria-connector-crux-VERSION-jar-with-dependencies.jar
 ```
+
+### Configure persistence
+
+Crux itself provides [a variety of persistence options](https://opencrux.com/reference/configuration.html), each of
+which can be configured for the connector. Below is a non-exhaustive list of some typical examples. Note that if you do
+not specify any configuration to the connector, it will only startup an in-memory node by default. While such a
+configuration is useful for quick testing and experimentation, it will not persist any information and therefore all
+information will be lost when the instance is stopped or restarted.
+
+To ensure that your repository retains its information, make sure you send in a configuration for one of the persistent
+storage options that Crux provides. There are generally 3 different persistent stores to consider:
+
+- query indices: used by Crux to quickly and efficiently query for information, and are therefore generally
+  recommended to be persisted through key-value stores that leverage in-memory caches (eg. RocksDB, LMDB)
+- document store: used by Crux to store the "master" copy of persisted data, supporting eviction for compliance, and
+  therefore typically leveraging robust persistent storage (eg. data stores via JDBC like PostgreSQL or object storage
+  like S3)
+- transaction log: used by Crux to store an immutable log of hashed data, therefore leveraging fast streaming
+  technologies (eg. Kafka)
+
+Note that you can choose a combination of components, that is, a different persistence back-end for each of these
+persistent stores.
+
+The specific jars necessary for leveraging these persistence mechanisms are _not_ currently distributed with the jar
+file for the connector: you will need to ensure that you obtain these independently (eg. via [https://clojars.org](https://clojars.org/search?q=group-id%3Ajuxt+AND+artifact-id%3Acrux-*))
+and place them into the same location as the connector itself (ie. the `LOADER_PATH` location, such as `/lib` in the examples above).
+
+(For a direct download, use a URL like: https://clojars.org/repo/juxt/crux-rocksdb/21.01-1.14.0-beta/crux-rocksdb-21.01-1.14.0-beta.jar)
+
+You should send through the configuration using the JSON format listed on Crux's site, directly within the
+`configurationProperties` map of the connector. As an exmaple, the following will configure the Crux repository
+with RocksDB as both the index store and document store, and Kafka as the transaction log:
+
+```json
+{
+  "class": "Connection",
+  "connectorType": {
+    "class": "ConnectorType",
+    "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+  },
+  "configurationProperties": {
+    "crux/index-store": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-index"
+      }
+    },
+    "crux/document-store": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-docs"
+      }
+    },
+    "crux/tx-log": {
+      "crux/module": "crux.kafka/->tx-log",
+      "kafka-config": {
+        "bootstrap-servers": "localhost:9092"
+      },
+      "tx-topic-opts": {
+        "topic-name": "crux-tx-log"
+      },
+      "poll-wait-duration": "PT1S"
+    }
+  }
+}
+```
+
+#### RocksDB
+
+RocksDB is often used as the data store for Crux's query indices, [but can also be used for other persistence](https://opencrux.com/reference/rocksdb.html).
+
+To use RocksDB persistence, you will need to ensure you have all of the following jar files available in the same
+directory as the connector:
+
+- [juxt:crux-rocksdb](https://clojars.org/juxt/crux-rocksdb)
+- [org.rocksdb:rocksdbjni](https://search.maven.org/artifact/org.rocksdb/rocksdbjni)
+- [com.github.jnr:jnr-ffi](https://search.maven.org/artifact/com.github.jnr/jnr-ffi)
+
+#### Kafka
+
+Kafka is often used as the transaction log for Crux, [but can also be used for other persistence](https://opencrux.com/reference/kafka.html).
+
+To use Kafka persistence, you will need to ensure you have all of the following jar files available in the same
+directory as the connector:
+
+- [juxt:crux-kafka](https://clojars.org/juxt/crux-kafka)
+- [org.apache.kafka:kafka-clients](https://search.maven.org/artifact/org.apache.kafka/kafka-clients)
+- [cheshire](https://clojars.org/cheshire)
+- [com.cognitect:transit-clj](https://search.maven.org/artifact/com.cognitect/transit-clj)
 
 ### Configure security
 
