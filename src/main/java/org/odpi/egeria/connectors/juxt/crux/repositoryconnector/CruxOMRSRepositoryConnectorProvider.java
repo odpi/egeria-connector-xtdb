@@ -5,9 +5,6 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 import org.odpi.openmetadata.frameworks.connectors.properties.beans.ConnectorType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryConnectorProviderBase;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * In the Open Connector Framework (OCF), a ConnectorProvider is a factory for a specific type of connector.
  * The CruxOMRSRepositoryConnectorProvider is the connector provider for the CruxOMRSRepositoryConnector.
@@ -18,22 +15,49 @@ import java.util.List;
  * name of the OMRS Connector implementation (by calling super.setConnectorClassName(className)).
  * Then the connector provider will work.
  * <br><br>
- * The permitted configuration options include:
- * <ul>
- *     <li>timeout - the default timeout, in seconds, to use for operations against the repository (defaults to 10)</li>
- *     <li>luceneIndexDir - the directory path where the Lucene index should be stored and managed (defaults to 'crux-lucene')</li>
- *     <li>defaultPageSize - the default number of results to retrieve for any paged operation (defaults to 50)</li>
- * </ul>
+ * The configurationProperties should follow the JSON structure of configuration documented on Crux's site:
+ * https://opencrux.com/reference/21.01-1.14.0/configuration.html
+ * <br><br>
+ * For example:
+ * <code>
+ * {
+ *   "class": "Connection",
+ *   "connectorType": {
+ *     "class": "ConnectorType",
+ *     "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+ *   },
+ *   "configurationProperties": {
+ *     "crux/index-store": {
+ *       "kv-store": {
+ *         "crux/module": "crux.rocksdb/-&gt;kv-store",
+ *         "db-dir": "data/servers/crux/rdb-index"
+ *       }
+ *     },
+ *     "crux/document-store": {
+ *       "kv-store": {
+ *         "crux/module": "crux.rocksdb/-&gt;kv-store",
+ *         "db-dir": "data/servers/crux/rdb-docs"
+ *       }
+ *     },
+ *     "crux/tx-log": {
+ *       "crux/module": "crux.kafka/-&gt;tx-log",
+ *       "kafka-config": {
+ *         "bootstrap-servers": "localhost:9092"
+ *       },
+ *       "tx-topic-opts": {
+ *         "topic-name": "crux-tx-log"
+ *       },
+ *       "poll-wait-duration": "PT1S"
+ *     }
+ *   }
+ * }
+ * </code>
  */
 public class CruxOMRSRepositoryConnectorProvider extends OMRSRepositoryConnectorProviderBase {
 
     static final String CONNECTOR_TYPE_GUID = "33d8b72f-b3e4-45ac-a6b3-d1f547dc5320";
     static final String CONNECTOR_TYPE_NAME = "OMRS Crux Repository Connector";
     static final String CONNECTOR_TYPE_DESC = "OMRS Crux Repository Connector that uses Crux as a back-end historical repository for metadata.";
-
-    static final String DEFAULT_TIMEOUT = "timeout";
-    static final String LUCENE_INDEX_DIR = "luceneIndexDir";
-    static final String DEFAULT_PAGE_SIZE = "defaultPageSize";
 
     /**
      * Constructor used to initialize the ConnectorProviderBase with the Java class name of the specific
@@ -51,12 +75,6 @@ public class CruxOMRSRepositoryConnectorProvider extends OMRSRepositoryConnector
         connectorType.setDisplayName(CONNECTOR_TYPE_NAME);
         connectorType.setDescription(CONNECTOR_TYPE_DESC);
         connectorType.setConnectorProviderClassName(this.getClass().getName());
-
-        List<String> recognizedConfigurationProperties = new ArrayList<>();
-        recognizedConfigurationProperties.add(DEFAULT_TIMEOUT);
-        recognizedConfigurationProperties.add(LUCENE_INDEX_DIR);
-        recognizedConfigurationProperties.add(DEFAULT_PAGE_SIZE);
-        connectorType.setRecognizedConfigurationProperties(recognizedConfigurationProperties);
 
         super.connectorTypeBean = connectorType;
 

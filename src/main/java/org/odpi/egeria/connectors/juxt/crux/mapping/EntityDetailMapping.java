@@ -5,8 +5,6 @@ package org.odpi.egeria.connectors.juxt.crux.mapping;
 import clojure.lang.Keyword;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -14,8 +12,6 @@ import java.util.Map;
  * Maps the properties of EntityDetails between persistence and objects.
  */
 public class EntityDetailMapping extends EntitySummaryMapping {
-
-    private static final Logger log = LoggerFactory.getLogger(EntityDetailMapping.class);
 
     public static final String ENTITY_PROPERTIES_NS = "entityProperties";
 

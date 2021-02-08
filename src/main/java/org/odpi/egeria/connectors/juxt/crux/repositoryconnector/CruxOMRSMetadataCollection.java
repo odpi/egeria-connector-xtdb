@@ -41,7 +41,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
      *                             The connector has the information to call the metadata repository.
      * @param repositoryName       name of this repository.
      * @param repositoryHelper     helper that provides methods to repository connectors and repository event mappers
-     *                             to build valid type definitions (TypeDefs), entities and relationships.
+     *                             to build valid type definitions, entities and relationships.
      * @param repositoryValidator  validator class for checking open metadata repository objects and parameters
      * @param metadataCollectionId unique identifier for the repository
      * @param auditLog             logging destination
@@ -325,7 +325,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             PropertyErrorException,
             PagingErrorException,
-            FunctionNotSupportedException,
             UserNotAuthorizedException {
 
         super.findEntitiesByPropertyValueParameterValidation(userId, entityTypeGUID, searchCriteria, fromEntityElement, limitResultsByStatus, limitResultsByClassification, asOfTime, sequencingProperty, sequencingOrder, pageSize);
@@ -491,7 +490,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             PropertyErrorException,
             PagingErrorException,
-            FunctionNotSupportedException,
             UserNotAuthorizedException {
 
         super.findRelationshipsByPropertyValueParameterValidation(userId, relationshipTypeGUID, searchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);

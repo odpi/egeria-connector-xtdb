@@ -6,8 +6,6 @@ import clojure.lang.Keyword;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.Classification;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntitySummary;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -17,10 +15,7 @@ import java.util.Map;
  */
 public class EntitySummaryMapping extends InstanceHeaderMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(EntitySummaryMapping.class);
-
     public static final String INSTANCE_REF_PREFIX = "entity";
-
     public static final String N_CLASSIFICATIONS = "classifications";
 
     /**

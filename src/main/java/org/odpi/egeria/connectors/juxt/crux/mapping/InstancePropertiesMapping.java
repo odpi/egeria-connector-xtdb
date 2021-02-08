@@ -7,8 +7,6 @@ import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSReposito
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProperties;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,8 +19,6 @@ import java.util.Map;
  * @see InstancePropertyValueMapping
  */
 public class InstancePropertiesMapping extends AbstractMapping {
-
-    private static final Logger log = LoggerFactory.getLogger(InstancePropertiesMapping.class);
 
     private String namespace;
     private InstanceType instanceType;
@@ -120,9 +116,9 @@ public class InstancePropertiesMapping extends AbstractMapping {
                     String propertyName = entry.getKey();
                     InstancePropertyValue value = entry.getValue();
                     if (value != null) {
-                        InstancePropertyValueMapping ipvm = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, value, namespace);
-                        if (ipvm != null) {
-                            Map<Keyword, Object> singlePropertyMap = ipvm.toCrux();
+                        InstancePropertyValueMapping mapping = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, value, namespace);
+                        if (mapping != null) {
+                            Map<Keyword, Object> singlePropertyMap = mapping.toCrux();
                             if (singlePropertyMap != null) {
                                 cruxMap.putAll(singlePropertyMap);
                             }
@@ -140,9 +136,9 @@ public class InstancePropertiesMapping extends AbstractMapping {
                 for (String propertyName : allProperties) {
                     if (!propertyMap.containsKey(propertyName)) {
                         // Only explicitly set to null if the earlier processing has not already set a value on the property
-                        InstancePropertyValueMapping ipvm = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, null, namespace);
-                        if (ipvm != null) {
-                            Map<Keyword, Object> singlePropertyMap = ipvm.toCrux();
+                        InstancePropertyValueMapping mapping = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, null, namespace);
+                        if (mapping != null) {
+                            Map<Keyword, Object> singlePropertyMap = mapping.toCrux();
                             if (singlePropertyMap != null) {
                                 cruxMap.putAll(singlePropertyMap);
                             }
@@ -157,10 +153,10 @@ public class InstancePropertiesMapping extends AbstractMapping {
      * Translate the provided Crux representation into an Egeria representation.
      */
     protected void fromMap() {
-        Map<String, InstancePropertyValue> ipvs = InstancePropertyValueMapping.getInstancePropertyValuesFromMap(cruxMap, namespace);
-        if (!ipvs.isEmpty()) {
+        Map<String, InstancePropertyValue> propertyValues = InstancePropertyValueMapping.getInstancePropertyValuesFromMap(cruxMap, namespace);
+        if (!propertyValues.isEmpty()) {
             instanceProperties = new InstanceProperties();
-            instanceProperties.setInstanceProperties(ipvs);
+            instanceProperties.setInstanceProperties(propertyValues);
         }
     }
 

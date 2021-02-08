@@ -260,7 +260,7 @@ public class CruxQuery {
                     || repositoryHelper.isStartsWithRegex(regexCriteria)
                     || repositoryHelper.isContainsRegex(regexCriteria)
                     || repositoryHelper.isEndsWithRegex(regexCriteria)) {
-                // Note that only these basic regex conditions allow us to easily unqualify to a plain string that we
+                // Note that only these basic regex conditions allow us to easily un-qualify to a plain string that we
                 // can use to hit the Lucene index, so these will be the only ones we attempt to support
                 String searchString = repositoryHelper.getUnqualifiedLiteralString(regexCriteria);
                 if (repositoryHelper.isStartsWithRegex(regexCriteria)) {
@@ -284,10 +284,10 @@ public class CruxQuery {
                 List<Object> luceneCriteria = new ArrayList<>();
                 luceneCriteria.add(WILDCARD_TEXT_SEARCH);
                 luceneCriteria.add(searchString);
-                IPersistentVector destructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
+                IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
                 List<IPersistentCollection> luceneQuery = new ArrayList<>();
                 luceneQuery.add(PersistentList.create(luceneCriteria));
-                luceneQuery.add(destructured);
+                luceneQuery.add(deStructured);
                 // ... (and [(wildcard-text-search "text") [[e v a s]]
                 andCond.add(PersistentVector.create(luceneQuery));
                 // Add the further regular expression match:
@@ -568,7 +568,7 @@ public class CruxQuery {
                         orJoin.addAll(conditionAggregator);
                         allPropertyConditions.add(PersistentList.create(orJoin));
                     } else {
-                        // For a NONE, we actually want to ensure that all of the conditions are AND'd, so no need to
+                        // For a NONE, we actually want to ensure that all of the conditions are AND-ed, so no need to
                         // wrap. And for an ANY, there will already be an or-join wrapped around the conditions by the
                         // caller of this method, so no need to wrap them again here. Therefore, in both cases, we just
                         // need to put all the conditions together and return them.
@@ -581,7 +581,7 @@ public class CruxQuery {
     }
 
     /**
-     * Retrieve the reference to use for an audit header property (these are generally unqualified (not namespaced),
+     * Retrieve the reference to use for an audit header property (these are generally unqualified (no namespace),
      * unless they are embedded within a classification).
      * @param namespace by which to qualify the property (for classifications)
      * @param propertyName for which to retrieve a reference

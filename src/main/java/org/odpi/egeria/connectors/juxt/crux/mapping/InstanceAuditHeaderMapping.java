@@ -39,7 +39,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     private static final String N_STATUS_ON_DELETE = "statusOnDelete";
     private static final String N_MAPPING_PROPERTIES = "mappingProperties";
 
-    // Note that these are non-namespaced, and therefore not useful on classifications (only entity, relationship)
+    // Note that these have no namespace, and therefore not useful on classifications (only entity, relationship)
     public static final Keyword CREATE_TIME = Keyword.intern(N_CREATE_TIME);
     public static final Keyword UPDATE_TIME = Keyword.intern(N_UPDATE_TIME);
     public static final Keyword CURRENT_STATUS = Keyword.intern(N_CURRENT_STATUS);
