@@ -639,4 +639,12 @@
         </profile>
     </profiles>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub IBM Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/odpi/egeria-connector-crux</url>
+        </repository>
+    </distributionManagement>
+
 </project>
