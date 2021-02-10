@@ -68,7 +68,7 @@ spec:
             - "-c"
             - >
                 cd /opt/egeria/connectors &&
-                wget ${CONNECTOR_URL} &&
+                curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR} &&
                 wget ${CRUX_ROCKS_JAR_URL} &&
                 wget ${ROCKS_JAR_URL} &&
                 wget ${JNR_JAR_URL}
