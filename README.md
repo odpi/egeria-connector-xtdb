@@ -147,7 +147,7 @@ To ensure that your repository retains its information, make sure you send in a 
 storage options that Crux provides. There are generally 3 different persistent stores to consider:
 
 - query indices: used by Crux to quickly and efficiently query for information, and are therefore generally
-  recommended to be persisted through key-value stores that leverage in-memory caches (eg. RocksDB, LMDB)
+  are persisted through key-value stores that leverage in-memory caches (eg. RocksDB, LMDB)
 - document store: used by Crux to store the "master" copy of persisted data, supporting eviction for compliance, and
   therefore typically leveraging robust persistent storage (eg. data stores via JDBC like PostgreSQL or object storage
   like S3)
@@ -164,8 +164,9 @@ and place them into the same location as the connector itself (ie. the `LOADER_P
 (For a direct download, use a URL like: https://clojars.org/repo/juxt/crux-rocksdb/21.01-1.14.0-beta/crux-rocksdb-21.01-1.14.0-beta.jar)
 
 You should send through the configuration using the JSON format listed on Crux's site, directly within the
-`configurationProperties` map of the connector. As an exmaple, the following will configure the Crux repository
-with RocksDB as both the index store and document store, and Kafka as the transaction log:
+`configurationProperties` map of the connector. As an example, the following will configure the Crux repository
+with RocksDB as both the index store and document store (sharing an LRU block cache of 1 GB), and Kafka as the
+transaction log (using the topic `crux-tx-log` and a poll-time of 1 second):
 
 ```json
 {
@@ -175,16 +176,22 @@ with RocksDB as both the index store and document store, and Kafka as the transa
     "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
   },
   "configurationProperties": {
+    "crux.rocksdb/block-cache": {
+      "crux/module": "crux.rocksdb/->lru-block-cache",
+      "cache-size": 1073741824
+    },
     "crux/index-store": {
       "kv-store": {
         "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-index"
+        "db-dir": "data/servers/crux/rdb-index",
+        "block-cache": "crux.rocksdb/block-cache"
       }
     },
     "crux/document-store": {
       "kv-store": {
         "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-docs"
+        "db-dir": "data/servers/crux/rdb-docs",
+        "block-cache": "crux.rocksdb/block-cache"
       }
     },
     "crux/tx-log": {
@@ -205,7 +212,7 @@ with RocksDB as both the index store and document store, and Kafka as the transa
 
 RocksDB is often used as the data store for Crux's query indices, [but can also be used for other persistence](https://opencrux.com/reference/rocksdb.html).
 
-To use RocksDB persistence, you will need to ensure you have all of the following jar files available in the same
+To use RocksDB persistence, you will need to ensure you have all the following jar files available in the same
 directory as the connector:
 
 - [juxt:crux-rocksdb](https://clojars.org/juxt/crux-rocksdb)
@@ -216,13 +223,51 @@ directory as the connector:
 
 Kafka is often used as the transaction log for Crux, [but can also be used for other persistence](https://opencrux.com/reference/kafka.html).
 
-To use Kafka persistence, you will need to ensure you have all of the following jar files available in the same
+To use Kafka persistence, you will need to ensure you have all the following jar files available in the same
 directory as the connector:
 
 - [juxt:crux-kafka](https://clojars.org/juxt/crux-kafka)
 - [org.apache.kafka:kafka-clients](https://search.maven.org/artifact/org.apache.kafka/kafka-clients)
 - [cheshire](https://clojars.org/cheshire)
 - [com.cognitect:transit-clj](https://search.maven.org/artifact/com.cognitect/transit-clj)
+
+### Configure metrics collection
+
+Crux is also able to collect metrics on its operation, which can be useful for monitoring and tuning areas like
+performance. Basic metrics collection via the console (stdout) and CSV log file are built-in to the connector, and can
+be configured using options like the following:
+
+```json
+{
+  "class": "Connection",
+  "connectorType": {
+    "class": "ConnectorType",
+    "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+  },
+  "configurationProperties": {
+    "crux.metrics/metrics": {
+      "with-index-store-metrics?": true,
+      "with-query-metrics?": true
+    },
+    "crux.metrics.csv/reporter": {
+      "output-file": "data/servers/crux/metrics",
+      "report-frequency": "PT1S",
+      "rate-unit": "seconds",
+      "duration-unit": "seconds"
+    },
+    "crux/index-store": { },
+    "crux/document-store": { },
+    "crux/tx-log": { }
+  }
+}
+```
+
+**Important note**: the directory specified for the metrics reporter (`data/servers/crux/metrics` in the example above)
+must exist prior to starting the instance with the given configuration.
+
+If you want to enable additional metrics collection (Prometheus, JMX, CloudWatch, etc) you will need to ensure all the
+[jar files for those additional dependencies](https://opencrux.com/reference/monitoring.html) are available in the same
+directory as the connector.
 
 ### Configure security
 
