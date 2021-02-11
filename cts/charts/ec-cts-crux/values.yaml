@@ -35,6 +35,8 @@ crux:
   snapshottoken: ""
   proxyserver: crux
 
+records: 5
+
 rocksdb:
   version: 6.15.2
 
