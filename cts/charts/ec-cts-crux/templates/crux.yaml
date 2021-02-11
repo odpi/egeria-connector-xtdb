@@ -88,6 +88,8 @@ spec:
           env:
             - name: "LOADER_PATH"
               value: "/opt/egeria/connectors"
+            - name: "MALLOC_ARENA_MAX"
+              value: "2"
           ports:
             - containerPort: 9443
           readinessProbe:
@@ -98,11 +100,11 @@ spec:
             failureThreshold: 6
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1000m"
+              memory: "4Gi"
+              cpu: "2000m"
             limits:
               memory: "8Gi"
-              cpu: "2000m"
+              cpu: "4000m"
           volumeMounts:
             - mountPath: /opt/egeria/connectors
               name: egeria-crux-connector-volume
