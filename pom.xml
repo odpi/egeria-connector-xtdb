@@ -351,6 +351,7 @@
                         <exclude>cts/results/**/deployment</exclude>
                         <exclude>cts/results/**/configmap.yaml</exclude>
                         <exclude>cts/results/**/*.registrystore</exclude>
+                        <exclude>docs/getting-started/reveal.js/**</exclude>
                     </excludes>
                     <licenseFamilies>
                         <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
