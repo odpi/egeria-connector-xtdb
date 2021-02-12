@@ -24,6 +24,8 @@ public class Constants {
     public static final Keyword CRUX_PUT = Keyword.intern("crux.tx", "put");
     public static final Keyword CRUX_EVICT = Keyword.intern("crux.tx", "evict");
 
+    public static final int MAX_TRAVERSAL_DEPTH = 40;
+
     /**
      * Retrieve an insertion vector for Crux (applicable for any write operation, since it is append-only).
      * @param properties map to include in the insertion

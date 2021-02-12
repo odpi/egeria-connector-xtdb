@@ -11,6 +11,7 @@ import crux.api.ICruxDatasource;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
+import org.odpi.egeria.connectors.juxt.crux.model.search.CruxGraphQuery;
 import org.odpi.egeria.connectors.juxt.crux.model.search.CruxQuery;
 import org.odpi.openmetadata.frameworks.connectors.ffdc.ConnectorCheckedException;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Provides all connectivity and API-based interaction with a Crux back-end.
@@ -430,6 +432,213 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Find the entities and relationships that radiate out from the supplied entity GUID.
+     * The results are scoped by the provided type GUIDs, other limiters, and the level.
+     * @param entityGUID the starting point for the radiation
+     * @param entityTypeGUIDs list of entity types to include in the query results (null means include all)
+     * @param relationshipTypeGUIDs list of relationship types to include in the query results (null means include all)
+     * @param limitResultsByStatus list of statuses to restrict results (null means include all)
+     * @param limitResultsByClassification list of classifications that must be present on all returned entities
+     * @param asOfTime historical query of the radiated relationships and entities (null means current values)
+     * @param level the number of relationships out from the starting entity that
+     * @return InstanceGraph
+     */
+    public InstanceGraph findNeighborhood(String entityGUID,
+                                          List<String> entityTypeGUIDs,
+                                          List<String> relationshipTypeGUIDs,
+                                          List<InstanceStatus> limitResultsByStatus,
+                                          List<String> limitResultsByClassification,
+                                          Date asOfTime,
+                                          int level) {
+
+        // Since a relationship involves not only the relationship object, but also some details from each proxy,
+        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
+        ICruxDatasource db;
+        if (asOfTime != null) {
+            db = cruxAPI.openDB(asOfTime);
+        } else {
+            db = cruxAPI.openDB();
+        }
+
+        InstanceGraph instanceGraph = new InstanceGraph();
+        // TODO: should we really include the starting entity itself (?)
+
+        int levelTraversed = 0;
+        if (level < 0) {
+            // If the level is negative, it means keep going until we run out of new traversals (or crash, presumably?)
+            // We will set a maximum...
+            level = Constants.MAX_TRAVERSAL_DEPTH;
+        }
+        if (level > 0) {
+
+            Set<String> entityGUIDsVisited = new HashSet<>();
+            Set<String> relationshipGUIDsVisited = new HashSet<>();
+            List<String> nextEntityGUIDs = new ArrayList<>();
+            nextEntityGUIDs.add(entityGUID);
+
+            do {
+                InstanceGraph nextGraph = getNextLevelNeighbors(db,
+                        nextEntityGUIDs,
+                        entityTypeGUIDs,
+                        relationshipTypeGUIDs,
+                        limitResultsByStatus,
+                        limitResultsByClassification,
+                        entityGUIDsVisited,
+                        relationshipGUIDsVisited);
+                entityGUIDsVisited.addAll(nextEntityGUIDs);
+                levelTraversed++;
+                List<EntityDetail> nextEntities = nextGraph.getEntities();
+                if (nextEntities == null || nextEntities.isEmpty()) {
+                    nextEntityGUIDs = null;
+                } else {
+                    // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
+                    // the list prior to iterating again
+                    nextEntityGUIDs = nextEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList());
+                    nextEntityGUIDs.removeAll(entityGUIDsVisited);
+                    // Merge this subgraph into the overall graph of results
+                    instanceGraph = mergeGraphs(instanceGraph, nextGraph);
+                }
+                // Once we either run out of GUIDs to traverse, or we've reached the desired level, we stop iterating
+            } while (nextEntityGUIDs != null && levelTraversed < level);
+
+        }
+
+        // Ensure that we close the open DB resource now that we're finished with it
+        closeDb(db);
+
+        // TODO: exclude proxies (somehow) from the entity detail list (?)
+
+        return instanceGraph;
+
+    }
+
+    /**
+     * Find the entities and relationships that radiate out directly from the supplied list of entity GUIDs.
+     * The results are scoped by the provided type GUIDs, other limiters, and the level.
+     * @param db already opened point-in-time view of the database
+     * @param startingPoints list of entity GUIDs from which we should start radiating outwards
+     * @param entityTypeGUIDs list of entity types to include in the query results (null means include all)
+     * @param relationshipTypeGUIDs list of relationship types to include in the query results (null means include all)
+     * @param limitResultsByStatus list of statuses to restrict results (null means include all)
+     * @param limitResultsByClassification list of classifications that must be present on all returned entities
+     * @return InstanceGraph of the immediate neighbors of the specified starting point GUIDs
+     */
+    private InstanceGraph getNextLevelNeighbors(ICruxDatasource db,
+                                                List<String> startingPoints,
+                                                List<String> entityTypeGUIDs,
+                                                List<String> relationshipTypeGUIDs,
+                                                List<InstanceStatus> limitResultsByStatus,
+                                                List<String> limitResultsByClassification,
+                                                Set<String> entityGUIDsVisited,
+                                                Set<String> relationshipGUIDsVisited) {
+
+        InstanceGraph consolidated = new InstanceGraph();
+
+        // Iterate through the provided starting entity starting points to retrieve the next level of neighbors
+        for (String entityGUID : startingPoints) {
+            // Results here will be a collection of tuples: [:entity/... :relationship/...]
+            Collection<List<?>> nextDegree = findDirectNeighbors(db,
+                    entityGUID,
+                    entityTypeGUIDs,
+                    relationshipTypeGUIDs,
+                    limitResultsByStatus,
+                    limitResultsByClassification);
+            log.debug("Found neighborhood results: {}", nextDegree);
+            InstanceGraph nextGraph = resultsToGraph(db, nextDegree, entityGUIDsVisited, relationshipGUIDsVisited);
+            if (nextGraph != null) {
+                // Consolidate (and de-duplicate) the results
+                consolidated = mergeGraphs(consolidated, nextGraph);
+            }
+        }
+
+        return consolidated;
+
+    }
+
+    /**
+     * Merge the provided instance graphs into a single consolidated graph, without any duplicates.
+     * @param one first graph to merge
+     * @param two second graph to merge
+     * @return InstanceGraph containing all elements from both graphs, only once
+     */
+    private InstanceGraph mergeGraphs(InstanceGraph one, InstanceGraph two) {
+        InstanceGraph consolidated = new InstanceGraph();
+        List<EntityDetail> oneEntities = one.getEntities();
+        List<EntityDetail> twoEntities = two.getEntities();
+        if (oneEntities != null) {
+            if (twoEntities != null) {
+                oneEntities.removeAll(twoEntities);
+                oneEntities.addAll(twoEntities);
+            }
+        } else {
+            oneEntities = twoEntities;
+        }
+        consolidated.setEntities(oneEntities);
+        if (oneEntities != null) {
+            log.debug("Merged entities: {}", oneEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList()));
+        }
+        List<Relationship> oneRelationships = one.getRelationships();
+        List<Relationship> twoRelationships = two.getRelationships();
+        if (oneRelationships != null) {
+            if (twoRelationships != null) {
+                oneRelationships.removeAll(twoRelationships);
+                oneRelationships.addAll(twoRelationships);
+            }
+        } else {
+            oneRelationships = twoRelationships;
+        }
+        consolidated.setRelationships(oneRelationships);
+        if (oneRelationships != null) {
+            log.debug("Merged relationships: {}", oneRelationships.stream().map(Relationship::getGUID).collect(Collectors.toList()));
+        }
+        return consolidated;
+    }
+
+    /**
+     * Translate the collection of Crux tuple results (from a graph query) into an Egeria InstanceGraph.
+     * @param db already opened point-in-time view of the database
+     * @param cruxResults list of result tuples, eg. from a neighborhood or other graph search
+     * @return InstanceGraph
+     * @see #findNeighborhood(String, List, List, List, List, Date, int)
+     */
+    private InstanceGraph resultsToGraph(ICruxDatasource db,
+                                         Collection<List<?>> cruxResults,
+                                         Set<String> entityGUIDsVisited,
+                                         Set<String> relationshipGUIDsVisited) {
+        InstanceGraph results = null;
+        if (cruxResults != null) {
+            List<Relationship> relationships = new ArrayList<>();
+            List<EntityDetail> entities = new ArrayList<>();
+            for (List<?> cruxResult : cruxResults) {
+                Keyword entityRef = (Keyword) cruxResult.get(0);
+                String entityGuid = Constants.trimGuidFromReference(entityRef.toString());
+                if (!entityGUIDsVisited.contains(entityGuid)) {
+                    EntityDetail entity = getEntityByRef(db, entityRef);
+                    if (entity == null) {
+                        log.warn("Unable to resolve search result into entity: {}", cruxResult);
+                    } else {
+                        entities.add(entity);
+                    }
+                }
+                Keyword relationshipRef = (Keyword) cruxResult.get(1);
+                String relationshipGuid = Constants.trimGuidFromReference(relationshipRef.toString());
+                if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
+                    Relationship relationship = getRelationshipByRef(db, relationshipRef);
+                    if (relationship == null) {
+                        log.warn("Unable to resolve search result into relationship: {}", cruxResult);
+                    } else {
+                        relationships.add(relationship);
+                    }
+                }
+            }
+            results = new InstanceGraph();
+            results.setEntities(entities);
+            results.setRelationships(relationships);
+        }
+        return results;
+    }
+
+    /**
      * Search based on the provided parameters.
      * @param relationshipTypeGUID see CruxOMRSMetadataCollection#findRelationships
      * @param relationshipSubtypeGUIDs see CruxOMRSMetadataCollection#findRelationships
@@ -556,21 +765,45 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             results = new ArrayList<>();
             for (List<?> cruxResult : cruxResults) {
                 Keyword docRef = (Keyword) cruxResult.get(0);
-                Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, docRef);
-                if (cruxDoc == null) {
-                    log.warn("Unable to resolve search result into full doc: {}", cruxResult);
+                Relationship relationship = getRelationshipByRef(db, docRef);
+                if (relationship == null) {
+                    log.warn("Unable to translate Crux result into Relationship: {}", cruxResult);
                 } else {
-                    RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
-                    Relationship relationship = rm.toEgeria();
-                    if (relationship != null) {
-                        results.add(relationship);
-                    } else {
-                        log.warn("Unable to translate Crux result into Relationship: {}", cruxDoc);
-                    }
+                    results.add(relationship);
                 }
             }
         }
         return results;
+    }
+
+    /**
+     * Translate the provided Crux document reference into an Egeria relationship.
+     * @param db already opened point-in-time view of the database
+     * @param ref reference to the relationship document
+     * @return Relationship
+     */
+    private Relationship getRelationshipByRef(ICruxDatasource db, Keyword ref) {
+        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, ref);
+        if (cruxDoc != null) {
+            RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
+            return rm.toEgeria();
+        }
+        return null;
+    }
+
+    /**
+     * Translate the provided Crux document reference into an Egeria relationship.
+     * @param db already opened point-in-time view of the database
+     * @param ref reference to the relationship document
+     * @return Relationship
+     */
+    private EntityDetail getEntityByRef(ICruxDatasource db, Keyword ref) {
+        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, ref);
+        if (cruxDoc != null) {
+            EntityDetailMapping edm = new EntityDetailMapping(this, cruxDoc);
+            return edm.toEgeria();
+        }
+        return null;
     }
 
     /**
@@ -1129,6 +1362,30 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 sequencingOrder,
                 pageSize,
                 null);
+        log.debug("Querying with: {}", query.getQuery());
+        return db.query(query.getQuery());
+    }
+
+    /**
+     * Find the immediate neighbors (1-degree separated entities and the relationships between) using the provided criteria.
+     * @param db already opened point-in-view of the database
+     * @param entityGUID of the entity for which to find immediate relationships
+     * @param entityTypeGUIDs of the entity type definitions by which to restrict entities in the results
+     * @param relationshipTypeGUIDs of the relationship type definitions by which to restrict relationships in the results
+     * @param limitResultsByStatus by which to limit relationships
+     * @param limitResultsByClassification by which to limit the entities in the results
+     * @return {@code Collection<List<?>>} of tuples of relationships and entities found in the results
+     */
+    public Collection<List<?>> findDirectNeighbors(ICruxDatasource db,
+                                                   String entityGUID,
+                                                   List<String> entityTypeGUIDs,
+                                                   List<String> relationshipTypeGUIDs,
+                                                   List<InstanceStatus> limitResultsByStatus,
+                                                   List<String> limitResultsByClassification) {
+        CruxGraphQuery query = new CruxGraphQuery(getMaxPageSize());
+        query.addEntityAnchorCondition(entityGUID);
+        query.addRelationshipLimiters(relationshipTypeGUIDs, limitResultsByStatus);
+        query.addEntityLimiters(entityTypeGUIDs, limitResultsByClassification);
         log.debug("Querying with: {}", query.getQuery());
         return db.query(query.getQuery());
     }

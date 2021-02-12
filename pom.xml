@@ -348,11 +348,9 @@
                         <exclude>cts/results/**/*.config</exclude>
                         <exclude>cts/results/**/*.local</exclude>
                         <exclude>cts/results/**/*.remote</exclude>
-                        <exclude>cts/results/**/*.deployment</exclude>
-                        <exclude>cts/results/**/*.configmap</exclude>
+                        <exclude>cts/results/**/deployment</exclude>
+                        <exclude>cts/results/**/configmap.yaml</exclude>
                         <exclude>cts/results/**/*.registrystore</exclude>
-                        <exclude>**/resources/ia/*.xml</exclude>
-                        <exclude>**/resources/openigc/*.xml</exclude>
                     </excludes>
                     <licenseFamilies>
                         <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">

@@ -26,40 +26,40 @@ public class CruxQuery {
     private static final Logger log = LoggerFactory.getLogger(CruxQuery.class);
 
     // Variable names (for sorting)
-    private static final Symbol DOC_ID = Symbol.intern("e");
-    private static final Symbol CREATE_TIME = Symbol.intern("ct");
-    private static final Symbol UPDATE_TIME = Symbol.intern("ut");
-    private static final Symbol SORT_PROPERTY = Symbol.intern("sp");
-    private static final Symbol MATCHED_VALUE = Symbol.intern("v");
-    private static final Symbol MATCHED_ATTRIBUTE = Symbol.intern("a");
-    private static final Symbol MATCHED_SCORE = Symbol.intern("s");
+    public static final Symbol DOC_ID = Symbol.intern("e");
+    public static final Symbol CREATE_TIME = Symbol.intern("ct");
+    public static final Symbol UPDATE_TIME = Symbol.intern("ut");
+    public static final Symbol SORT_PROPERTY = Symbol.intern("sp");
+    protected static final Symbol MATCHED_VALUE = Symbol.intern("v");
+    protected static final Symbol MATCHED_ATTRIBUTE = Symbol.intern("a");
+    protected static final Symbol MATCHED_SCORE = Symbol.intern("s");
 
     // Sort orders
-    private static final Keyword SORT_ASCENDING = Keyword.intern("asc");
-    private static final Keyword SORT_DESCENDING = Keyword.intern("desc");
+    protected static final Keyword SORT_ASCENDING = Keyword.intern("asc");
+    protected static final Keyword SORT_DESCENDING = Keyword.intern("desc");
 
     // Predicates (for comparisons)
-    private static final Symbol WILDCARD_TEXT_SEARCH = Symbol.intern("wildcard-text-search");
-    private static final Symbol OR_OPERATOR = Symbol.intern("or");
-    private static final Symbol AND_OPERATOR = Symbol.intern("and");
-    private static final Symbol NOT_OPERATOR = Symbol.intern("not");
-    private static final Symbol OR_JOIN = Symbol.intern("or-join");
-    private static final Symbol GT_OPERATOR = Symbol.intern(">");
-    private static final Symbol GTE_OPERATOR = Symbol.intern(">=");
-    private static final Symbol LT_OPERATOR = Symbol.intern("<");
-    private static final Symbol LTE_OPERATOR = Symbol.intern("<=");
-    private static final Symbol IS_NULL_OPERATOR = Symbol.intern("nil?");
-    private static final Symbol NOT_NULL_OPERATOR = Symbol.intern("some?");
-    private static final Symbol REGEX_OPERATOR = Symbol.intern("re-matches");
-    private static final Symbol IN_OPERATOR = null; // TODO
+    protected static final Symbol WILDCARD_TEXT_SEARCH = Symbol.intern("wildcard-text-search");
+    protected static final Symbol OR_OPERATOR = Symbol.intern("or");
+    protected static final Symbol AND_OPERATOR = Symbol.intern("and");
+    protected static final Symbol NOT_OPERATOR = Symbol.intern("not");
+    protected static final Symbol OR_JOIN = Symbol.intern("or-join");
+    protected static final Symbol GT_OPERATOR = Symbol.intern(">");
+    protected static final Symbol GTE_OPERATOR = Symbol.intern(">=");
+    protected static final Symbol LT_OPERATOR = Symbol.intern("<");
+    protected static final Symbol LTE_OPERATOR = Symbol.intern("<=");
+    protected static final Symbol IS_NULL_OPERATOR = Symbol.intern("nil?");
+    protected static final Symbol NOT_NULL_OPERATOR = Symbol.intern("some?");
+    protected static final Symbol REGEX_OPERATOR = Symbol.intern("re-matches");
+    protected static final Symbol IN_OPERATOR = null; // TODO
 
     // String predicates
-    private static final Symbol STARTS_WITH = Symbol.intern("clojure.string/starts-with?");
-    private static final Symbol CONTAINS = Symbol.intern("clojure.string/includes?");
-    private static final Symbol ENDS_WITH = Symbol.intern("clojure.string/ends-with?");
-    private static final Symbol STR_OPERATOR = Symbol.intern("str");
+    protected static final Symbol STARTS_WITH = Symbol.intern("clojure.string/starts-with?");
+    protected static final Symbol CONTAINS = Symbol.intern("clojure.string/includes?");
+    protected static final Symbol ENDS_WITH = Symbol.intern("clojure.string/ends-with?");
+    protected static final Symbol STR_OPERATOR = Symbol.intern("str");
 
-    private static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
+    protected static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
     private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
         Map<PropertyComparisonOperator, Symbol> map = new HashMap<>();
         map.put(PropertyComparisonOperator.GT, GT_OPERATOR);
@@ -73,7 +73,7 @@ public class CruxQuery {
         return map;
     }
 
-    private static final List<String> LUCENE_SPECIAL_CHARS = createLuceneSpecialCharsList();
+    protected static final List<String> LUCENE_SPECIAL_CHARS = createLuceneSpecialCharsList();
     private static List<String> createLuceneSpecialCharsList() {
         List<String> list = new ArrayList<>();
         list.add("+");
@@ -100,7 +100,7 @@ public class CruxQuery {
 
     private IPersistentMap query;
     private final List<Symbol> findElements;
-    private final List<IPersistentCollection> conditions;
+    protected final List<IPersistentCollection> conditions;
     private final List<IPersistentVector> sequencing;
     private int limit;
     private int offset = 0;
@@ -148,23 +148,34 @@ public class CruxQuery {
      */
     public void addTypeCondition(String typeGuid, List<String> subtypeLimits) {
         if (typeGuid != null) {
-            List<Object> orConditions = new ArrayList<>();
-            orConditions.add(OR_OPERATOR);
-            if (subtypeLimits != null && !subtypeLimits.isEmpty()) {
-                // If subtypes were specified, search only for those (explicitly)
-                for (String subtypeGuid : subtypeLimits) {
-                    orConditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, subtypeGuid));
-                    orConditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, subtypeGuid));
-                }
-            } else {
-                // Otherwise, search for any matches against the typeGuid exactly or where it is a supertype
-                // - exactly matching the TypeDef:  [e :type.guid "..."]
-                orConditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, typeGuid));
-                // - matching any of the super types:  [e :type.supers "...]
-                orConditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, typeGuid));
-            }
-            conditions.add(PersistentList.create(orConditions));
+            conditions.add(getTypeCondition(DOC_ID, typeGuid, subtypeLimits));
         }
+    }
+
+    /**
+     * Add a condition to limit the type of the results by their TypeDef GUID.
+     * @param variable to resolve against the type
+     * @param typeGuid by which to limit the results
+     * @param subtypeLimits limit the results to only these subtypes (if provided)
+     * @return IPersistentList of the conditions
+     */
+    protected IPersistentList getTypeCondition(Symbol variable, String typeGuid, List<String> subtypeLimits) {
+        List<Object> orConditions = new ArrayList<>();
+        orConditions.add(OR_OPERATOR);
+        if (subtypeLimits != null && !subtypeLimits.isEmpty()) {
+            // If subtypes were specified, search only for those (explicitly)
+            for (String subtypeGuid : subtypeLimits) {
+                orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUID, subtypeGuid));
+                orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, subtypeGuid));
+            }
+        } else {
+            // Otherwise, search for any matches against the typeGuid exactly or where it is a supertype
+            // - exactly matching the TypeDef:  [e :type.guid "..."]
+            orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUID, typeGuid));
+            // - matching any of the super types:  [e :type.supers "...]
+            orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, typeGuid));
+        }
+        return PersistentList.create(orConditions);
     }
 
     /**
@@ -813,7 +824,7 @@ public class CruxQuery {
      * @param condition to translate
      * @return IPersistentCollection of the appropriate Crux representation
      */
-    private IPersistentCollection getCruxCondition(List<Object> condition) {
+    protected IPersistentCollection getCruxCondition(List<Object> condition) {
         if (condition != null && !condition.isEmpty()) {
             Object first = condition.get(0);
             if (first instanceof Symbol) {
@@ -833,26 +844,41 @@ public class CruxQuery {
      */
     public void addStatusLimiters(List<InstanceStatus> limitResultsByStatus) {
         if (limitResultsByStatus != null && !limitResultsByStatus.isEmpty()) {
-            List<IPersistentVector> statusConditions = new ArrayList<>();
-            for (InstanceStatus limitByStatus : limitResultsByStatus) {
-                Integer ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(limitByStatus);
-                if (ordinal != null) {
-                    statusConditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.CURRENT_STATUS, ordinal));
-                }
-            }
-            if (!statusConditions.isEmpty()) {
-                if (statusConditions.size() == 1) {
-                    // If there is only one, add it directly as a condition
-                    conditions.addAll(statusConditions);
-                } else {
-                    // Otherwise, wrap the conditions in an OR-predicate, and add that list to the conditions
-                    List<Object> wrapped = new ArrayList<>();
-                    wrapped.add(OR_OPERATOR);
-                    wrapped.addAll(statusConditions);
-                    conditions.add(PersistentList.create(wrapped));
-                }
+            IPersistentCollection statusCondition = getStatusLimiters(DOC_ID, limitResultsByStatus);
+            if (statusCondition != null) {
+                conditions.add(statusCondition);
             }
         }
+    }
+
+    /**
+     * Retrieve the status condition(s) for the provided status limiters.
+     * @param variable that should be limited
+     * @param limitResultsByStatus list of statuses by which to limit results
+     * @return IPersistentCollection of the condition(s)
+     */
+    protected IPersistentCollection getStatusLimiters(Symbol variable, List<InstanceStatus> limitResultsByStatus) {
+        IPersistentCollection result = null;
+        List<IPersistentVector> statusConditions = new ArrayList<>();
+        for (InstanceStatus limitByStatus : limitResultsByStatus) {
+            Integer ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(limitByStatus);
+            if (ordinal != null) {
+                statusConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.CURRENT_STATUS, ordinal));
+            }
+        }
+        if (!statusConditions.isEmpty()) {
+            if (statusConditions.size() == 1) {
+                // If there is only one, return it directly
+                result = statusConditions.get(0);
+            } else {
+                // Otherwise, wrap the conditions in an OR-predicate, and add that list to the conditions
+                List<Object> wrapped = new ArrayList<>();
+                wrapped.add(OR_OPERATOR);
+                wrapped.addAll(statusConditions);
+                result = PersistentList.create(wrapped);
+            }
+        }
+        return result;
     }
 
     /**
@@ -934,7 +960,7 @@ public class CruxQuery {
      * @param qualifiedSortProperties the set of properties by which we will sort
      * @param order indicating ascending or descending
      */
-    private void addPropertyBasedSorting(Set<Keyword> qualifiedSortProperties, Keyword order) {
+    protected void addPropertyBasedSorting(Set<Keyword> qualifiedSortProperties, Keyword order) {
         addFindElement(SORT_PROPERTY);
         if (qualifiedSortProperties.size() == 1) {
             // If there is only a single condition for sorting, just add it directly
@@ -994,7 +1020,7 @@ public class CruxQuery {
      * the list)
      * @param element to add (if not already in the list)
      */
-    private void addFindElement(Symbol element) {
+    protected void addFindElement(Symbol element) {
         if (!findElements.contains(element)) {
             findElements.add(element);
         }
@@ -1004,7 +1030,7 @@ public class CruxQuery {
      * Retrieve a condition that will ensure no results are returned by a query.
      * @return {@code List<IPersistentCollection>}
      */
-    private List<IPersistentCollection> getNoResultsCondition() {
+    protected static List<IPersistentCollection> getNoResultsCondition() {
         List<IPersistentCollection> conditions = new ArrayList<>();
         conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
         return conditions;
@@ -1015,7 +1041,7 @@ public class CruxQuery {
      * @param input to escape
      * @return String with escapes inserted for any special characters
      */
-    private String escapeLuceneSpecialCharacters(String input) {
+    protected String escapeLuceneSpecialCharacters(String input) {
         String revised = input;
         for (String s : LUCENE_SPECIAL_CHARS) {
             revised = revised.replace(s, "\\" + s);

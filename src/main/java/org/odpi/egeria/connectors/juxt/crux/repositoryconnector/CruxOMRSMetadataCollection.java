@@ -507,7 +507,37 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
     /**
      * {@inheritDoc}
+     * Return all of the relationships and intermediate entities that connect the startEntity with the endEntity.
 
+    @Override
+    public InstanceGraph getLinkingEntities(String userId,
+                                            String startEntityGUID,
+                                            String endEntityGUID,
+                                            List<InstanceStatus> limitResultsByStatus,
+                                            Date asOfTime) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException,
+            PropertyErrorException,
+            UserNotAuthorizedException {
+
+        final String methodName = "getLinkingEntities";
+
+        this.getLinkingEntitiesParameterValidation(userId,
+                startEntityGUID,
+                endEntityGUID,
+                limitResultsByStatus,
+                asOfTime);
+
+        // TODO: implement -- needs to be some kind of recursive speculation, and only have it add
+        //  the relationships / entities as the recursion unwraps (if the end of the recursion returns
+        //  a 'true' to indicate that the endEntityGUID was reached via that speculative recursive traversal) (?)
+
+    } */
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public InstanceGraph getEntityNeighborhood(String userId,
                                                String entityGUID,
@@ -556,32 +586,66 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             }
         }
 
-        // TODO: implement...
-
-        /*
-         * Time warp the stores
-
-        Map<String, EntityDetail>   entityStore = repositoryStore.timeWarpEntityStore(asOfTime);
-        Map<String, Relationship>   relationshipStore = repositoryStore.timeWarpRelationshipStore(asOfTime);
-
-        InMemoryEntityNeighbourhood inMemoryEntityNeighbourhood = new InMemoryEntityNeighbourhood(repositoryHelper,
-                repositoryName,
-                repositoryValidator,
-                entityStore,
-                relationshipStore,
-                entityGUID,
+        return cruxRepositoryConnector.findNeighborhood(entityGUID,
                 entityTypeGUIDs,
                 relationshipTypeGUIDs,
                 limitResultsByStatus,
                 limitResultsByClassification,
+                asOfTime,
                 level);
 
+    }
 
-        return inMemoryEntityNeighbourhood.createInstanceGraph();
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public  List<EntityDetail> getRelatedEntities(String userId,
+                                                  String startEntityGUID,
+                                                  List<String> entityTypeGUIDs,
+                                                  int fromEntityElement,
+                                                  List<InstanceStatus> limitResultsByStatus,
+                                                  List<String> limitResultsByClassification,
+                                                  Date asOfTime,
+                                                  String sequencingProperty,
+                                                  SequencingOrder sequencingOrder,
+                                                  int pageSize) throws
+            InvalidParameterException,
+            TypeErrorException,
+            RepositoryErrorException,
+            EntityNotKnownException,
+            PropertyErrorException,
+            PagingErrorException,
+            UserNotAuthorizedException {
 
+        this.getRelatedEntitiesParameterValidation(userId,
+                startEntityGUID,
+                entityTypeGUIDs,
+                fromEntityElement,
+                limitResultsByStatus,
+                limitResultsByClassification,
+                asOfTime,
+                sequencingProperty,
+                sequencingOrder,
+                pageSize);
+
+        // Retrieve ALL (full depth) neighborhood from the starting entity
+        InstanceGraph adjacent = this.getEntityNeighborhood(userId,
+                startEntityGUID,
+                entityTypeGUIDs,
+                null,
+                limitResultsByStatus,
+                limitResultsByClassification,
+                asOfTime,
+                -1);
+
+        if (adjacent != null) {
+            // ... and then simply limit the entity results according to the sequencing and paging parameters
+            return repositoryHelper.formatEntityResults(adjacent.getEntities(), fromEntityElement, sequencingProperty, sequencingOrder, pageSize);
+        }
         return null;
 
-    }         */
+    }
 
     /**
      * {@inheritDoc}

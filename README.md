@@ -10,7 +10,8 @@
 The intention of this connector is to provide an option for a fully-compliant Egeria repository that supports metadata
 history (temporal `asOfTime` queries across its entire metadata landscape).
 
-(**NOTE**: this connector is currently a work-in-progress, and should be considered at an experimental stage at best.)
+The connector is currently undergoing heavier testing to verify it functions and performs as intended. Feel free to use
+it in "experimentation" mode, for now.
 
 ## Getting started
 
@@ -18,7 +19,7 @@ history (temporal `asOfTime` queries across its entire metadata landscape).
 
 The quick version (same for all connectors):
 
-1. Download the latest Crux connector from: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/egeria-connector-crux/1.0-SNAPSHOT/egeria-connector-crux-1.0-SNAPSHOT-jar-with-dependencies.jar
+1. Download the latest Crux connector from the [Packages link](https://github.com/orgs/odpi/packages?repo_name=egeria-connector-crux) of the GitHub repo.
 1. Download the latest Egeria core from: https://odpi.jfrog.io/odpi/egeria-snapshot-local/org/odpi/egeria/server-chassis-spring/2.7-SNAPSHOT/server-chassis-spring-2.7-SNAPSHOT.jar
 1. Rename the downloaded Egeria core file to `egeria-server-chassis-spring.jar`.
 1. Download the `truststore.p12` file from: https://github.com/odpi/egeria/blob/master/truststore.p12
