@@ -52,12 +52,14 @@
 							called <a href="https://revealjs.com" target="reveal">reveal.js</a>. You can use its icons
 							on the slides to move around, or you can use keyboard shortcuts. Try the <code>?</code> key
 							to bring up a cheatsheet of the keyboard shortcuts.
-							<br><br>
+						</p>
+						<p class="fragment" style="font-size: x-large; text-align: left;">
 							At any point, you can also press the <code>m</code> key to bring up the menu. From the menu you
 							can quickly jump to any particular topic.
-							<br><br>
-							Looking for more about how the connector actually works, rather than this getting started
-							guide? Proceed downwards once again.
+						</p>
+						<p class="fragment" style="font-size: x-large; text-align: left;">
+							Looking for more about how the connector actually works, rather than this primer on keyboard
+							shortcuts? Proceed downwards once again.
 						</p>
 					</section>
 					<section>
@@ -387,9 +389,9 @@ $ mvn clean install
 [INFO] ------------------------------------------------------------------------
 						</code></pre>
 						<p style="font-size: x-large; text-align: left;">
-							To build the connector, you will need to have at least Java version 1.8 installed as well
-							as Apache Maven (at least version 3.6). Clone the connector's GitHub repository and then
-							build the connector using the commands highlighted above.
+							To build the server chassis, you will need to have at least Java version 1.8 installed as well
+							as Apache Maven (at least version 3.6). Clone <a href="https://github.com/odpi/egeria" target="ec">Egeria's GitHub repository</a> and then
+							build the project using the commands highlighted above.
 						</p>
 						<p style="font-size: small; text-align: left;">
 							(Note that this builds all of Egeria's core, which is significantly larger than the connector.
@@ -481,18 +483,18 @@ $ mvn clean install
 							file provides a local truststore for Java. This allows the self-signed certificate embedded
 							within the server chassis (by default) to be trusted.
 						</p>
-						<p style="font-size: x-large; text-align: left;">
+						<p class="fragment" style="font-size: x-large; text-align: left;">
 							Without this trust, interactions with the server chassis (such as the REST calls that are made
 							through Java to handle interaction between the chassis and the connector) will result in an
 							<code>SSLHandshakeException</code>.
 						</p>
-						<p style="font-size: x-large; text-align: left;">
+						<p class="fragment" style="font-size: x-large; text-align: left;">
 							While this <code>truststore.p12</code> file allows SSL-encrypted communication, the fact that
 							it relies on a self-signed certificate means that there is no independent source of trust
 							in the interactions (which would typically be achieved through an independent Certificate
 							Authority).
 						</p>
-						<p style="font-size: x-large; text-align: left;">
+						<p class="fragment" style="font-size: x-large; text-align: left;">
 							Additional details on TLS for Egeria can be found in <a href="https://egeria.odpi.org/open-metadata-implementation/admin-services/docs/user/omag-server-platform-transport-level-security.html">the Egeria documentation</a>.
 						</p>
 					</section>
@@ -555,7 +557,7 @@ Fri Feb 12 20:16:49 GMT 2021 OMAG server platform ready for more configuration
 							Of course, the <code>{version}</code> should be replaced by whatever version of the server
 							chassis you are running.
 						</p>
-						<p style="font-size: x-large; text-align: left;">
+						<p class="fragment" style="font-size: x-large; text-align: left;">
 							The <code>-Dloader.path=.</code> indicates that the server chassis should look for any
 							connectors in the current directory. If you wanted to instead place the connector in a
 							separate location (for example <code>/lib</code>), you could change the <code>.</code> to
@@ -589,7 +591,7 @@ Fri Feb 12 20:16:49 GMT 2021 OMAG server platform ready for more configuration
 							These final two lines of output indicate that the server chassis has completed starting up
 							and is now ready to be configured.
 						</p>
-						<p style="font-size: x-large; text-align: left;">
+						<p class="fragment" style="font-size: x-large; text-align: left;">
 							Any attempt to configure the server chassis before these lines are output is likely to
 							result in failures.
 						</p>
@@ -640,12 +642,17 @@ $ curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/adm
 {"class":"SuccessMessageResponse","relatedHTTPCode":200,"successMessage":"Fri Feb 12 20:34:16 GMT 2021 crux is running the following services: [Open Metadata Repository Services (OMRS)]"}
 						</code></pre>
 						<p style="font-size: x-large; text-align: left;">
-							It may take 10-15 seconds to complete, but the example message above indicates that the
+							It may take 10-15 seconds to complete, but the example response above indicates that the
 							connector instance is now running.
 						</p>
 					</section>
 					<section>
-						<!-- TODO: describe output -->
+						<h4 style="text-align: left;">Sample log output</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Back in the console where the server chassis is running, you should see the audit log
+							printing out a large amount of information as the startup is running. Most of this is
+							related to the registration of type definition details with the repository.
+						</p>
 						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="744"><script type="text/template">
  ODPi Egeria
     ____   __  ___ ___    ______   _____                                 ____   _         _     ___
@@ -1392,6 +1399,9 @@ Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0032 The local repository o
 Fri Feb 12 20:34:16 GMT 2021 crux Startup OMRS-AUDIT-0007 The Open Metadata Repository Services (OMRS) has initialized
 Fri Feb 12 20:34:16 GMT 2021 crux Startup OMAG-ADMIN-0004 The crux server has successfully completed start up.  The following services are running: [Open Metadata Repository Services (OMRS)]
 	 					</script></code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							This final line indicates that the server is now running.
+						</p>
 					</section>
 				</section>
 
