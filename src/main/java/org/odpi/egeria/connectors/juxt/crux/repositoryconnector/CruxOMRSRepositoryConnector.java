@@ -268,6 +268,21 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Retrieve the requested entity from the Crux repository.
+     * @param db already opened point-in-time view of the database
+     * @param guid of the entity to retrieve
+     * @return EntityDetail as it existed at the specified database's point-in-time view
+     */
+    public EntityDetail getEntity(ICruxDatasource db, String guid) {
+        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, EntityDetailMapping.getReference(guid));
+        if (cruxDoc == null) {
+            return null;
+        }
+        EntityDetailMapping edm = new EntityDetailMapping(this, cruxDoc);
+        return edm.toEgeria();
+    }
+
+    /**
      * Search based on the provided parameters.
      * @param entityTypeGUID see CruxOMRSMetadataCollection#findEntities
      * @param entitySubtypeGUIDs see CruxOMRSMetadataCollection#findEntities
@@ -461,7 +476,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         }
 
         InstanceGraph instanceGraph = new InstanceGraph();
-        // TODO: should we really include the starting entity itself (?)
 
         int levelTraversed = 0;
         if (level < 0) {
@@ -476,30 +490,38 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             List<String> nextEntityGUIDs = new ArrayList<>();
             nextEntityGUIDs.add(entityGUID);
 
-            do {
-                InstanceGraph nextGraph = getNextLevelNeighbors(db,
-                        nextEntityGUIDs,
-                        entityTypeGUIDs,
-                        relationshipTypeGUIDs,
-                        limitResultsByStatus,
-                        limitResultsByClassification,
-                        entityGUIDsVisited,
-                        relationshipGUIDsVisited);
-                entityGUIDsVisited.addAll(nextEntityGUIDs);
-                levelTraversed++;
-                List<EntityDetail> nextEntities = nextGraph.getEntities();
-                if (nextEntities == null || nextEntities.isEmpty()) {
-                    nextEntityGUIDs = null;
-                } else {
-                    // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
-                    // the list prior to iterating again
-                    nextEntityGUIDs = nextEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList());
-                    nextEntityGUIDs.removeAll(entityGUIDsVisited);
-                    // Merge this subgraph into the overall graph of results
-                    instanceGraph = mergeGraphs(instanceGraph, nextGraph);
-                }
-                // Once we either run out of GUIDs to traverse, or we've reached the desired level, we stop iterating
-            } while (nextEntityGUIDs != null && levelTraversed < level);
+            // Start the InstanceGraph off with the entity starting point that was requested
+            // (not clear if this is the intended logic, but follows other repository implementations)
+            List<EntityDetail> startingEntities = new ArrayList<>();
+            EntityDetail startingEntity = this.getEntity(db, entityGUID);
+            if (startingEntity != null) {
+                startingEntities.add(startingEntity);
+                instanceGraph.setEntities(startingEntities);
+                do {
+                    InstanceGraph nextGraph = getNextLevelNeighbors(db,
+                            nextEntityGUIDs,
+                            entityTypeGUIDs,
+                            relationshipTypeGUIDs,
+                            limitResultsByStatus,
+                            limitResultsByClassification,
+                            entityGUIDsVisited,
+                            relationshipGUIDsVisited);
+                    entityGUIDsVisited.addAll(nextEntityGUIDs);
+                    levelTraversed++;
+                    List<EntityDetail> nextEntities = nextGraph.getEntities();
+                    if (nextEntities == null || nextEntities.isEmpty()) {
+                        nextEntityGUIDs = null;
+                    } else {
+                        // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
+                        // the list prior to iterating again
+                        nextEntityGUIDs = nextEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList());
+                        nextEntityGUIDs.removeAll(entityGUIDsVisited);
+                        // Merge this subgraph into the overall graph of results
+                        instanceGraph = mergeGraphs(instanceGraph, nextGraph);
+                    }
+                    // Once we either run out of GUIDs to traverse, or we've reached the desired level, we stop iterating
+                } while (nextEntityGUIDs != null && levelTraversed < level);
+            }
 
         }
 
