@@ -339,6 +339,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
      * @return {@code List<EntityDetail>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      * @see CruxOMRSMetadataCollection#findEntitiesByPropertyValue(String, String, String, int, List, List, Date, String, SequencingOrder, int)
      */
     public List<EntityDetail> findEntitiesByText(String entityTypeGUID,
@@ -349,7 +350,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                  Date asOfTime,
                                                  String sequencingProperty,
                                                  SequencingOrder sequencingOrder,
-                                                 int pageSize) throws TypeErrorException {
+                                                 int pageSize) throws TypeErrorException, FunctionNotSupportedException {
         Collection<List<?>> cruxResults = searchCruxLucene(
                 TypeDefCategory.ENTITY_DEF,
                 entityTypeGUID,
@@ -477,26 +478,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         InstanceGraph instanceGraph = new InstanceGraph();
 
-        int levelTraversed = 0;
-        if (level < 0) {
-            // If the level is negative, it means keep going until we run out of new traversals (or crash, presumably?)
-            // We will set a maximum...
-            level = Constants.MAX_TRAVERSAL_DEPTH;
-        }
-        if (level > 0) {
+        Set<String> entityGUIDsVisited = new HashSet<>();
+        Set<String> relationshipGUIDsVisited = new HashSet<>();
+        List<String> nextEntityGUIDs = new ArrayList<>();
+        nextEntityGUIDs.add(entityGUID);
 
-            Set<String> entityGUIDsVisited = new HashSet<>();
-            Set<String> relationshipGUIDsVisited = new HashSet<>();
-            List<String> nextEntityGUIDs = new ArrayList<>();
-            nextEntityGUIDs.add(entityGUID);
+        // Start the InstanceGraph off with the entity starting point that was requested
+        // (not clear if this is the intended logic, but follows other repository implementations)
+        List<EntityDetail> startingEntities = new ArrayList<>();
+        EntityDetail startingEntity = this.getEntity(db, entityGUID);
 
-            // Start the InstanceGraph off with the entity starting point that was requested
-            // (not clear if this is the intended logic, but follows other repository implementations)
-            List<EntityDetail> startingEntities = new ArrayList<>();
-            EntityDetail startingEntity = this.getEntity(db, entityGUID);
-            if (startingEntity != null) {
-                startingEntities.add(startingEntity);
-                instanceGraph.setEntities(startingEntities);
+        if (startingEntity != null) {
+            startingEntities.add(startingEntity);
+            instanceGraph.setEntities(startingEntities);
+
+            int levelTraversed = 0;
+            if (level < 0) {
+                // If the level is negative, it means keep going until we run out of new traversals (or crash, presumably?)
+                // We will set a maximum...
+                level = Constants.MAX_TRAVERSAL_DEPTH;
+            }
+            if (level > 0) {
+
                 do {
                     InstanceGraph nextGraph = getNextLevelNeighbors(db,
                             nextEntityGUIDs,
@@ -730,6 +733,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
      * @return {@code List<Relationship>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      * @see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue(String, String, String, int, List, Date, String, SequencingOrder, int)
      */
     public List<Relationship> findRelationshipsByText(String relationshipTypeGUID,
@@ -739,7 +743,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                       Date asOfTime,
                                                       String sequencingProperty,
                                                       SequencingOrder sequencingOrder,
-                                                      int pageSize) throws TypeErrorException {
+                                                      int pageSize) throws TypeErrorException, FunctionNotSupportedException {
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
         // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
@@ -1277,6 +1281,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     public Collection<List<?>> searchCruxLucene(TypeDefCategory category,
                                                 String typeGuid,
@@ -1288,7 +1293,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
-                                                String namespace) throws TypeErrorException {
+                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateTextQuery(query,
                 category,
@@ -1321,6 +1326,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     public Collection<List<?>> searchCruxLucene(ICruxDatasource db,
                                                 TypeDefCategory category,
@@ -1332,7 +1338,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
-                                                String namespace) throws TypeErrorException {
+                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateTextQuery(query,
                 category,
@@ -1468,6 +1474,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the sequencing property (if any)
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     private void updateTextQuery(CruxQuery query,
                                  TypeDefCategory category,
@@ -1479,12 +1486,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                  String sequencingProperty,
                                  SequencingOrder sequencingOrder,
                                  int pageSize,
-                                 String namespace) throws TypeErrorException {
+                                 String namespace) throws TypeErrorException, FunctionNotSupportedException {
         query.addTypeCondition(typeGuid, null);
         query.addTypeDefCategoryCondition(category);
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, null, namespace);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
         query.addWildcardTextCondition(searchCriteria, completeTypeSet, namespace, repositoryHelper, repositoryName);
+        //query.addWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addPaging(fromElement, pageSize);
         query.addStatusLimiters(limitResultsByStatus);

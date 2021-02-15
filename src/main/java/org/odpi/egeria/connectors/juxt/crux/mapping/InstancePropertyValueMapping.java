@@ -97,8 +97,10 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                 case ENUM:
                     mapping = new EnumPropertyValueMapping(cruxConnector, instanceType, propertyName, (EnumPropertyValue) value, namespace);
                     break;
-                case MAP:
                 case ARRAY:
+                    mapping = new ArrayPropertyValueMapping(cruxConnector, instanceType, propertyName, (ArrayPropertyValue) value, namespace);
+                    break;
+                case MAP:
                 case STRUCT:
                 case UNKNOWN:
                 default:
@@ -110,6 +112,34 @@ public class InstancePropertyValueMapping extends AbstractMapping {
             mapping = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, null, namespace);
         }
         return mapping;
+    }
+
+    /**
+     * Convert the provided Egeria value into a Crux comparable form.
+     * @param ipv Egeria value to translate to Crux-comparable value
+     * @return Object value that Crux can compare
+     */
+    public static Object getValueForComparison(InstancePropertyValue ipv) {
+        InstancePropertyCategory category = ipv.getInstancePropertyCategory();
+        Object value = null;
+        switch (category) {
+            case PRIMITIVE:
+                value = PrimitivePropertyValueMapping.getPrimitiveValueForComparison((PrimitivePropertyValue) ipv);
+                break;
+            case ENUM:
+                value = EnumPropertyValueMapping.getEnumPropertyValueForComparison((EnumPropertyValue) ipv);
+                break;
+            case ARRAY:
+                value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison((ArrayPropertyValue) ipv);
+                break;
+            case STRUCT: // TODO...
+            case MAP: // TODO...
+            case UNKNOWN:
+            default:
+                log.warn("Unmapped value type: {}", category);
+                break;
+        }
+        return value;
     }
 
     /**
@@ -337,12 +367,14 @@ public class InstancePropertyValueMapping extends AbstractMapping {
                     case PRIMITIVE:
                         PrimitiveDef pd = (PrimitiveDef) atd;
                         PrimitiveDefCategory pdc = pd.getPrimitiveDefCategory();
-                        // In the case of a primitive, the value must also be a primitive and its primitive type
-                        // must match
-                        return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.PRIMITIVE)
+                        // In the case of a primitive, the value must either be an array (necessary for IN comparison)
+                        // or also be a primitive, in which case its primitive type must match
+                        return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.ARRAY)) ||
+                                (value.getInstancePropertyCategory().equals(InstancePropertyCategory.PRIMITIVE)
                                 && ((PrimitivePropertyValue) value).getPrimitiveDefCategory().equals(pdc));
                     case ENUM_DEF:
-                        return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.ENUM));
+                        return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.ARRAY)) ||
+                                (value.getInstancePropertyCategory().equals(InstancePropertyCategory.ENUM));
                     case COLLECTION:
                         CollectionDef cd = (CollectionDef) atd;
                         switch (cd.getCollectionDefCategory()) {

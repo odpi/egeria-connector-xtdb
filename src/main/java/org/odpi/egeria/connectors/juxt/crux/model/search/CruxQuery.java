@@ -51,7 +51,8 @@ public class CruxQuery {
     protected static final Symbol IS_NULL_OPERATOR = Symbol.intern("nil?");
     protected static final Symbol NOT_NULL_OPERATOR = Symbol.intern("some?");
     protected static final Symbol REGEX_OPERATOR = Symbol.intern("re-matches");
-    protected static final Symbol IN_OPERATOR = null; // TODO
+    protected static final Symbol IN_OPERATOR = Symbol.intern("contains?");
+    protected static final Symbol SET_OPERATOR = Symbol.intern("hash-set");
 
     // String predicates
     protected static final Symbol STARTS_WITH = Symbol.intern("clojure.string/starts-with?");
@@ -642,12 +643,6 @@ public class CruxQuery {
             // For any others, we need to translate into predicate form, which requires 2-3 pieces:
             //  [e :property variable]            - always needed, to define how to map the property's value to a variable
             IPersistentVector propertyToVariable = PersistentVector.create(DOC_ID, propertyRef, variable);
-            //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
-            Symbol nonNullStringVar = Symbol.intern("sv");
-            List<Object> forceString = new ArrayList<>();
-            forceString.add(STR_OPERATOR);
-            forceString.add(variable);
-            IPersistentVector enforceNonNullStringValue = PersistentVector.create(PersistentList.create(forceString), nonNullStringVar);
             //  [(predicate variable "value")]    - for a non-string predicate
             //  [(predicate #"regex" s_variable)] - for a regex-based (string) predicate
             // These 2-3 pieces need to be combined in particular ways depending on the outer criteria, see logic
@@ -656,8 +651,14 @@ public class CruxQuery {
             List<Object> predicateComparison = new ArrayList<>();
             boolean alreadyCovered = false;
             if (REGEX_OPERATOR.equals(predicate)) {
-                Object compareTo = getValueForComparison(value);
+                Object compareTo = InstancePropertyValueMapping.getValueForComparison(value);
                 if (compareTo instanceof String) {
+                    //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
+                    Symbol nonNullStringVar = Symbol.intern("sv");
+                    List<Object> forceString = new ArrayList<>();
+                    forceString.add(STR_OPERATOR);
+                    forceString.add(variable);
+                    IPersistentVector enforceNonNullStringValue = PersistentVector.create(PersistentList.create(forceString), nonNullStringVar);
                     String regexSearchString = (String) compareTo;
                     if (repositoryHelper.isExactMatchRegex(regexSearchString, false)) {
                         // If we are looking for an exact match, we will short-circuit out of this predicate-based
@@ -677,13 +678,34 @@ public class CruxQuery {
                 } else {
                     log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
                 }
+            } else if (IN_OPERATOR.equals(predicate)) {
+                // For the IN comparison, we need an extra condition to setup the list (actually set) to compare against
+                // [(hash-set 1 2 3) las]    - needed for lists, to ensure the list is a unique set of keys to check against
+                Symbol listAsSet = Symbol.intern("las");
+                List<Object> forceSet = new ArrayList<>();
+                forceSet.add(SET_OPERATOR);
+                Object toCompare = InstancePropertyValueMapping.getValueForComparison(value);
+                if (toCompare instanceof List) {
+                    // add all elements of the array to the list
+                    forceSet.addAll((List<?>)toCompare);
+                }
+                List<Object> set = new ArrayList<>();
+                set.add(PersistentList.create(forceSet));
+                set.add(listAsSet);
+                IPersistentVector enforceSet = PersistentVector.create(set);
+                // [(contains? las variable)]
+                predicateConditions.add(enforceSet);
+                predicateComparison.add(predicate);
+                predicateComparison.add(listAsSet);
+                predicateComparison.add(variable);
+                predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             } else {
                 // For everything else, we need a (predicate variable value) pattern
                 // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
                 //  [(predicate variable "value")] - for a non-string predicate
                 predicateComparison.add(predicate);
                 predicateComparison.add(variable);
-                predicateComparison.add(getValueForComparison(value));
+                predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
                 predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             }
             if (!alreadyCovered) {
@@ -716,7 +738,7 @@ public class CruxQuery {
      * @return IPersistentCollection giving the conditions
      */
     protected IPersistentCollection getEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
-        return PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value));
+        return PersistentVector.create(DOC_ID, propertyRef, InstancePropertyValueMapping.getValueForComparison(value));
     }
 
     /**
@@ -738,7 +760,7 @@ public class CruxQuery {
     protected IPersistentCollection getNotEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
         List<Object> predicateComparison = new ArrayList<>();
         predicateComparison.add(NOT_OPERATOR);
-        predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, getValueForComparison(value)));
+        predicateComparison.add(PersistentVector.create(DOC_ID, propertyRef, InstancePropertyValueMapping.getValueForComparison(value)));
         return PersistentList.create(predicateComparison);
     }
 
@@ -790,32 +812,6 @@ public class CruxQuery {
             log.warn("Unmapped comparison operator: {}", comparator);
         }
         return toUse;
-    }
-
-    /**
-     * Convert the provided Egeria value into a Crux comparable form.
-     * @param ipv Egeria value to translate to Crux-comparable value
-     * @return Object value that Crux can compare
-     */
-    protected Object getValueForComparison(InstancePropertyValue ipv) {
-        InstancePropertyCategory category = ipv.getInstancePropertyCategory();
-        Object value = null;
-        switch (category) {
-            case PRIMITIVE:
-                value = PrimitivePropertyValueMapping.getPrimitiveValueForComparison((PrimitivePropertyValue) ipv);
-                break;
-            case ENUM:
-                value = EnumPropertyValueMapping.getEnumPropertyValueForComparison((EnumPropertyValue) ipv);
-                break;
-            case STRUCT: // TODO...
-            case ARRAY: // TODO...
-            case MAP: // TODO...
-            case UNKNOWN:
-            default:
-                log.warn("Unmapped value type: {}", category);
-                break;
-        }
-        return value;
     }
 
     /**
