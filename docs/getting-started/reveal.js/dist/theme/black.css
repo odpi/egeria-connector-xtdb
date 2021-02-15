@@ -132,15 +132,19 @@ section.has-light-background, section.has-light-background h1, section.has-light
   margin: 0 0 0 1em; }
 
 .reveal ol {
+  display: block;
   list-style-type: decimal; }
 
 .reveal ul {
+  display: block;
   list-style-type: disc; }
 
 .reveal ul ul {
+  display: block;
   list-style-type: square; }
 
 .reveal ul ul ul {
+  display: block;
   list-style-type: circle; }
 
 .reveal ul ul,

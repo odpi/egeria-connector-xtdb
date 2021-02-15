@@ -53,11 +53,11 @@
 							on the slides to move around, or you can use keyboard shortcuts. Try the <code>?</code> key
 							to bring up a cheatsheet of the keyboard shortcuts.
 						</p>
-						<p class="fragment" style="font-size: x-large; text-align: left;">
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
 							At any point, you can also press the <code>m</code> key to bring up the menu. From the menu you
 							can quickly jump to any particular topic.
 						</p>
-						<p class="fragment" style="font-size: x-large; text-align: left;">
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
 							Looking for more about how the connector actually works, rather than this primer on keyboard
 							shortcuts? Proceed downwards once again.
 						</p>
@@ -483,12 +483,12 @@ $ mvn clean install
 							file provides a local truststore for Java. This allows the self-signed certificate embedded
 							within the server chassis (by default) to be trusted.
 						</p>
-						<p class="fragment" style="font-size: x-large; text-align: left;">
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
 							Without this trust, interactions with the server chassis (such as the REST calls that are made
 							through Java to handle interaction between the chassis and the connector) will result in an
 							<code>SSLHandshakeException</code>.
 						</p>
-						<p class="fragment" style="font-size: x-large; text-align: left;">
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
 							While this <code>truststore.p12</code> file allows SSL-encrypted communication, the fact that
 							it relies on a self-signed certificate means that there is no independent source of trust
 							in the interactions (which would typically be achieved through an independent Certificate
@@ -615,19 +615,264 @@ $ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"Connecti
 					<section data-menu-title="Configure event bus">
 						<h4 style="text-align: left;">Configure event bus</h4>
 						<p style="font-size: x-large; text-align: left;">
-							<!-- TODO: describe the event bus configuration... -->
+							This first call to the API will configure the event bus of Egeria.
 						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1,3,5,7">
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"producer":{"bootstrap.servers":"localhost:9092"},"consumer":{"bootstrap.servers":"localhost:9092"}}' "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/event-bus?connectorProvider=org.odpi.openmetadata.adapters.eventbus.topic.kafka.KafkaOpenMetadataTopicProvider&topicURLRoot=OMRSTopic"
+{"class":"VoidResponse","relatedHTTPCode":200}
+						</code></pre>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							The event bus is how Egeria coordinates communication amongst its various servers and
+							repositories: for example, ensuring that any new type definitions are registered with each
+							repository capable of handling them, notifying other repositories when the metadata in one
+							repository changes, etc.
+						</p>
+						<div class="fragment fade-in-then-semi-out">
+						<pre data-id="code-animation" class="text" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="2-3">
+https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/event-bus?\
+connectorProvider=org.odpi.openmetadata.adapters.eventbus.topic.kafka.KafkaOpenMetadataTopicProvider\
+&topicURLRoot=OMRSTopic
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							The URL parameter <code>connectorProvider</code> defines the type of event bus to use (in
+							this case Apache Kafka), while the <code>topicURLRoot</code> gives a prefix name for the Kafka topic.
+						</p>
+						</div>
+						<div class="fragment">
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers>
+{
+  "producer": {
+    "bootstrap.servers": "localhost:9092"
+  },
+  "consumer": {
+    "bootstrap.servers": "localhost:9092"
+  }
+}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							The JSON payload gives details about how to connect to Apache Kafka, in this case assuming
+							it is running on local machine (localhost) on its default port (9092).
+						</p>
+						</div>
 					</section>
 					<section data-menu-title="Configure cohort">
 						<h4 style="text-align: left;">Configure cohort</h4>
 						<p style="font-size: x-large; text-align: left;">
-							<!-- TODO: describe the cohort configuration... -->
+							This next call configures the cohort with which this Egeria server chassis should register.
 						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1,3,5,7">
+$ curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/cohorts/mycohort"
+{"class":"VoidResponse","relatedHTTPCode":200}
+						</code></pre>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							The cohort is a network of interacting metadata servers, which could be some subset of the
+							overall Egeria landscape.
+						</p>
+						<div class="fragment fade-in-then-semi-out">
+						<pre data-id="code-animation" class="text" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="2">
+https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/cohorts/\
+mycohort
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							We only need to supply a name for the cohort, which forms part of the URL itself: in this
+							example using <code>mycohort</code>.
+						</p>
+						</div>
 					</section>
-					<section data-menu-title="Configure Crux connector">
+					<section data-menu-title="Configure Crux connector" data-transition="slide-in fade-out">
 						<h4 style="text-align: left;">Configure Crux connector</h4>
 						<p style="font-size: x-large; text-align: left;">
-							<!-- TODO: describe options for configuring Crux itself... -->
+							This final call to the API configures the behavior of the Crux repository itself.
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1,3,5,7">
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"}}' "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/mode/repository-proxy/connection"
+{"class":"VoidResponse","relatedHTTPCode":200}
+						</code></pre>
+						<div class="fragment fade-in-then-semi-out">
+						<p style="font-size: x-large; text-align: left;">
+							The URL to which we post indicates that we will use the Egeria server chassis's built-in
+							proxy capability to access the Crux repository connector.
+						</p>
+						<pre data-id="code-animation" class="text" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="2">
+https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/\
+mode/repository-proxy/connection
+						</code></pre>
+						</div>
+						<div class="fragment fade-in-then-semi-out">
+						<p style="font-size: x-large; text-align: left;">
+							The JSON payload's contents define how this proxy itself should be configured: specifically,
+							which Java class should be used for the repository connection. Here we can see the payload
+							refers to the <code>CruxOMRSRepositoryConnectorProvider</code>, which therefore tells the
+							proxy to use this class -- specific to the Crux repository connector -- in order to configure
+							its repository connection.
+						</p>
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="5">
+{
+  "class": "Connection",
+  "connectorType": {
+    "class": "ConnectorType",
+    "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+  }
+}
+						</code></pre>
+						</div>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">Configure Crux connector</h4>
+						<p style="font-size: x-large; text-align: left;">
+							There are many options for configuring Crux itself.
+						</p>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							A list of overall persistence modules and deeper configuration options for each can be found
+							through <a href="https://opencrux.com/reference/configuration.html" target="crux">Crux's own
+							documentation</a>.
+						</p>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							The default configuration used in the examples above will startup the Crux repository in
+							a completely embedded, in-memory-only mode. No data will be persisted, so if you stop or
+							restart the server chassis all data will be lost.
+						</p>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							While this is actually beneficial for quick experimentation and testing purposes, it is
+							naturally not desirable for a "real" repository: you'd want your metadata to stick around
+							even when the server goes offline.
+						</p>
+					</section>
+					<section data-menu-title="Configure Crux persistence" data-transition="fade" data-auto-animate>
+						<h4 style="text-align: left;">Configure Crux persistence</h4>
+						<p style="font-size: x-large; text-align: left;">
+							To enable persistence, send in the JSON document configuration outlined in
+							<a href="https://opencrux.com/reference/configuration.html" target="crux">Crux's own documentation</a>
+							directly to the <code>configurationProperties</code> property of Egeria's connector configuration:
+						</p>
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="7-26">
+{
+  "class": "Connection",
+  "connectorType": {
+    "class": "ConnectorType",
+    "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+  },
+  "configurationProperties": {
+    "crux/index-store": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-index"
+      }
+    },
+    "crux/document-store": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-docs"
+      }
+    },
+    "crux/tx-log": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-tx"
+      }
+    }
+  }
+}
+						</code></pre>
+					</section>
+					<section data-transition="fade" data-auto-animate>
+						<h4 style="text-align: left;">Configure Crux persistence</h4>
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="7-26">
+{
+  "class": "Connection",
+  "connectorType": {
+    "class": "ConnectorType",
+    "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+  },
+  "configurationProperties": {
+    "crux/index-store": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-index"
+      }
+    },
+    "crux/document-store": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-docs"
+      }
+    },
+    "crux/tx-log": {
+      "kv-store": {
+        "crux/module": "crux.rocksdb/->kv-store",
+        "db-dir": "data/servers/crux/rdb-tx"
+      }
+    }
+  }
+}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							In this example, we are configuring RocksDB to act as the persistence layer for Crux's
+							index and document stores, as well as its transaction log.
+						</p>
+					</section>
+					<section data-transition="fade" data-auto-animate>
+						<h4 style="text-align: left;">Configure Crux persistence</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Note that depending on the persistence you choose to use, you may need to download additional
+							dependencies and place them into the same directory as the connector.
+						</p>
+						<div class="fragment fade-in-then-semi-out">
+						<p style="font-size: x-large; text-align: left;">
+							For example, when using RocksDB you will need the following:
+						</p>
+						<ul style="font-size: x-large; text-align: left;">
+							<li><a href="https://clojars.org/juxt/crux-rocksdb" target="dl">juxt:crux-rocksdb</a></li>
+							<li><a href="https://search.maven.org/artifact/org.rocksdb/rocksdbjni" target="dl">org.rocksdb:rocksdbjni</a></li>
+							<li><a href="https://search.maven.org/artifact/com.github.jnr/jnr-ffi" target="dl">com.github.jnr:njr-ffi</a></li>
+						</ul>
+						</div>
+						<div class="fragment">
+						<p style="font-size: x-large; text-align: left;">
+							You can generally determine the additional dependencies you will need by looking at the
+							<code>project.clj</code> file of relevant Crux module -- specifically its <code>:dependencies</code>
+							section.
+						</p>
+							<pre data-id="code-animation" class="clojure" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="6-10">
+(defproject juxt/crux-rocksdb "crux-git-version-beta"
+  :description "Crux RocksDB"
+  :url "https://github.com/juxt/crux"
+  :license {:name "The MIT License"
+            :url "http://opensource.org/licenses/MIT"}
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [juxt/crux-core "crux-git-version-beta"]
+                 [juxt/crux-metrics "crux-git-version-alpha" :scope "provided"]
+                 [org.rocksdb/rocksdbjni "6.12.7"]
+                 [com.github.jnr/jnr-ffi "2.1.12"]]
+  :middleware [leiningen.project-version/middleware]
+  :pedantic? :warn)
+						</code></pre>
+						</div>
+					</section>
+					<section data-transition="fade" data-auto-animate>
+						<h4 style="text-align: left;">Configure Crux persistence</h4>
+							<pre data-id="code-animation" class="clojure" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="6,9-10">
+(defproject juxt/crux-rocksdb "crux-git-version-beta"
+  :description "Crux RocksDB"
+  :url "https://github.com/juxt/crux"
+  :license {:name "The MIT License"
+            :url "http://opensource.org/licenses/MIT"}
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [juxt/crux-core "crux-git-version-beta"]
+                 [juxt/crux-metrics "crux-git-version-alpha" :scope "provided"]
+                 [org.rocksdb/rocksdbjni "6.12.7"]
+                 [com.github.jnr/jnr-ffi "2.1.12"]]
+  :middleware [leiningen.project-version/middleware]
+  :pedantic? :warn)
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Sticking with RocksDB for this example, above is the
+							<a href="https://github.com/juxt/crux/blob/master/crux-rocksdb/project.clj" target="crux">crux-rocksdb/project.clj</a>.
+						</p>
+						<p class="fragment" style="font-size: x-large; text-align: left;">
+							Note that its dependencies include <code>org.rocksdb:rocksdbjni</code> and
+							<code>com.github.jnr:jnr-ffi</code>. The third dependency given in the previous slide is
+							this Crux persistence module itself (<code>juxt:crux-rocksdb</code>).
 						</p>
 					</section>
 				</section>
