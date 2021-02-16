@@ -16,6 +16,7 @@ data:
   EGERIA_COHORT: {{ .Values.egeria.cohort }}
   EGERIA_SERVER: {{ .Values.egeria.server }}
   KAFKA_ENDPOINT: {{ .Release.Name }}-kafka:9092
+  CTS_FACTOR: "{{ .Values.records }}"
 
   # Used by Crux
   STRICT_SSL: "false"

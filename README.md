@@ -1,7 +1,12 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the ODPi Egeria project. -->
 
-[![GitHub](https://img.shields.io/github/license/odpi/egeria-connector-crux)](LICENSE) [![Azure](https://dev.azure.com/odpi/egeria/_apis/build/status/odpi.egeria-connector-crux)](https://dev.azure.com/odpi/Egeria/_build) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=egeria-connector-crux&metric=alert_status)](https://sonarcloud.io/dashboard?id=egeria-connector-crux) [![Maven Central](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux)](https://mvnrepository.com/artifact/org.odpi.egeria/egeria-connector-crux)
+<!-- [![Quality](https://sonarcloud.io/api/project_badges/measure?project=egeria-connector-crux&metric=alert_status)](https://sonarcloud.io/dashboard?id=egeria-connector-crux) -->
+
+[![License](https://img.shields.io/github/license/odpi/egeria-connector-crux)](LICENSE)
+[![Build](https://github.com/odpi/egeria-connector-crux/workflows/Maven%20Package/badge.svg)](https://github.com/odpi/egeria-connector-crux/actions?query=workflow%3A%22Maven+Package%22)
+[![Snapshot](https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Ftoken%3A82d3aaedcfbb070176d9b30df29ea28768b90691%40maven.pkg.github.com%2Fodpi%2Fegeria-connector-crux%2Forg%2Fodpi%2Fegeria%2Fegeria-connector-crux%2Fmaven-metadata.xml)](https://github.com/odpi/egeria-connector-crux/packages/617324)
+[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux)](https://mvnrepository.com/artifact/org.odpi.egeria/egeria-connector-crux)
 
 # Crux Connector
 
