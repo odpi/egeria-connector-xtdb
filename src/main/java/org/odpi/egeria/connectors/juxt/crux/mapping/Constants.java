@@ -24,6 +24,7 @@ public class Constants {
     public static final Keyword CRUX_PUT = Keyword.intern("crux.tx", "put");
     public static final Keyword CRUX_EVICT = Keyword.intern("crux.tx", "evict");
 
+    // Graph query limits
     public static final int MAX_TRAVERSAL_DEPTH = 40;
 
     /**

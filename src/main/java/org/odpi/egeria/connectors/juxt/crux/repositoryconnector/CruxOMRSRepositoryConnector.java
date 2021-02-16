@@ -274,7 +274,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return EntityDetail as it existed at the specified database's point-in-time view
      */
     public EntityDetail getEntity(ICruxDatasource db, String guid) {
-        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, EntityDetailMapping.getReference(guid));
+        return getEntity(db, EntityDetailMapping.getReference(guid));
+    }
+
+    /**
+     * Retrieve the requested entity from the Crux repository.
+     * @param db already opened point-in-time view of the database
+     * @param ref of the entity to retrieve
+     * @return EntityDetail as it existed at the specified database's point-in-time view
+     */
+    private EntityDetail getEntity(ICruxDatasource db, Keyword ref) {
+        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, ref);
         if (cruxDoc == null) {
             return null;
         }
@@ -478,6 +488,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         InstanceGraph instanceGraph = new InstanceGraph();
 
+        Set<List<?>> consolidated = new LinkedHashSet<>();
+
+        Set<String> entityGUIDsRetrieved = new HashSet<>();
+        Set<String> relationshipGUIDsRetrieved = new HashSet<>();
         Set<String> entityGUIDsVisited = new HashSet<>();
         Set<String> relationshipGUIDsVisited = new HashSet<>();
         List<String> nextEntityGUIDs = new ArrayList<>();
@@ -491,6 +505,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         if (startingEntity != null) {
             startingEntities.add(startingEntity);
             instanceGraph.setEntities(startingEntities);
+            entityGUIDsRetrieved.add(entityGUID);
 
             int levelTraversed = 0;
             if (level < 0) {
@@ -501,7 +516,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             if (level > 0) {
 
                 do {
-                    InstanceGraph nextGraph = getNextLevelNeighbors(db,
+                    Set<List<?>> nextGraph = getNextLevelNeighbors(db,
                             nextEntityGUIDs,
                             entityTypeGUIDs,
                             relationshipTypeGUIDs,
@@ -511,27 +526,26 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                             relationshipGUIDsVisited);
                     entityGUIDsVisited.addAll(nextEntityGUIDs);
                     levelTraversed++;
-                    List<EntityDetail> nextEntities = nextGraph.getEntities();
-                    if (nextEntities == null || nextEntities.isEmpty()) {
-                        nextEntityGUIDs = null;
-                    } else {
-                        // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
-                        // the list prior to iterating again
-                        nextEntityGUIDs = nextEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList());
-                        nextEntityGUIDs.removeAll(entityGUIDsVisited);
-                        // Merge this subgraph into the overall graph of results
-                        instanceGraph = mergeGraphs(instanceGraph, nextGraph);
-                    }
+                    // Add this subset of results into the consolidated set of results
+                    consolidated.addAll(nextGraph);
+                    // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
+                    // the list prior to iterating again
+                    nextEntityGUIDs = getEntityGUIDsFromGraphResults(nextGraph);
+                    nextEntityGUIDs.removeAll(entityGUIDsVisited);
                     // Once we either run out of GUIDs to traverse, or we've reached the desired level, we stop iterating
-                } while (nextEntityGUIDs != null && levelTraversed < level);
+                } while (!nextEntityGUIDs.isEmpty() && levelTraversed < level);
+            }
+
+            // TODO: exclude proxies (somehow) from the entity detail list (?)
+            InstanceGraph neighbors = resultsToGraph(db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved);
+            if (neighbors != null) {
+                instanceGraph = mergeGraphs(instanceGraph, neighbors);
             }
 
         }
 
         // Ensure that we close the open DB resource now that we're finished with it
         closeDb(db);
-
-        // TODO: exclude proxies (somehow) from the entity detail list (?)
 
         return instanceGraph;
 
@@ -546,18 +560,18 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param relationshipTypeGUIDs list of relationship types to include in the query results (null means include all)
      * @param limitResultsByStatus list of statuses to restrict results (null means include all)
      * @param limitResultsByClassification list of classifications that must be present on all returned entities
-     * @return InstanceGraph of the immediate neighbors of the specified starting point GUIDs
+     * @return {@code Set<List<?>>} of the immediate neighbors of the specified starting point GUIDs, as graph tuples [[:entityRef :relationshipRef]]
      */
-    private InstanceGraph getNextLevelNeighbors(ICruxDatasource db,
-                                                List<String> startingPoints,
-                                                List<String> entityTypeGUIDs,
-                                                List<String> relationshipTypeGUIDs,
-                                                List<InstanceStatus> limitResultsByStatus,
-                                                List<String> limitResultsByClassification,
-                                                Set<String> entityGUIDsVisited,
-                                                Set<String> relationshipGUIDsVisited) {
+    private Set<List<?>> getNextLevelNeighbors(ICruxDatasource db,
+                                               List<String> startingPoints,
+                                               List<String> entityTypeGUIDs,
+                                               List<String> relationshipTypeGUIDs,
+                                               List<InstanceStatus> limitResultsByStatus,
+                                               List<String> limitResultsByClassification,
+                                               Set<String> entityGUIDsVisited,
+                                               Set<String> relationshipGUIDsVisited) {
 
-        InstanceGraph consolidated = new InstanceGraph();
+        Set<List<?>> consolidated = new LinkedHashSet<>();
 
         // Iterate through the provided starting entity starting points to retrieve the next level of neighbors
         for (String entityGUID : startingPoints) {
@@ -569,13 +583,147 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     limitResultsByStatus,
                     limitResultsByClassification);
             log.debug("Found neighborhood results: {}", nextDegree);
-            InstanceGraph nextGraph = resultsToGraph(db, nextDegree, entityGUIDsVisited, relationshipGUIDsVisited);
-            if (nextGraph != null) {
-                // Consolidate (and de-duplicate) the results
-                consolidated = mergeGraphs(consolidated, nextGraph);
+            for (List<?> candidateTuple : nextDegree) {
+                Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
+                Keyword candidateRelationshipRef = getRelationshipRefFromGraphTuple(candidateTuple);
+                String entityGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
+                String relationshipGuid = Constants.trimGuidFromReference(candidateRelationshipRef.toString());
+                if (!entityGUIDsVisited.contains(entityGuid) || !relationshipGUIDsVisited.contains(relationshipGuid)) {
+                    // If either the entity or the relationship has not been seen, add the tuple
+                    consolidated.add(candidateTuple);
+                    entityGUIDsVisited.add(entityGUID);
+                    relationshipGUIDsVisited.add(relationshipGuid);
+                }
             }
         }
 
+        return consolidated;
+
+    }
+
+    /**
+     * Find all of the traversals that exist between the provided entities, based on the other provided criteria.
+     * @param startEntityGUID from which to start traversing
+     * @param endEntityGUID at which to stop traversing
+     * @param limitResultsByStatus to limit the entities that are traversed based on their status
+     * @param asOfTime to find the traversals for a particular point-in-time
+     * @return InstanceGraph containing all of the relationships and entities between the start and end
+     */
+    public InstanceGraph getTraversalsBetweenEntities(String startEntityGUID,
+                                                      String endEntityGUID,
+                                                      List<InstanceStatus> limitResultsByStatus,
+                                                      Date asOfTime) {
+
+        // Since a relationship involves not only the relationship object, but also some details from each proxy,
+        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
+        ICruxDatasource db;
+        if (asOfTime != null) {
+            db = cruxAPI.openDB(asOfTime);
+        } else {
+            db = cruxAPI.openDB();
+        }
+
+        InstanceGraph instanceGraph = new InstanceGraph();
+
+        Set<String> entityGUIDsVisited = new HashSet<>();
+        Set<String> relationshipGUIDsVisited = new HashSet<>();
+
+        // Start the InstanceGraph off with the entity starting point that was requested
+        // (not clear if this is the intended logic, but follows other repository implementations)
+        List<EntityDetail> startingEntities = new ArrayList<>();
+        EntityDetail startingEntity = this.getEntity(db, startEntityGUID);
+
+        if (startingEntity != null) {
+
+            startingEntities.add(startingEntity);
+            instanceGraph.setEntities(startingEntities);
+            entityGUIDsVisited.add(startEntityGUID);
+
+            Set<List<?>> successfulTraversals = traverseToEnd(db,
+                    startEntityGUID,
+                    endEntityGUID,
+                    limitResultsByStatus,
+                    new HashSet<>(),
+                    1);
+
+            // TODO: exclude proxies (somehow) from the entity detail list (?)
+            InstanceGraph furtherTraversals = resultsToGraph(db, successfulTraversals, entityGUIDsVisited, relationshipGUIDsVisited);
+            if (furtherTraversals != null) {
+                instanceGraph = mergeGraphs(instanceGraph, furtherTraversals);
+            }
+
+        }
+
+        // Ensure that we close the open DB resource now that we're finished with it
+        closeDb(db);
+
+        return instanceGraph;
+
+    }
+
+    /**
+     * Recursively traverses from the starting entity to the end entity, up to a maximum depth (to avoid potential
+     * stack overflow).
+     * @param db already opened view of the database at a point-in-time
+     * @param startEntityGUID from which to start traversing
+     * @param endEntityGUID at which to stop traversing
+     * @param limitResultsByStatus to limit which entities are traversed based on their status
+     * @param entityGUIDsVisited to avoid traversing the same entity multiple times (for efficiency)
+     * @param currentDepth tracks the current depth (once we reach maximum, bail out)
+     * @return {@code Set<List<?>>} of the unique combinations of entities and relationships that successfully link between the start and end
+     * @see Constants#MAX_TRAVERSAL_DEPTH
+     */
+    private Set<List<?>> traverseToEnd(ICruxDatasource db,
+                                       String startEntityGUID,
+                                       String endEntityGUID,
+                                       List<InstanceStatus> limitResultsByStatus,
+                                       Set<String> entityGUIDsVisited,
+                                       int currentDepth) {
+
+        Set<List<?>> consolidated = new LinkedHashSet<>();
+
+        // As long as we have not reached the maximum depth, keep traversing...
+        if (currentDepth < Constants.MAX_TRAVERSAL_DEPTH) {
+            Collection<List<?>> nextLevel = findDirectNeighbors(db,
+                    startEntityGUID,
+                    null,
+                    null,
+                    limitResultsByStatus,
+                    null);
+            log.debug("Found traversal results: {}", nextLevel);
+            Keyword endRef = EntitySummaryMapping.getReference(endEntityGUID);
+            if (nextLevel != null && !nextLevel.isEmpty()) {
+                // As long as there is something to check in the next level, do so...
+                for (List<?> candidateTuple : nextLevel) {
+                    Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
+                    if (endRef.equals(candidateEntityRef)) {
+                        // If we found the endEntityGUID in the results, add it to the set of successful traversals
+                        consolidated.add(candidateTuple);
+                    } else {
+                        String nextStartGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
+                        if (!entityGUIDsVisited.contains(nextStartGuid)) {
+                            // If we have not already traversed this GUID, continue traversing...
+                            entityGUIDsVisited.add(nextStartGuid);
+                            Set<List<?>> nextTraversal = traverseToEnd(db,
+                                    nextStartGuid,
+                                    endEntityGUID,
+                                    limitResultsByStatus,
+                                    entityGUIDsVisited,
+                                    currentDepth + 1);
+                            // If the traversal returns a non-empty result, it was successful
+                            if (!nextTraversal.isEmpty()) {
+                                // So add the traversal up to now (since it led to a successful outcome)
+                                consolidated.add(candidateTuple);
+                                // And the successful sub-traversal(s) that were returned
+                                consolidated.addAll(nextTraversal);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // return the consolidated set of successful traversals, or null if none were found
         return consolidated;
 
     }
@@ -635,7 +783,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             List<Relationship> relationships = new ArrayList<>();
             List<EntityDetail> entities = new ArrayList<>();
             for (List<?> cruxResult : cruxResults) {
-                Keyword entityRef = (Keyword) cruxResult.get(0);
+                Keyword entityRef = getEntityRefFromGraphTuple(cruxResult);
                 String entityGuid = Constants.trimGuidFromReference(entityRef.toString());
                 if (!entityGUIDsVisited.contains(entityGuid)) {
                     EntityDetail entity = getEntityByRef(db, entityRef);
@@ -645,7 +793,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         entities.add(entity);
                     }
                 }
-                Keyword relationshipRef = (Keyword) cruxResult.get(1);
+                Keyword relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
                 String relationshipGuid = Constants.trimGuidFromReference(relationshipRef.toString());
                 if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
                     Relationship relationship = getRelationshipByRef(db, relationshipRef);
@@ -661,6 +809,43 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             results.setRelationships(relationships);
         }
         return results;
+    }
+
+    /**
+     * Retrieve the unique set of entity GUIDs from the provided graph query results.
+     * @param cruxResults graph query results
+     * @return {@code List<String>}
+     */
+    private List<String> getEntityGUIDsFromGraphResults(Collection<List<?>> cruxResults) {
+        List<String> list = new ArrayList<>();
+        for (List<?> result : cruxResults) {
+            Keyword entityRef = getEntityRefFromGraphTuple(result);
+            if (entityRef != null) {
+                String guid = Constants.trimGuidFromReference(entityRef.toString());
+                if (!list.contains(guid)) {
+                    list.add(guid);
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Retrieve the entity reference from the provided graph query result.
+     * @param tuple graph query result
+     * @return Keyword reference for the entity
+     */
+    private Keyword getEntityRefFromGraphTuple(List<?> tuple) {
+        return tuple == null ? null : (Keyword) tuple.get(0);
+    }
+
+    /**
+     * Retrieve the relationship reference from the provided graph query result.
+     * @param tuple graph query result
+     * @return Keyword reference for the relationship
+     */
+    private Keyword getRelationshipRefFromGraphTuple(List<?> tuple) {
+        return tuple == null ? null : (Keyword) tuple.get(1);
     }
 
     /**
