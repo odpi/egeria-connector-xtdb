@@ -510,7 +510,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     /**
      * {@inheritDoc}
      * Return all of the relationships and intermediate entities that connect the startEntity with the endEntity.
-
+     */
     @Override
     public InstanceGraph getLinkingEntities(String userId,
                                             String startEntityGUID,
@@ -531,11 +531,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 limitResultsByStatus,
                 asOfTime);
 
-        // TODO: implement -- needs to be some kind of recursive speculation, and only have it add
-        //  the relationships / entities as the recursion unwraps (if the end of the recursion returns
-        //  a 'true' to indicate that the endEntityGUID was reached via that speculative recursive traversal) (?)
+        return cruxRepositoryConnector.getTraversalsBetweenEntities(startEntityGUID,
+                endEntityGUID,
+                limitResultsByStatus,
+                asOfTime);
 
-    } */
+    }
 
     /**
      * {@inheritDoc}
