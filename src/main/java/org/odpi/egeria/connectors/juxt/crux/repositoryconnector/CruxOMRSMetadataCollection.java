@@ -509,7 +509,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
     /**
      * {@inheritDoc}
-     * Return all of the relationships and intermediate entities that connect the startEntity with the endEntity.
      */
     @Override
     public InstanceGraph getLinkingEntities(String userId,
@@ -530,6 +529,21 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 endEntityGUID,
                 limitResultsByStatus,
                 asOfTime);
+
+        // If the two GUIDs are equal, just return the one entity and nothing else (no relationships)
+        if (startEntityGUID.equals(endEntityGUID)) {
+            try {
+                InstanceGraph one = new InstanceGraph();
+                List<EntityDetail> list = new ArrayList<>();
+                EntityDetail entity = cruxRepositoryConnector.getEntity(startEntityGUID, asOfTime, false);
+                list.add(entity);
+                one.setEntities(list);
+                return one;
+            } catch (EntityProxyOnlyException e) {
+                throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                        startEntityGUID, repositoryName), this.getClass().getName(), methodName, e);
+            }
+        }
 
         return cruxRepositoryConnector.getTraversalsBetweenEntities(startEntityGUID,
                 endEntityGUID,

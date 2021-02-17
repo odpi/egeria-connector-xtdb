@@ -438,22 +438,30 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             db = cruxAPI.openDB();
         }
 
-        Collection<List<?>> cruxResults = findEntityRelationships(db,
-                entityGUID,
-                relationshipTypeGUID,
-                fromRelationshipElement,
-                limitResultsByStatus,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize);
+        try {
 
-        log.debug("Found results: {}", cruxResults);
-        List<Relationship> results = resultsToList(db, cruxResults);
+            Collection<List<?>> cruxResults = findEntityRelationships(db,
+                    entityGUID,
+                    relationshipTypeGUID,
+                    fromRelationshipElement,
+                    limitResultsByStatus,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize);
 
-        // Ensure that we close the open DB resource now that we're finished with it
-        closeDb(db);
+            log.debug("Found results: {}", cruxResults);
+            List<Relationship> results = resultsToList(db, cruxResults);
 
-        return results;
+            // Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
+
+            return results;
+
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
+            closeDb(db);
+            throw e;
+        }
 
     }
 
@@ -486,68 +494,76 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             db = cruxAPI.openDB();
         }
 
-        InstanceGraph instanceGraph = new InstanceGraph();
+        try {
 
-        Set<List<?>> consolidated = new LinkedHashSet<>();
+            InstanceGraph instanceGraph = new InstanceGraph();
 
-        Set<String> entityGUIDsRetrieved = new HashSet<>();
-        Set<String> relationshipGUIDsRetrieved = new HashSet<>();
-        Set<String> entityGUIDsVisited = new HashSet<>();
-        Set<String> relationshipGUIDsVisited = new HashSet<>();
-        List<String> nextEntityGUIDs = new ArrayList<>();
-        nextEntityGUIDs.add(entityGUID);
+            Set<List<?>> consolidated = new LinkedHashSet<>();
 
-        // Start the InstanceGraph off with the entity starting point that was requested
-        // (not clear if this is the intended logic, but follows other repository implementations)
-        List<EntityDetail> startingEntities = new ArrayList<>();
-        EntityDetail startingEntity = this.getEntity(db, entityGUID);
+            Set<String> entityGUIDsRetrieved = new HashSet<>();
+            Set<String> relationshipGUIDsRetrieved = new HashSet<>();
+            Set<String> entityGUIDsVisited = new HashSet<>();
+            Set<String> relationshipGUIDsVisited = new HashSet<>();
+            List<String> nextEntityGUIDs = new ArrayList<>();
+            nextEntityGUIDs.add(entityGUID);
 
-        if (startingEntity != null) {
-            startingEntities.add(startingEntity);
-            instanceGraph.setEntities(startingEntities);
-            entityGUIDsRetrieved.add(entityGUID);
+            // Start the InstanceGraph off with the entity starting point that was requested
+            // (not clear if this is the intended logic, but follows other repository implementations)
+            List<EntityDetail> startingEntities = new ArrayList<>();
+            EntityDetail startingEntity = this.getEntity(db, entityGUID);
 
-            int levelTraversed = 0;
-            if (level < 0) {
-                // If the level is negative, it means keep going until we run out of new traversals (or crash, presumably?)
-                // We will set a maximum...
-                level = Constants.MAX_TRAVERSAL_DEPTH;
+            if (startingEntity != null) {
+                startingEntities.add(startingEntity);
+                instanceGraph.setEntities(startingEntities);
+                entityGUIDsRetrieved.add(entityGUID);
+
+                int levelTraversed = 0;
+                if (level < 0) {
+                    // If the level is negative, it means keep going until we run out of new traversals (or crash, presumably?)
+                    // We will set a maximum...
+                    level = Constants.MAX_TRAVERSAL_DEPTH;
+                }
+                if (level > 0) {
+
+                    do {
+                        Set<List<?>> nextGraph = getNextLevelNeighbors(db,
+                                nextEntityGUIDs,
+                                entityTypeGUIDs,
+                                relationshipTypeGUIDs,
+                                limitResultsByStatus,
+                                limitResultsByClassification,
+                                entityGUIDsVisited,
+                                relationshipGUIDsVisited);
+                        entityGUIDsVisited.addAll(nextEntityGUIDs);
+                        levelTraversed++;
+                        // Add this subset of results into the consolidated set of results
+                        consolidated.addAll(nextGraph);
+                        // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
+                        // the list prior to iterating again
+                        nextEntityGUIDs = getEntityGUIDsFromGraphResults(nextGraph);
+                        nextEntityGUIDs.removeAll(entityGUIDsVisited);
+                        // Once we either run out of GUIDs to traverse, or we've reached the desired level, we stop iterating
+                    } while (!nextEntityGUIDs.isEmpty() && levelTraversed < level);
+                }
+
+                // TODO: exclude proxies (somehow) from the entity detail list (?)
+                InstanceGraph neighbors = resultsToGraph(db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved);
+                if (neighbors != null) {
+                    instanceGraph = mergeGraphs(instanceGraph, neighbors);
+                }
+
             }
-            if (level > 0) {
 
-                do {
-                    Set<List<?>> nextGraph = getNextLevelNeighbors(db,
-                            nextEntityGUIDs,
-                            entityTypeGUIDs,
-                            relationshipTypeGUIDs,
-                            limitResultsByStatus,
-                            limitResultsByClassification,
-                            entityGUIDsVisited,
-                            relationshipGUIDsVisited);
-                    entityGUIDsVisited.addAll(nextEntityGUIDs);
-                    levelTraversed++;
-                    // Add this subset of results into the consolidated set of results
-                    consolidated.addAll(nextGraph);
-                    // Retrieve the next set of entity GUIDs to traverse, but remove any already-visited ones from
-                    // the list prior to iterating again
-                    nextEntityGUIDs = getEntityGUIDsFromGraphResults(nextGraph);
-                    nextEntityGUIDs.removeAll(entityGUIDsVisited);
-                    // Once we either run out of GUIDs to traverse, or we've reached the desired level, we stop iterating
-                } while (!nextEntityGUIDs.isEmpty() && levelTraversed < level);
-            }
+            // Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
 
-            // TODO: exclude proxies (somehow) from the entity detail list (?)
-            InstanceGraph neighbors = resultsToGraph(db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved);
-            if (neighbors != null) {
-                instanceGraph = mergeGraphs(instanceGraph, neighbors);
-            }
+            return instanceGraph;
 
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
+            closeDb(db);
+            throw e;
         }
-
-        // Ensure that we close the open DB resource now that we're finished with it
-        closeDb(db);
-
-        return instanceGraph;
 
     }
 
@@ -608,11 +624,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByStatus to limit the entities that are traversed based on their status
      * @param asOfTime to find the traversals for a particular point-in-time
      * @return InstanceGraph containing all of the relationships and entities between the start and end
+     * @throws EntityNotKnownException if the requested starting point is not known to the repository
      */
     public InstanceGraph getTraversalsBetweenEntities(String startEntityGUID,
                                                       String endEntityGUID,
                                                       List<InstanceStatus> limitResultsByStatus,
-                                                      Date asOfTime) {
+                                                      Date asOfTime) throws EntityNotKnownException {
+
+        final String methodName = "getTraversalsBetweenEntities";
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
         // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
@@ -623,41 +642,55 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             db = cruxAPI.openDB();
         }
 
-        InstanceGraph instanceGraph = new InstanceGraph();
+        try {
 
-        Set<String> entityGUIDsVisited = new HashSet<>();
-        Set<String> relationshipGUIDsVisited = new HashSet<>();
+            InstanceGraph instanceGraph = new InstanceGraph();
 
-        // Start the InstanceGraph off with the entity starting point that was requested
-        // (not clear if this is the intended logic, but follows other repository implementations)
-        List<EntityDetail> startingEntities = new ArrayList<>();
-        EntityDetail startingEntity = this.getEntity(db, startEntityGUID);
+            Set<String> entityGUIDsVisited = new HashSet<>();
+            Set<String> relationshipGUIDsVisited = new HashSet<>();
 
-        if (startingEntity != null) {
+            // Start the InstanceGraph off with the entity starting point that was requested
+            // (not clear if this is the intended logic, but follows other repository implementations)
+            List<EntityDetail> startingEntities = new ArrayList<>();
+            EntityDetail startingEntity = this.getEntity(db, startEntityGUID);
+
+            if (startingEntity == null) {
+                throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                        startEntityGUID, repositoryName), this.getClass().getName(), methodName);
+            }
 
             startingEntities.add(startingEntity);
             instanceGraph.setEntities(startingEntities);
             entityGUIDsVisited.add(startEntityGUID);
 
+            Set<String> traversedGuids = new HashSet<>();
+            traversedGuids.add(startEntityGUID);
             Set<List<?>> successfulTraversals = traverseToEnd(db,
                     startEntityGUID,
                     endEntityGUID,
                     limitResultsByStatus,
-                    new HashSet<>(),
+                    traversedGuids,
                     1);
 
             // TODO: exclude proxies (somehow) from the entity detail list (?)
             InstanceGraph furtherTraversals = resultsToGraph(db, successfulTraversals, entityGUIDsVisited, relationshipGUIDsVisited);
-            if (furtherTraversals != null) {
+            if (furtherTraversals == null || furtherTraversals.getEntities().isEmpty()) {
+                // If there are no entities, return an empty graph
+                instanceGraph = null;
+            } else {
                 instanceGraph = mergeGraphs(instanceGraph, furtherTraversals);
             }
 
+            // Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
+
+            return instanceGraph;
+
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
+            closeDb(db);
+            throw e;
         }
-
-        // Ensure that we close the open DB resource now that we're finished with it
-        closeDb(db);
-
-        return instanceGraph;
 
     }
 
@@ -691,6 +724,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     limitResultsByStatus,
                     null);
             log.debug("Found traversal results: {}", nextLevel);
+            Keyword startRef = EntitySummaryMapping.getReference(startEntityGUID);
             Keyword endRef = EntitySummaryMapping.getReference(endEntityGUID);
             if (nextLevel != null && !nextLevel.isEmpty()) {
                 // As long as there is something to check in the next level, do so...
@@ -699,7 +733,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     if (endRef.equals(candidateEntityRef)) {
                         // If we found the endEntityGUID in the results, add it to the set of successful traversals
                         consolidated.add(candidateTuple);
-                    } else {
+                    } else if (!startRef.equals(candidateEntityRef)) {
+                        // Otherwise, so long as we have not circled back to the starting point, continue traversing
                         String nextStartGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
                         if (!entityGUIDsVisited.contains(nextStartGuid)) {
                             // If we have not already traversed this GUID, continue traversing...
@@ -882,27 +917,35 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             db = cruxAPI.openDB();
         }
 
-        Collection<List<?>> cruxResults = searchCrux(db,
-                TypeDefCategory.RELATIONSHIP_DEF,
-                relationshipTypeGUID,
-                relationshipSubtypeGUIDs,
-                matchProperties,
-                fromRelationshipElement,
-                limitResultsByStatus,
-                null,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize,
-                RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
-        );
+        try {
 
-        log.debug("Found results: {}", cruxResults);
-        List<Relationship> results = resultsToList(db, cruxResults);
+            Collection<List<?>> cruxResults = searchCrux(db,
+                    TypeDefCategory.RELATIONSHIP_DEF,
+                    relationshipTypeGUID,
+                    relationshipSubtypeGUIDs,
+                    matchProperties,
+                    fromRelationshipElement,
+                    limitResultsByStatus,
+                    null,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize,
+                    RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
+            );
 
-        // Ensure that we close the open DB resource now that we're finished with it
-        closeDb(db);
+            log.debug("Found results: {}", cruxResults);
+            List<Relationship> results = resultsToList(db, cruxResults);
 
-        return results;
+            // Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
+
+            return results;
+
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
+            closeDb(db);
+            throw e;
+        }
 
     }
 
@@ -939,26 +982,34 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             db = cruxAPI.openDB();
         }
 
-        Collection<List<?>> cruxResults = searchCruxLucene(db,
-                TypeDefCategory.RELATIONSHIP_DEF,
-                relationshipTypeGUID,
-                searchCriteria,
-                fromRelationshipElement,
-                limitResultsByStatus,
-                null,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize,
-                RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
-        );
+        try {
 
-        log.debug("Found results: {}", cruxResults);
-        List<Relationship> results = resultsToList(db, cruxResults);
+            Collection<List<?>> cruxResults = searchCruxLucene(db,
+                    TypeDefCategory.RELATIONSHIP_DEF,
+                    relationshipTypeGUID,
+                    searchCriteria,
+                    fromRelationshipElement,
+                    limitResultsByStatus,
+                    null,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize,
+                    RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
+            );
 
-        // Ensure that we close the open DB resource now that we're finished with it
-        closeDb(db);
+            log.debug("Found results: {}", cruxResults);
+            List<Relationship> results = resultsToList(db, cruxResults);
 
-        return results;
+            // Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
+
+            return results;
+
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
+            closeDb(db);
+            throw e;
+        }
 
     }
 
@@ -1095,22 +1146,30 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             db = cruxAPI.openDB();
         }
 
-        // 1. Retrieve the relationship document itself, first
-        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, RelationshipMapping.getReference(guid));
-        log.debug("Found results: {}", cruxDoc);
+        try {
 
-        // 2. Pass the relationship document and the open DB connection to the mapping
-        //  (so it can retrieve the entity proxies from that same point-in-time)
-        RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
+            // 1. Retrieve the relationship document itself, first
+            Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, RelationshipMapping.getReference(guid));
+            log.debug("Found results: {}", cruxDoc);
 
-        // 3. Map through the result (involves additional queries, so cannot close DB yet)
-        Relationship result = rm.toEgeria();
+            // 2. Pass the relationship document and the open DB connection to the mapping
+            //  (so it can retrieve the entity proxies from that same point-in-time)
+            RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
 
-        // 4. Ensure that we close the open DB resource now that we're finished with it
-        closeDb(db);
+            // 3. Map through the result (involves additional queries, so cannot close DB yet)
+            Relationship result = rm.toEgeria();
 
-        // 5. Return the resulting relationship
-        return result;
+            // 4. Ensure that we close the open DB resource now that we're finished with it
+            closeDb(db);
+
+            // 5. Return the resulting relationship
+            return result;
+
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
+            closeDb(db);
+            throw e;
+        }
 
     }
 
@@ -1163,42 +1222,47 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return Relationship giving the restored version (or null if there was no previous version to restore)
      */
     public Relationship restorePreviousVersionOfRelationship(String userId, String guid) {
+
         Keyword docRef = RelationshipMapping.getReference(guid);
         ICruxDatasource db = cruxAPI.openDB();
-        List<Map<Keyword, ?>> history = getObjectHistory(db, docRef);
-        Map<Keyword, Object> currentVersionTxn  = null;
-        Map<Keyword, Object> previousVersionTxn = null;
-        if (history != null && history.size() > 1) {
-            // There must be a minimum of two entries in the history for us to have a previous version to go to.
-            currentVersionTxn  = new HashMap<>(history.get(0));
-            previousVersionTxn = new HashMap<>(history.get(1));
-        }
-        Relationship restored = null;
-        if (currentVersionTxn != null) {
-            // Note that here we will not pass-through the opened DB as these methods will need to retrieve a different
-            // point-in-time view anyway (so cannot use the opened DB resource)
-            Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
-            RelationshipMapping rmC = new RelationshipMapping(this, currentVersionCrux, db);
-            Relationship current = rmC.toEgeria();
-            long currentVersion = current.getVersion();
-            Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
-            RelationshipMapping rmP = new RelationshipMapping(this, previousVersionCrux, db);
-            restored = rmP.toEgeria();
-            // Ensure that we close the open DB resource now that we're finished with it
+
+        try {
+            List<Map<Keyword, ?>> history = getObjectHistory(db, docRef);
+            Map<Keyword, Object> currentVersionTxn = null;
+            Map<Keyword, Object> previousVersionTxn = null;
+            if (history != null && history.size() > 1) {
+                // There must be a minimum of two entries in the history for us to have a previous version to go to.
+                currentVersionTxn = new HashMap<>(history.get(0));
+                previousVersionTxn = new HashMap<>(history.get(1));
+            }
+            Relationship restored = null;
+            if (currentVersionTxn != null) {
+                // Note that here we will not pass-through the opened DB as these methods will need to retrieve a different
+                // point-in-time view anyway (so cannot use the opened DB resource)
+                Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
+                RelationshipMapping rmC = new RelationshipMapping(this, currentVersionCrux, db);
+                Relationship current = rmC.toEgeria();
+                long currentVersion = current.getVersion();
+                Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
+                RelationshipMapping rmP = new RelationshipMapping(this, previousVersionCrux, db);
+                restored = rmP.toEgeria();
+                // Update the version of the restored instance to be one more than the latest (current) version, the update
+                // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
+                // and the last user to update it to the user that requested this restoration
+                restored.setVersion(currentVersion + 1);
+                restored.setUpdateTime(new Date());
+                restored.setUpdatedBy(userId);
+                // Then submit this version back into Crux as an update
+                restored = updateRelationship(restored);
+            }
+            // Ensure that we close the open DB resource now that we're finished with it (whether we found something or not)
             closeDb(db);
-            // Update the version of the restored instance to be one more than the latest (current) version, the update
-            // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
-            // and the last user to update it to the user that requested this restoration
-            restored.setVersion(currentVersion + 1);
-            restored.setUpdateTime(new Date());
-            restored.setUpdatedBy(userId);
-            // Then submit this version back into Crux as an update
-            restored = updateRelationship(restored);
-        } else {
-            // Even if we did not find any history, ensure that we close the open DB resource
+            return restored;
+        } catch (Exception e) {
+            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
             closeDb(db);
+            throw e;
         }
-        return restored;
     }
 
     /**
@@ -1759,12 +1823,21 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         return cruxAPI.awaitTx(tx, null);
     }
 
+    /**
+     * Retrieve the statements needed to permanently remove a document (and its history) from the repository.
+     * @param docRef giving the primary key of the document to permanently remove
+     * @return {@code List<List<?>>} of statements
+     */
     private List<List<?>> getEvictDocStatements(Keyword docRef) {
         List<List<?>> statements = new ArrayList<>();
         statements.add(Constants.evict(docRef));
         return statements;
     }
 
+    /**
+     * Close the point-in-time view of the database to allow its resources to be released.
+     * @param db to close
+     */
     private void closeDb(ICruxDatasource db) {
         try {
             db.close();
