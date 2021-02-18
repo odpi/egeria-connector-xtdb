@@ -4,10 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import clojure.lang.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import crux.api.Crux;
-import crux.api.HistoryOptions;
-import crux.api.ICruxAPI;
-import crux.api.ICruxDatasource;
+import crux.api.*;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
@@ -29,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -38,7 +36,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
     private static final Logger log = LoggerFactory.getLogger(CruxOMRSRepositoryConnector.class);
 
+    private static final String SYNC = "Synchronously";
+    private static final String ASYNC = "Asynchronously";
+
     private ICruxAPI cruxAPI = null;
+    private boolean luceneConfigured = false;
+    private boolean synchronousIndex = true;
 
     /**
      * Default constructor used by the OCF Connector Provider.
@@ -86,14 +89,29 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         File configFile = null;
         Map<String, Object> configProperties = connectionProperties.getConfigurationProperties();
         if (configProperties != null && !configProperties.isEmpty()) {
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                configFile = File.createTempFile("crux", ".json");
-                log.debug("Wrote configuration to: {}", configFile.getCanonicalPath());
-                mapper.writeValue(configFile, configProperties);
-            } catch (IOException e) {
-                throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
-                        this.getClass().getName(), methodName, e);
+            if (configProperties.containsKey(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG)) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    configFile = File.createTempFile("crux", ".json");
+                    Object cruxCfg = configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG);
+                    if (cruxCfg instanceof Map) {
+                        Map<?, ?> cruxConfig = (Map<?, ?>) cruxCfg;
+                        log.debug("Writing configuration to: {}", configFile.getCanonicalPath());
+                        mapper.writeValue(configFile, cruxConfig);
+                        // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
+                        // the configurationProperties
+                        luceneConfigured = cruxConfig.containsKey(Constants.CRUX_LUCENE);
+                    }
+                } catch (IOException e) {
+                    throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
+                            this.getClass().getName(), methodName, e);
+                }
+            }
+            if (configProperties.containsKey(CruxOMRSRepositoryConnectorProvider.SYNCHRONOUS_INDEX)) {
+                Object syncIdx = configProperties.get(CruxOMRSRepositoryConnectorProvider.SYNCHRONOUS_INDEX);
+                if (syncIdx instanceof Boolean) {
+                    synchronousIndex = (Boolean) syncIdx;
+                }
             }
         }
 
@@ -108,7 +126,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTING_WITH_CONFIG.getMessageDefinition());
                 cruxAPI = Crux.startNode(configFile);
             }
-            log.debug(" ... node: {}", cruxAPI);
+            Map<Keyword, ?> details = cruxAPI.status();
+            log.debug(" ... node: {}", details);
+            log.debug(" ... luceneConfigured? {}", luceneConfigured);
+            log.debug(" ... synchronousIndex? {}", synchronousIndex);
+            Object version = details.get(Constants.CRUX_VERSION);
+            auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(getServerName(), version == null ? "<null>" : version.toString()));
         } catch (Exception e) {
             log.error("Unable to start the repository based on the provided configuration.", e);
             // Note: unfortunately the audit log swallows this exception's stack trace, and therefore is insufficient
@@ -116,8 +139,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             throw new ConnectorCheckedException(CruxOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
                     this.getClass().getName(), methodName, e);
         }
-
-        auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(getServerName(), "<null>"));
 
     }
 
@@ -150,7 +171,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param entity to create
      */
     public void createEntityProxy(EntityProxy entity) {
-        Map<Keyword, ?> results = runSynchronousTx(getCreateEntityProxyStatements(entity));
+        Map<Keyword, ?> results = runTx(getCreateEntityProxyStatements(entity));
         log.debug(" ... results: {}", results);
     }
 
@@ -172,7 +193,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return EntityDetail that was created
      */
     public EntityDetail createEntity(EntityDetail entity) {
-        Map<Keyword, ?> results = runSynchronousTx(getCreateEntityStatements(entity));
+        Map<Keyword, ?> results = runTx(getCreateEntityStatements(entity));
         log.debug(" ... results: {}", results);
         return entity;
     }
@@ -195,7 +216,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param guid of the entity to permanently delete
      */
     public void purgeEntity(String guid) {
-        runSynchronousTx(getPurgeEntityStatements(guid));
+        runTx(getPurgeEntityStatements(guid));
     }
 
     /**
@@ -306,6 +327,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findEntities
      * @return {@code List<EntityDetail>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      * @see CruxOMRSMetadataCollection#findEntities(String, String, List, SearchProperties, int, List, SearchClassifications, Date, String, SequencingOrder, int)
      */
     public List<EntityDetail> findEntities(String entityTypeGUID,
@@ -317,23 +339,29 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                            Date asOfTime,
                                            String sequencingProperty,
                                            SequencingOrder sequencingOrder,
-                                           int pageSize) throws TypeErrorException {
-        Collection<List<?>> cruxResults = searchCrux(
-                TypeDefCategory.ENTITY_DEF,
-                entityTypeGUID,
-                entitySubtypeGUIDs,
-                matchProperties,
-                fromEntityElement,
-                limitResultsByStatus,
-                matchClassifications,
-                asOfTime,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize,
-                EntityDetailMapping.ENTITY_PROPERTIES_NS
-        );
-        log.debug("Found results: {}", cruxResults);
-        return translateEntityResults(cruxResults, asOfTime);
+                                           int pageSize) throws TypeErrorException, RepositoryTimeoutException {
+        final String methodName = "findEntities";
+        try {
+            Collection<List<?>> cruxResults = searchCrux(
+                    TypeDefCategory.ENTITY_DEF,
+                    entityTypeGUID,
+                    entitySubtypeGUIDs,
+                    matchProperties,
+                    fromEntityElement,
+                    limitResultsByStatus,
+                    matchClassifications,
+                    asOfTime,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize,
+                    EntityDetailMapping.ENTITY_PROPERTIES_NS
+            );
+            log.debug("Found results: {}", cruxResults);
+            return translateEntityResults(cruxResults, asOfTime);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
+        }
     }
 
     /**
@@ -349,7 +377,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
      * @return {@code List<EntityDetail>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      * @see CruxOMRSMetadataCollection#findEntitiesByPropertyValue(String, String, String, int, List, List, Date, String, SequencingOrder, int)
      */
     public List<EntityDetail> findEntitiesByText(String entityTypeGUID,
@@ -360,22 +388,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                  Date asOfTime,
                                                  String sequencingProperty,
                                                  SequencingOrder sequencingOrder,
-                                                 int pageSize) throws TypeErrorException, FunctionNotSupportedException {
-        Collection<List<?>> cruxResults = searchCruxLucene(
-                TypeDefCategory.ENTITY_DEF,
-                entityTypeGUID,
-                searchCriteria,
-                fromEntityElement,
-                limitResultsByStatus,
-                matchClassifications,
-                asOfTime,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize,
-                EntityDetailMapping.ENTITY_PROPERTIES_NS
-        );
-        log.debug("Found results: {}", cruxResults);
-        return translateEntityResults(cruxResults, asOfTime);
+                                                 int pageSize) throws TypeErrorException, RepositoryTimeoutException {
+        final String methodName = "findEntitiesByText";
+        try {
+            Collection<List<?>> cruxResults = searchCruxLucene(
+                    TypeDefCategory.ENTITY_DEF,
+                    entityTypeGUID,
+                    searchCriteria,
+                    fromEntityElement,
+                    limitResultsByStatus,
+                    matchClassifications,
+                    asOfTime,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize,
+                    EntityDetailMapping.ENTITY_PROPERTIES_NS
+            );
+            log.debug("Found results: {}", cruxResults);
+            return translateEntityResults(cruxResults, asOfTime);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
+        }
     }
 
     /**
@@ -419,6 +453,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @return {@code List<Relationship>} list of the matching relationships
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryErrorException if any issue closing open Crux resources
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public List<Relationship> findRelationshipsForEntity(String entityGUID,
                                                          String relationshipTypeGUID,
@@ -427,18 +463,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                          Date asOfTime,
                                                          String sequencingProperty,
                                                          SequencingOrder sequencingOrder,
-                                                         int pageSize) throws TypeErrorException {
+                                                         int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "findRelationshipsForEntity";
+        List<Relationship> results;
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
-        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
-        ICruxDatasource db;
-        if (asOfTime != null) {
-            db = cruxAPI.openDB(asOfTime);
-        } else {
-            db = cruxAPI.openDB();
-        }
-
-        try {
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
             Collection<List<?>> cruxResults = findEntityRelationships(db,
                     entityGUID,
@@ -450,18 +482,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     pageSize);
 
             log.debug("Found results: {}", cruxResults);
-            List<Relationship> results = resultsToList(db, cruxResults);
+            results = resultsToList(db, cruxResults);
 
-            // Ensure that we close the open DB resource now that we're finished with it
-            closeDb(db);
-
-            return results;
-
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return results;
 
     }
 
@@ -475,7 +506,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByClassification list of classifications that must be present on all returned entities
      * @param asOfTime historical query of the radiated relationships and entities (null means current values)
      * @param level the number of relationships out from the starting entity that
-     * @return InstanceGraph
+     * @return InstanceGraph of the neighborhood
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public InstanceGraph findNeighborhood(String entityGUID,
                                           List<String> entityTypeGUIDs,
@@ -483,20 +516,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           List<InstanceStatus> limitResultsByStatus,
                                           List<String> limitResultsByClassification,
                                           Date asOfTime,
-                                          int level) {
+                                          int level) throws RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "findNeighborhood";
+        InstanceGraph instanceGraph;
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
-        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
-        ICruxDatasource db;
-        if (asOfTime != null) {
-            db = cruxAPI.openDB(asOfTime);
-        } else {
-            db = cruxAPI.openDB();
-        }
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
-        try {
-
-            InstanceGraph instanceGraph = new InstanceGraph();
+            instanceGraph = new InstanceGraph();
 
             Set<List<?>> consolidated = new LinkedHashSet<>();
 
@@ -554,16 +583,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
             }
 
-            // Ensure that we close the open DB resource now that we're finished with it
-            closeDb(db);
-
-            return instanceGraph;
-
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return instanceGraph;
 
     }
 
@@ -577,6 +602,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByStatus list of statuses to restrict results (null means include all)
      * @param limitResultsByClassification list of classifications that must be present on all returned entities
      * @return {@code Set<List<?>>} of the immediate neighbors of the specified starting point GUIDs, as graph tuples [[:entityRef :relationshipRef]]
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     private Set<List<?>> getNextLevelNeighbors(ICruxDatasource db,
                                                List<String> startingPoints,
@@ -585,32 +611,38 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                List<InstanceStatus> limitResultsByStatus,
                                                List<String> limitResultsByClassification,
                                                Set<String> entityGUIDsVisited,
-                                               Set<String> relationshipGUIDsVisited) {
+                                               Set<String> relationshipGUIDsVisited) throws RepositoryTimeoutException {
 
+        final String methodName = "getNextLevelNeighbors";
         Set<List<?>> consolidated = new LinkedHashSet<>();
 
-        // Iterate through the provided starting entity starting points to retrieve the next level of neighbors
-        for (String entityGUID : startingPoints) {
-            // Results here will be a collection of tuples: [:entity/... :relationship/...]
-            Collection<List<?>> nextDegree = findDirectNeighbors(db,
-                    entityGUID,
-                    entityTypeGUIDs,
-                    relationshipTypeGUIDs,
-                    limitResultsByStatus,
-                    limitResultsByClassification);
-            log.debug("Found neighborhood results: {}", nextDegree);
-            for (List<?> candidateTuple : nextDegree) {
-                Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
-                Keyword candidateRelationshipRef = getRelationshipRefFromGraphTuple(candidateTuple);
-                String entityGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
-                String relationshipGuid = Constants.trimGuidFromReference(candidateRelationshipRef.toString());
-                if (!entityGUIDsVisited.contains(entityGuid) || !relationshipGUIDsVisited.contains(relationshipGuid)) {
-                    // If either the entity or the relationship has not been seen, add the tuple
-                    consolidated.add(candidateTuple);
-                    entityGUIDsVisited.add(entityGUID);
-                    relationshipGUIDsVisited.add(relationshipGuid);
+        try {
+            // Iterate through the provided starting entity starting points to retrieve the next level of neighbors
+            for (String entityGUID : startingPoints) {
+                // Results here will be a collection of tuples: [:entity/... :relationship/...]
+                Collection<List<?>> nextDegree = findDirectNeighbors(db,
+                        entityGUID,
+                        entityTypeGUIDs,
+                        relationshipTypeGUIDs,
+                        limitResultsByStatus,
+                        limitResultsByClassification);
+                log.debug("Found neighborhood results: {}", nextDegree);
+                for (List<?> candidateTuple : nextDegree) {
+                    Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
+                    Keyword candidateRelationshipRef = getRelationshipRefFromGraphTuple(candidateTuple);
+                    String entityGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
+                    String relationshipGuid = Constants.trimGuidFromReference(candidateRelationshipRef.toString());
+                    if (!entityGUIDsVisited.contains(entityGuid) || !relationshipGUIDsVisited.contains(relationshipGuid)) {
+                        // If either the entity or the relationship has not been seen, add the tuple
+                        consolidated.add(candidateTuple);
+                        entityGUIDsVisited.add(entityGUID);
+                        relationshipGUIDsVisited.add(relationshipGuid);
+                    }
                 }
             }
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
         }
 
         return consolidated;
@@ -625,26 +657,21 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param asOfTime to find the traversals for a particular point-in-time
      * @return InstanceGraph containing all of the relationships and entities between the start and end
      * @throws EntityNotKnownException if the requested starting point is not known to the repository
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
      */
     public InstanceGraph getTraversalsBetweenEntities(String startEntityGUID,
                                                       String endEntityGUID,
                                                       List<InstanceStatus> limitResultsByStatus,
-                                                      Date asOfTime) throws EntityNotKnownException {
+                                                      Date asOfTime) throws EntityNotKnownException, RepositoryErrorException {
 
         final String methodName = "getTraversalsBetweenEntities";
+        InstanceGraph instanceGraph;
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
-        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
-        ICruxDatasource db;
-        if (asOfTime != null) {
-            db = cruxAPI.openDB(asOfTime);
-        } else {
-            db = cruxAPI.openDB();
-        }
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
-        try {
-
-            InstanceGraph instanceGraph = new InstanceGraph();
+            instanceGraph = new InstanceGraph();
 
             Set<String> entityGUIDsVisited = new HashSet<>();
             Set<String> relationshipGUIDsVisited = new HashSet<>();
@@ -681,16 +708,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 instanceGraph = mergeGraphs(instanceGraph, furtherTraversals);
             }
 
-            // Ensure that we close the open DB resource now that we're finished with it
-            closeDb(db);
-
-            return instanceGraph;
-
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return instanceGraph;
 
     }
 
@@ -705,56 +728,63 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param currentDepth tracks the current depth (once we reach maximum, bail out)
      * @return {@code Set<List<?>>} of the unique combinations of entities and relationships that successfully link between the start and end
      * @see Constants#MAX_TRAVERSAL_DEPTH
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     private Set<List<?>> traverseToEnd(ICruxDatasource db,
                                        String startEntityGUID,
                                        String endEntityGUID,
                                        List<InstanceStatus> limitResultsByStatus,
                                        Set<String> entityGUIDsVisited,
-                                       int currentDepth) {
+                                       int currentDepth) throws RepositoryTimeoutException {
 
+        final String methodName = "traverseToEnd";
         Set<List<?>> consolidated = new LinkedHashSet<>();
 
         // As long as we have not reached the maximum depth, keep traversing...
         if (currentDepth < Constants.MAX_TRAVERSAL_DEPTH) {
-            Collection<List<?>> nextLevel = findDirectNeighbors(db,
-                    startEntityGUID,
-                    null,
-                    null,
-                    limitResultsByStatus,
-                    null);
-            log.debug("Found traversal results: {}", nextLevel);
-            Keyword startRef = EntitySummaryMapping.getReference(startEntityGUID);
-            Keyword endRef = EntitySummaryMapping.getReference(endEntityGUID);
-            if (nextLevel != null && !nextLevel.isEmpty()) {
-                // As long as there is something to check in the next level, do so...
-                for (List<?> candidateTuple : nextLevel) {
-                    Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
-                    if (endRef.equals(candidateEntityRef)) {
-                        // If we found the endEntityGUID in the results, add it to the set of successful traversals
-                        consolidated.add(candidateTuple);
-                    } else if (!startRef.equals(candidateEntityRef)) {
-                        // Otherwise, so long as we have not circled back to the starting point, continue traversing
-                        String nextStartGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
-                        if (!entityGUIDsVisited.contains(nextStartGuid)) {
-                            // If we have not already traversed this GUID, continue traversing...
-                            entityGUIDsVisited.add(nextStartGuid);
-                            Set<List<?>> nextTraversal = traverseToEnd(db,
-                                    nextStartGuid,
-                                    endEntityGUID,
-                                    limitResultsByStatus,
-                                    entityGUIDsVisited,
-                                    currentDepth + 1);
-                            // If the traversal returns a non-empty result, it was successful
-                            if (!nextTraversal.isEmpty()) {
-                                // So add the traversal up to now (since it led to a successful outcome)
-                                consolidated.add(candidateTuple);
-                                // And the successful sub-traversal(s) that were returned
-                                consolidated.addAll(nextTraversal);
+            try {
+                Collection<List<?>> nextLevel = findDirectNeighbors(db,
+                        startEntityGUID,
+                        null,
+                        null,
+                        limitResultsByStatus,
+                        null);
+                log.debug("Found traversal results: {}", nextLevel);
+                Keyword startRef = EntitySummaryMapping.getReference(startEntityGUID);
+                Keyword endRef = EntitySummaryMapping.getReference(endEntityGUID);
+                if (nextLevel != null && !nextLevel.isEmpty()) {
+                    // As long as there is something to check in the next level, do so...
+                    for (List<?> candidateTuple : nextLevel) {
+                        Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
+                        if (endRef.equals(candidateEntityRef)) {
+                            // If we found the endEntityGUID in the results, add it to the set of successful traversals
+                            consolidated.add(candidateTuple);
+                        } else if (!startRef.equals(candidateEntityRef)) {
+                            // Otherwise, so long as we have not circled back to the starting point, continue traversing
+                            String nextStartGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
+                            if (!entityGUIDsVisited.contains(nextStartGuid)) {
+                                // If we have not already traversed this GUID, continue traversing...
+                                entityGUIDsVisited.add(nextStartGuid);
+                                Set<List<?>> nextTraversal = traverseToEnd(db,
+                                        nextStartGuid,
+                                        endEntityGUID,
+                                        limitResultsByStatus,
+                                        entityGUIDsVisited,
+                                        currentDepth + 1);
+                                // If the traversal returns a non-empty result, it was successful
+                                if (!nextTraversal.isEmpty()) {
+                                    // So add the traversal up to now (since it led to a successful outcome)
+                                    consolidated.add(candidateTuple);
+                                    // And the successful sub-traversal(s) that were returned
+                                    consolidated.addAll(nextTraversal);
+                                }
                             }
                         }
                     }
                 }
+            } catch (TimeoutException e) {
+                throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                        this.getClass().getName(), methodName, e);
             }
         }
 
@@ -896,6 +926,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findRelationships
      * @return {@code List<Relationship>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      * @see CruxOMRSMetadataCollection#findRelationships(String, String, List, SearchProperties, int, List, Date, String, SequencingOrder, int)
      */
     public List<Relationship> findRelationships(String relationshipTypeGUID,
@@ -906,18 +938,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 Date asOfTime,
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
-                                                int pageSize) throws TypeErrorException {
+                                                int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "findRelationships";
+        List<Relationship> results;
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
-        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
-        ICruxDatasource db;
-        if (asOfTime != null) {
-            db = cruxAPI.openDB(asOfTime);
-        } else {
-            db = cruxAPI.openDB();
-        }
-
-        try {
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
             Collection<List<?>> cruxResults = searchCrux(db,
                     TypeDefCategory.RELATIONSHIP_DEF,
@@ -934,18 +962,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             );
 
             log.debug("Found results: {}", cruxResults);
-            List<Relationship> results = resultsToList(db, cruxResults);
+            results = resultsToList(db, cruxResults);
 
-            // Ensure that we close the open DB resource now that we're finished with it
-            closeDb(db);
-
-            return results;
-
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return results;
 
     }
 
@@ -961,7 +988,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
      * @return {@code List<Relationship>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      * @see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue(String, String, String, int, List, Date, String, SequencingOrder, int)
      */
     public List<Relationship> findRelationshipsByText(String relationshipTypeGUID,
@@ -971,18 +999,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                       Date asOfTime,
                                                       String sequencingProperty,
                                                       SequencingOrder sequencingOrder,
-                                                      int pageSize) throws TypeErrorException, FunctionNotSupportedException {
+                                                      int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "findRelationshipsByText";
+        List<Relationship> results;
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
-        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
-        ICruxDatasource db;
-        if (asOfTime != null) {
-            db = cruxAPI.openDB(asOfTime);
-        } else {
-            db = cruxAPI.openDB();
-        }
-
-        try {
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
             Collection<List<?>> cruxResults = searchCruxLucene(db,
                     TypeDefCategory.RELATIONSHIP_DEF,
@@ -998,18 +1022,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             );
 
             log.debug("Found results: {}", cruxResults);
-            List<Relationship> results = resultsToList(db, cruxResults);
+            results = resultsToList(db, cruxResults);
 
-            // Ensure that we close the open DB resource now that we're finished with it
-            closeDb(db);
-
-            return results;
-
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return results;
 
     }
 
@@ -1074,7 +1097,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return Relationship that was created
      */
     public Relationship createRelationship(Relationship relationship) {
-        Map<Keyword, ?> results = runSynchronousTx(getCreateRelationshipStatements(relationship));
+        Map<Keyword, ?> results = runTx(getCreateRelationshipStatements(relationship));
         log.debug(" ... results: {}", results);
         return relationship;
     }
@@ -1097,7 +1120,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param guid of the relationship to permanently delete
      */
     public void purgeRelationship(String guid) {
-        runSynchronousTx(getPurgeRelationshipStatements(guid));
+        runTx(getPurgeRelationshipStatements(guid));
     }
 
     /**
@@ -1134,42 +1157,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param guid of the relationship to retrieve
      * @param asOfTime view of the relationship at this particular point in time
      * @return Relationship as it existed at the specified point in time
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
      */
-    public Relationship getRelationship(String guid, Date asOfTime) {
+    public Relationship getRelationship(String guid, Date asOfTime) throws RepositoryErrorException {
+
+        final String methodName = "getRelationship";
+        Relationship result;
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
-        // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
-        ICruxDatasource db;
-        if (asOfTime != null) {
-             db = cruxAPI.openDB(asOfTime);
-        } else {
-            db = cruxAPI.openDB();
-        }
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
-        try {
-
-            // 1. Retrieve the relationship document itself, first
             Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, RelationshipMapping.getReference(guid));
             log.debug("Found results: {}", cruxDoc);
-
-            // 2. Pass the relationship document and the open DB connection to the mapping
-            //  (so it can retrieve the entity proxies from that same point-in-time)
             RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
+            result = rm.toEgeria();
 
-            // 3. Map through the result (involves additional queries, so cannot close DB yet)
-            Relationship result = rm.toEgeria();
-
-            // 4. Ensure that we close the open DB resource now that we're finished with it
-            closeDb(db);
-
-            // 5. Return the resulting relationship
-            return result;
-
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return result;
 
     }
 
@@ -1179,24 +1188,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param userId of the user requesting the restoration
      * @param guid of the entity for which to restore the previous version
      * @return EntityDetail giving the restored version (or null if there was no previous version to restore)
+     * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
      */
-    public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) {
+    public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) throws RepositoryErrorException {
         Keyword docRef = EntitySummaryMapping.getReference(guid);
-        List<Map<Keyword, ?>> history = getObjectHistory(docRef);
-        Map<Keyword, Object> currentVersionTxn  = null;
-        Map<Keyword, Object> previousVersionTxn = null;
+        List<Map<Keyword, Object>> history = getPreviousVersion(docRef);
         if (history != null && history.size() > 1) {
             // There must be a minimum of two entries in the history for us to have a previous version to go to.
-            currentVersionTxn  = new HashMap<>(history.get(0));
-            previousVersionTxn = new HashMap<>(history.get(1));
-        }
-        if (currentVersionTxn != null) {
-            Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
-            EntityDetailMapping edmC = new EntityDetailMapping(this, currentVersionCrux);
+            EntityDetailMapping edmC = new EntityDetailMapping(this, history.get(0));
             EntityDetail current = edmC.toEgeria();
             long currentVersion = current.getVersion();
-            Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
-            EntityDetailMapping edmP = new EntityDetailMapping(this, previousVersionCrux);
+            EntityDetailMapping edmP = new EntityDetailMapping(this, history.get(1));
             EntityDetail restored = edmP.toEgeria();
             // Update the version of the restored instance to be one more than the latest (current) version, the update
             // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
@@ -1220,31 +1222,22 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param userId of the user requesting the restoration
      * @param guid of the relationship for which to restore the previous version
      * @return Relationship giving the restored version (or null if there was no previous version to restore)
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
      */
-    public Relationship restorePreviousVersionOfRelationship(String userId, String guid) {
+    public Relationship restorePreviousVersionOfRelationship(String userId, String guid) throws RepositoryErrorException {
 
+        final String methodName = "restorePreviousVersionOfRelationship";
         Keyword docRef = RelationshipMapping.getReference(guid);
-        ICruxDatasource db = cruxAPI.openDB();
+        Relationship restored = null;
 
-        try {
-            List<Map<Keyword, ?>> history = getObjectHistory(db, docRef);
-            Map<Keyword, Object> currentVersionTxn = null;
-            Map<Keyword, Object> previousVersionTxn = null;
+        try (ICruxDatasource db = cruxAPI.openDB()) {
+            List<Map<Keyword, Object>> history = getPreviousVersion(db, docRef);
             if (history != null && history.size() > 1) {
                 // There must be a minimum of two entries in the history for us to have a previous version to go to.
-                currentVersionTxn = new HashMap<>(history.get(0));
-                previousVersionTxn = new HashMap<>(history.get(1));
-            }
-            Relationship restored = null;
-            if (currentVersionTxn != null) {
-                // Note that here we will not pass-through the opened DB as these methods will need to retrieve a different
-                // point-in-time view anyway (so cannot use the opened DB resource)
-                Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
-                RelationshipMapping rmC = new RelationshipMapping(this, currentVersionCrux, db);
+                RelationshipMapping rmC = new RelationshipMapping(this, history.get(0), db);
                 Relationship current = rmC.toEgeria();
                 long currentVersion = current.getVersion();
-                Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
-                RelationshipMapping rmP = new RelationshipMapping(this, previousVersionCrux, db);
+                RelationshipMapping rmP = new RelationshipMapping(this, history.get(1), db);
                 restored = rmP.toEgeria();
                 // Update the version of the restored instance to be one more than the latest (current) version, the update
                 // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
@@ -1255,56 +1248,102 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 // Then submit this version back into Crux as an update
                 restored = updateRelationship(restored);
             }
-            // Ensure that we close the open DB resource now that we're finished with it (whether we found something or not)
-            closeDb(db);
-            return restored;
-        } catch (Exception e) {
-            // Ensure that even if there is an exception, we still close the open DB resource prior to propagating it
-            closeDb(db);
-            throw e;
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
         }
+
+        return restored;
+
     }
 
     /**
-     * Retrieve the transaction history for the provided Crux object, which will be of a form like the following:
-     * <code>
-     * {
-     *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
-     *     :crux.tx/tx-id 2,
-     *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-     *     :crux.db/content-hash #crux/id "..."
-     * }
-     * </code>
-     * @param reference indicating the primary key of the object for which to retrieve the transaction history.
-     * @return {@code List<Map<Keyword, ?>>} of the transaction history
+     * Retrieve only the current and previous versions for the provided Crux object, lazily instantiated so that we do
+     * not need to pull back the entire history for an object that has changed many times.
+     * @param reference indicating the primary key of the object for which to retrieve the previous version
+     * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the the previous version as the second element (or null if there is no previous version)
+     * @throws RepositoryErrorException if any issue closing the open lazy-evaluating cursor
      */
-    private List<Map<Keyword, ?>> getObjectHistory(Keyword reference) {
+    private List<Map<Keyword, Object>> getPreviousVersion(Keyword reference) throws RepositoryErrorException {
+
+        final String methodName = "getPreviousVersion";
         HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
-        List<Map<Keyword, ?>> history = cruxAPI.db().entityHistory(reference, options);
-        log.debug("Found history: {}", history);
-        return history;
+        List<Map<Keyword, Object>> results;
+
+        // try-with to ensure that the ICursor resource is closed, even if any exception is thrown
+        try (ICursor<Map<Keyword, ?>> lazyCursor = cruxAPI.db().openEntityHistory(reference, options)) {
+            results = getPreviousVersionFromCursor(lazyCursor, reference);
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        }
+
+        return results;
+
     }
 
     /**
-     * Retrieve the transaction history for the provided Crux object, from an already-opened point-in-time view of the
-     * repository, which will be of a form like the following:
-     * <code>
-     * {
-     *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
-     *     :crux.tx/tx-id 2,
-     *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-     *     :crux.db/content-hash #crux/id "..."
-     * }
-     * </code>
-     * @param db from which to retrieve the transaction history
-     * @param reference indicating the primary key of the object for which to retrieve the transaction history.
-     * @return {@code List<Map<Keyword, ?>>} of the transaction history
+     * Retrieve only the current and previous versions for the provided Crux object, from an already-opened
+     * point-in-time view of the repository, lazily instantiated so that we do not need to pull back the entire history
+     * for an object that has changed many times.
+     * @param db from which to retrieve the previous version
+     * @param reference indicating the primary key of the object for which to retrieve the previous version
+     * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
+     * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
      */
-    private List<Map<Keyword, ?>> getObjectHistory(ICruxDatasource db, Keyword reference) {
+    private List<Map<Keyword, Object>> getPreviousVersion(ICruxDatasource db, Keyword reference) throws RepositoryErrorException {
+
+        final String methodName = "getPreviousVersion";
         HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
-        List<Map<Keyword, ?>> history = db.entityHistory(reference, options);
-        log.debug("Found history: {}", history);
-        return history;
+        List<Map<Keyword, Object>> results;
+
+        // try-with to ensure that the ICursor resource is closed, even if any exception is thrown
+        try (ICursor<Map<Keyword, ?>> lazyCursor = db.openEntityHistory(reference, options)) {
+            // Note that here we will not pass-through the opened DB as this method will need to retrieve a different
+            // point-in-time view of the details of each entity anyway (based on the transaction dates from the cursor,
+            // rather than the already-opened DB resource)
+            results = getPreviousVersionFromCursor(lazyCursor, reference);
+        } catch (Exception e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        }
+
+        return results;
+
+    }
+
+    /**
+     * Retrieve only the current and previous versions of the provided Crux reference, from an already-opened lazily-
+     * evaluated cursor.
+     * @param cursor from which to lazily-evaluate the current and previous versions
+     * @param reference indicating the primary key of the object for which to retrieve the current and previous version
+     * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
+     */
+    private List<Map<Keyword, Object>> getPreviousVersionFromCursor(ICursor<Map<Keyword, ?>> cursor, Keyword reference) {
+        List<Map<Keyword, Object>> results = new ArrayList<>();
+        // History entries themselves will just be transaction details like the following:
+        // { :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
+        //   :crux.tx/tx-id 2,
+        //   :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
+        //   :crux.db/content-hash #crux/id "..." }
+        if (cursor != null) {
+            if (cursor.hasNext()) {
+                Map<Keyword, ?> currentVersionTxn = cursor.next();
+                if (cursor.hasNext()) {
+                    // ... so use these transaction details to retrieve the actual objects, and return those
+                    Map<Keyword, ?> previousVersionTxn = cursor.next();
+                    Map<Keyword, Object> current = getCruxObjectByReference(reference, currentVersionTxn);
+                    if (current != null) {
+                        results.add(current);
+                    }
+                    Map<Keyword, Object> previous = getCruxObjectByReference(reference, previousVersionTxn);
+                    if (previous != null) {
+                        results.add(previous);
+                    }
+                }
+            }
+        }
+        return results;
     }
 
     /**
@@ -1350,8 +1389,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param relationship to save as a reference copy
      * @return {@code List<List<?>>} of statements
      * @throws RelationshipConflictException the relationship conflicts with an existing relationship (different metadata collection IDs)
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
      */
-    public List<List<?>> getSaveReferenceCopyStatements(Relationship relationship) throws RelationshipConflictException {
+    public List<List<?>> getSaveReferenceCopyStatements(Relationship relationship) throws RelationshipConflictException, RepositoryErrorException {
 
         final String methodName = "getSaveReferenceCopyStatements";
 
@@ -1415,10 +1455,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param txnDetails containing the valid-time and tx-time of the precise version of the document to retrieve
      * @return {@code Map<Keyword, Object>} of the object's properties
      */
-    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Map<Keyword, Object> txnDetails) {
-        Date validTime = (Date) txnDetails.get(Constants.CRUX_VALID_TIME);
-        Date txnTime   = (Date) txnDetails.get(Constants.CRUX_TX_TIME);
-        return cruxAPI.db(validTime, txnTime).entity(reference);
+    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Map<Keyword, ?> txnDetails) {
+        Object oValid = txnDetails.get(Constants.CRUX_VALID_TIME);
+        Object oTxn   = txnDetails.get(Constants.CRUX_TX_TIME);
+        if (oValid instanceof Date && oTxn instanceof Date) {
+            return cruxAPI.db((Date) oValid, (Date) oTxn).entity(reference);
+        }
+        return null;
     }
 
     /**
@@ -1437,6 +1480,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> searchCrux(TypeDefCategory category,
                                           String typeGuid,
@@ -1449,7 +1493,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String sequencingProperty,
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
-                                          String namespace) throws TypeErrorException {
+                                          String namespace) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateQuery(query,
                 category,
@@ -1484,6 +1528,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> searchCrux(ICruxDatasource db,
                                           TypeDefCategory category,
@@ -1496,7 +1541,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String sequencingProperty,
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
-                                          String namespace) throws TypeErrorException {
+                                          String namespace) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateQuery(query,
                 category,
@@ -1530,7 +1575,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> searchCruxLucene(TypeDefCategory category,
                                                 String typeGuid,
@@ -1542,7 +1587,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
-                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
+                                                String namespace) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateTextQuery(query,
                 category,
@@ -1575,7 +1620,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> searchCruxLucene(ICruxDatasource db,
                                                 TypeDefCategory category,
@@ -1587,7 +1632,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
-                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
+                                                String namespace) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateTextQuery(query,
                 category,
@@ -1616,6 +1661,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> findEntityRelationships(ICruxDatasource db,
                                                        String entityGUID,
@@ -1624,7 +1670,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                        List<InstanceStatus> limitResultsByStatus,
                                                        String sequencingProperty,
                                                        SequencingOrder sequencingOrder,
-                                                       int pageSize) throws TypeErrorException {
+                                                       int pageSize) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         updateQuery(query,
@@ -1652,13 +1698,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByStatus by which to limit relationships
      * @param limitResultsByClassification by which to limit the entities in the results
      * @return {@code Collection<List<?>>} of tuples of relationships and entities found in the results
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> findDirectNeighbors(ICruxDatasource db,
                                                    String entityGUID,
                                                    List<String> entityTypeGUIDs,
                                                    List<String> relationshipTypeGUIDs,
                                                    List<InstanceStatus> limitResultsByStatus,
-                                                   List<String> limitResultsByClassification) {
+                                                   List<String> limitResultsByClassification) throws TimeoutException {
         CruxGraphQuery query = new CruxGraphQuery(getMaxPageSize());
         query.addEntityAnchorCondition(entityGUID);
         query.addRelationshipLimiters(relationshipTypeGUIDs, limitResultsByStatus);
@@ -1723,7 +1770,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the sequencing property (if any)
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     private void updateTextQuery(CruxQuery query,
                                  TypeDefCategory category,
@@ -1735,13 +1781,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                  String sequencingProperty,
                                  SequencingOrder sequencingOrder,
                                  int pageSize,
-                                 String namespace) throws TypeErrorException, FunctionNotSupportedException {
+                                 String namespace) throws TypeErrorException {
         query.addTypeCondition(typeGuid, null);
         query.addTypeDefCategoryCondition(category);
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, null, namespace);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
-        query.addWildcardTextCondition(searchCriteria, completeTypeSet, namespace, repositoryHelper, repositoryName);
-        //query.addWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName);
+        if (luceneConfigured) {
+            query.addWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace);
+        } else {
+            query.addWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace);
+        }
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addPaging(fromElement, pageSize);
         query.addStatusLimiters(limitResultsByStatus);
@@ -1815,12 +1864,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param statements to submit in the same transaction
      * @return {@code Map<Keyword, ?>} transaction details
      */
-    public Map<Keyword, ?> runSynchronousTx(List<List<?>> statements) {
-        log.debug("Synchronously transacting with: {}", statements);
+    public Map<Keyword, ?> runTx(List<List<?>> statements) {
+        log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements);
         Map<Keyword, ?> tx = cruxAPI.submitTx(statements);
         // Null for the timeout here means use the default (which is therefore configurable directly by the Crux
         // configurationProperties of the connector)
-        return cruxAPI.awaitTx(tx, null);
+        if (synchronousIndex) {
+            return cruxAPI.awaitTx(tx, null);
+        } else {
+            return tx;
+        }
     }
 
     /**
@@ -1832,18 +1885,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         List<List<?>> statements = new ArrayList<>();
         statements.add(Constants.evict(docRef));
         return statements;
-    }
-
-    /**
-     * Close the point-in-time view of the database to allow its resources to be released.
-     * @param db to close
-     */
-    private void closeDb(ICruxDatasource db) {
-        try {
-            db.close();
-        } catch (IOException e) {
-            log.error("Unable to close the open DB resource.", e);
-        }
     }
 
 }

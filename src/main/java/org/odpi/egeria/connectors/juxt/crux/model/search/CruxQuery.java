@@ -194,16 +194,16 @@ public class CruxQuery {
      * Add conditions to the search to find any text field that matches the supplied criteria (without a separate Lucene
      * index).
      * @param regexCriteria defining what should be matched
-     * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
-     * @param namespace by which to qualify the properties
      * @param repositoryHelper through which we can introspect the type definitions and their properties
      * @param repositoryName of the repository (for logging)
+     * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
+     * @param namespace by which to qualify the properties
      */
     public void addWildcardTextCondition(String regexCriteria,
-                                         Set<String> typesToInclude,
-                                         String namespace,
                                          OMRSRepositoryHelper repositoryHelper,
-                                         String repositoryName) {
+                                         String repositoryName,
+                                         Set<String> typesToInclude,
+                                         String namespace) {
 
         final String methodName = "addWildcardTextCondition";
 
@@ -254,12 +254,15 @@ public class CruxQuery {
      * @param regexCriteria defining what should be matched
      * @param repositoryHelper through which we can check the regular expressions in the criteria
      * @param repositoryName of the repository (for logging)
-     * @throws FunctionNotSupportedException if the regular expression provided in the criteria cannot be efficiently searched
+     * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
+     * @param namespace by which to qualify the properties
      */
     public void addWildcardLuceneCondition(String regexCriteria,
                                            OMRSRepositoryHelper repositoryHelper,
-                                           String repositoryName) throws FunctionNotSupportedException {
-        final String methodName = "addWildcardLuceneCondition";
+                                           String repositoryName,
+                                           Set<String> typesToInclude,
+                                           String namespace) {
+
         // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
         // will be to add the Lucene condition first, to narrow the results as far as we can via the index, but
         // then to add a secondary condition with the regex to further narrow the results -- and use as the property
@@ -316,11 +319,10 @@ public class CruxQuery {
                 // (or-join [e] (and [(wildcard-text-search "text") [[e v a s]] [(re-matches #"regex" v)]))
                 conditions.add(PersistentList.create(wrapped));
             } else {
-                // We will only attempt to support the scenarios above, where we can take the strategy outlined.
-                // An arbitrary Java regex run against the entire data store is just too much thrashing, and too limited
-                // a use case to try to support -- so we'll throw a FunctionNotSupportedException for anything else
-                throw new FunctionNotSupportedException(CruxOMRSErrorCode.REGEX_NOT_IMPLEMENTED.getMessageDefinition(repositoryName, regexCriteria),
-                        this.getClass().getName(), methodName);
+                // If we cannot run a Lucene-optimised query, then we will fallback to a full OR-based text condition
+                // comparison: which will be VERY slow, but as long as it does not exceed the query timeout threshold
+                // should at least still return accurate results
+                addWildcardTextCondition(regexCriteria, repositoryHelper, repositoryName, typesToInclude, namespace);
             }
         }
     }

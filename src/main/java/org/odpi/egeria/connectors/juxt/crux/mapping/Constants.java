@@ -15,6 +15,10 @@ import java.util.Map;
  */
 public class Constants {
 
+    // Config details
+    public static final Keyword CRUX_VERSION = Keyword.intern("crux.version", "version");
+    public static final String CRUX_LUCENE = "crux.lucene/lucene-store";
+
     // Shared properties
     public static final Keyword CRUX_PK = Keyword.intern("crux.db", "id");
     public static final Keyword CRUX_TX_TIME = Keyword.intern("crux.tx", "tx-time");
@@ -26,6 +30,9 @@ public class Constants {
 
     // Graph query limits
     public static final int MAX_TRAVERSAL_DEPTH = 40;
+
+    // Cascading limits
+    public static final int CASCADE_DELETES_PAGE_SIZE = 10000;
 
     /**
      * Retrieve an insertion vector for Crux (applicable for any write operation, since it is append-only).

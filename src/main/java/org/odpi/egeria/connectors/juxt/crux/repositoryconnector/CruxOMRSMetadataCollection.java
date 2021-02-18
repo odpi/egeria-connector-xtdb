@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
+import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.OMRSDynamicTypeMetadataCollectionBase;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
@@ -29,8 +30,6 @@ import java.util.*;
 public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectionBase {
 
     private static final Logger log = LoggerFactory.getLogger(CruxOMRSMetadataCollection.class);
-
-    private static final int CASCADE_DELETES_PAGE_SIZE = 10000;
 
     private final CruxOMRSRepositoryConnector cruxRepositoryConnector;
 
@@ -325,7 +324,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             PropertyErrorException,
             PagingErrorException,
-            FunctionNotSupportedException,
             UserNotAuthorizedException {
 
         super.findEntitiesByPropertyValueParameterValidation(userId, entityTypeGUID, searchCriteria, fromEntityElement, limitResultsByStatus, limitResultsByClassification, asOfTime, sequencingProperty, sequencingOrder, pageSize);
@@ -491,7 +489,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             PropertyErrorException,
             PagingErrorException,
-            FunctionNotSupportedException,
             UserNotAuthorizedException {
 
         super.findRelationshipsByPropertyValueParameterValidation(userId, relationshipTypeGUID, searchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
@@ -935,7 +932,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                     null,
                     null,
                     null,
-                    CASCADE_DELETES_PAGE_SIZE);
+                    Constants.CASCADE_DELETES_PAGE_SIZE);
             if (relationships != null) {
                 for (Relationship relationship : relationships) {
                     if (relationship != null) {
@@ -1007,7 +1004,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                     null,
                     null,
                     null,
-                    CASCADE_DELETES_PAGE_SIZE);
+                    Constants.CASCADE_DELETES_PAGE_SIZE);
             if (relationships != null) {
                 for (Relationship relationship : relationships) {
                     if (relationship != null) {
@@ -1578,7 +1575,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         List<List<?>> statements = cruxRepositoryConnector.getPurgeEntityStatements(entity.getGUID());
         statements.addAll(cruxRepositoryConnector.getCreateEntityStatements(updatedEntity));
-        cruxRepositoryConnector.runSynchronousTx(statements);
+        cruxRepositoryConnector.runTx(statements);
 
         return updatedEntity;
 
@@ -1700,7 +1697,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         List<List<?>> statements = cruxRepositoryConnector.getPurgeRelationshipStatements(relationshipGUID);
         statements.addAll(cruxRepositoryConnector.getCreateRelationshipStatements(updatedRelationship));
-        cruxRepositoryConnector.runSynchronousTx(statements);
+        cruxRepositoryConnector.runTx(statements);
 
         return updatedRelationship;
 
@@ -2059,7 +2056,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityTwoProxy()));
         }
         statements.addAll(cruxRepositoryConnector.getSaveReferenceCopyStatements(relationship));
-        cruxRepositoryConnector.runSynchronousTx(statements);
+        cruxRepositoryConnector.runTx(statements);
 
     }
 

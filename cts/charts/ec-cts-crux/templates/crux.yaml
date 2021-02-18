@@ -100,10 +100,10 @@ spec:
             failureThreshold: 6
           resources:
             requests:
-              memory: "4Gi"
+              memory: "8Gi"
               cpu: "2000m"
             limits:
-              memory: "8Gi"
+              memory: "16Gi"
               cpu: "4000m"
           volumeMounts:
             - mountPath: /opt/egeria/connectors
