@@ -4,10 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import clojure.lang.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import crux.api.Crux;
-import crux.api.HistoryOptions;
-import crux.api.ICruxAPI;
-import crux.api.ICruxDatasource;
+import crux.api.*;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
@@ -38,7 +35,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
     private static final Logger log = LoggerFactory.getLogger(CruxOMRSRepositoryConnector.class);
 
+    private static final String SYNC = "Synchronously";
+    private static final String ASYNC = "Asynchronously";
+
     private ICruxAPI cruxAPI = null;
+    private boolean luceneConfigured = false;
+    private boolean synchronousIndex = true;
 
     /**
      * Default constructor used by the OCF Connector Provider.
@@ -86,14 +88,29 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         File configFile = null;
         Map<String, Object> configProperties = connectionProperties.getConfigurationProperties();
         if (configProperties != null && !configProperties.isEmpty()) {
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                configFile = File.createTempFile("crux", ".json");
-                log.debug("Wrote configuration to: {}", configFile.getCanonicalPath());
-                mapper.writeValue(configFile, configProperties);
-            } catch (IOException e) {
-                throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
-                        this.getClass().getName(), methodName, e);
+            if (configProperties.containsKey(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG)) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    configFile = File.createTempFile("crux", ".json");
+                    Object cruxCfg = configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG);
+                    if (cruxCfg instanceof Map) {
+                        Map<?, ?> cruxConfig = (Map<?, ?>) cruxCfg;
+                        log.debug("Writing configuration to: {}", configFile.getCanonicalPath());
+                        mapper.writeValue(configFile, cruxConfig);
+                        // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
+                        // the configurationProperties
+                        luceneConfigured = cruxConfig.containsKey(Constants.CRUX_LUCENE);
+                    }
+                } catch (IOException e) {
+                    throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
+                            this.getClass().getName(), methodName, e);
+                }
+            }
+            if (configProperties.containsKey(CruxOMRSRepositoryConnectorProvider.SYNCHRONOUS_INDEX)) {
+                Object syncIdx = configProperties.get(CruxOMRSRepositoryConnectorProvider.SYNCHRONOUS_INDEX);
+                if (syncIdx instanceof Boolean) {
+                    synchronousIndex = (Boolean) syncIdx;
+                }
             }
         }
 
@@ -108,7 +125,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTING_WITH_CONFIG.getMessageDefinition());
                 cruxAPI = Crux.startNode(configFile);
             }
-            log.debug(" ... node: {}", cruxAPI);
+            Map<Keyword, ?> details = cruxAPI.status();
+            log.debug(" ... node: {}", details);
+            log.debug(" ... luceneConfigured? {}", luceneConfigured);
+            log.debug(" ... synchronousIndex? {}", synchronousIndex);
+            Object version = details.get(Constants.CRUX_VERSION);
+            auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(getServerName(), version == null ? "<null>" : version.toString()));
         } catch (Exception e) {
             log.error("Unable to start the repository based on the provided configuration.", e);
             // Note: unfortunately the audit log swallows this exception's stack trace, and therefore is insufficient
@@ -116,8 +138,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             throw new ConnectorCheckedException(CruxOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
                     this.getClass().getName(), methodName, e);
         }
-
-        auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(getServerName(), "<null>"));
 
     }
 
@@ -150,7 +170,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param entity to create
      */
     public void createEntityProxy(EntityProxy entity) {
-        Map<Keyword, ?> results = runSynchronousTx(getCreateEntityProxyStatements(entity));
+        Map<Keyword, ?> results = runTx(getCreateEntityProxyStatements(entity));
         log.debug(" ... results: {}", results);
     }
 
@@ -172,7 +192,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return EntityDetail that was created
      */
     public EntityDetail createEntity(EntityDetail entity) {
-        Map<Keyword, ?> results = runSynchronousTx(getCreateEntityStatements(entity));
+        Map<Keyword, ?> results = runTx(getCreateEntityStatements(entity));
         log.debug(" ... results: {}", results);
         return entity;
     }
@@ -195,7 +215,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param guid of the entity to permanently delete
      */
     public void purgeEntity(String guid) {
-        runSynchronousTx(getPurgeEntityStatements(guid));
+        runTx(getPurgeEntityStatements(guid));
     }
 
     /**
@@ -349,7 +369,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
      * @return {@code List<EntityDetail>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      * @see CruxOMRSMetadataCollection#findEntitiesByPropertyValue(String, String, String, int, List, List, Date, String, SequencingOrder, int)
      */
     public List<EntityDetail> findEntitiesByText(String entityTypeGUID,
@@ -360,7 +379,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                  Date asOfTime,
                                                  String sequencingProperty,
                                                  SequencingOrder sequencingOrder,
-                                                 int pageSize) throws TypeErrorException, FunctionNotSupportedException {
+                                                 int pageSize) throws TypeErrorException {
         Collection<List<?>> cruxResults = searchCruxLucene(
                 TypeDefCategory.ENTITY_DEF,
                 entityTypeGUID,
@@ -961,7 +980,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
      * @return {@code List<Relationship>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      * @see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue(String, String, String, int, List, Date, String, SequencingOrder, int)
      */
     public List<Relationship> findRelationshipsByText(String relationshipTypeGUID,
@@ -971,7 +989,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                       Date asOfTime,
                                                       String sequencingProperty,
                                                       SequencingOrder sequencingOrder,
-                                                      int pageSize) throws TypeErrorException, FunctionNotSupportedException {
+                                                      int pageSize) throws TypeErrorException {
 
         // Since a relationship involves not only the relationship object, but also some details from each proxy,
         // we will open a database up-front to re-use for multiple queries (and ensure we close it later).
@@ -1074,7 +1092,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return Relationship that was created
      */
     public Relationship createRelationship(Relationship relationship) {
-        Map<Keyword, ?> results = runSynchronousTx(getCreateRelationshipStatements(relationship));
+        Map<Keyword, ?> results = runTx(getCreateRelationshipStatements(relationship));
         log.debug(" ... results: {}", results);
         return relationship;
     }
@@ -1097,7 +1115,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param guid of the relationship to permanently delete
      */
     public void purgeRelationship(String guid) {
-        runSynchronousTx(getPurgeRelationshipStatements(guid));
+        runTx(getPurgeRelationshipStatements(guid));
     }
 
     /**
@@ -1182,21 +1200,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      */
     public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) {
         Keyword docRef = EntitySummaryMapping.getReference(guid);
-        List<Map<Keyword, ?>> history = getObjectHistory(docRef);
-        Map<Keyword, Object> currentVersionTxn  = null;
-        Map<Keyword, Object> previousVersionTxn = null;
+        List<Map<Keyword, Object>> history = getPreviousVersion(docRef);
         if (history != null && history.size() > 1) {
             // There must be a minimum of two entries in the history for us to have a previous version to go to.
-            currentVersionTxn  = new HashMap<>(history.get(0));
-            previousVersionTxn = new HashMap<>(history.get(1));
-        }
-        if (currentVersionTxn != null) {
-            Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
-            EntityDetailMapping edmC = new EntityDetailMapping(this, currentVersionCrux);
+            EntityDetailMapping edmC = new EntityDetailMapping(this, history.get(0));
             EntityDetail current = edmC.toEgeria();
             long currentVersion = current.getVersion();
-            Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
-            EntityDetailMapping edmP = new EntityDetailMapping(this, previousVersionCrux);
+            EntityDetailMapping edmP = new EntityDetailMapping(this, history.get(1));
             EntityDetail restored = edmP.toEgeria();
             // Update the version of the restored instance to be one more than the latest (current) version, the update
             // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
@@ -1227,24 +1237,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         ICruxDatasource db = cruxAPI.openDB();
 
         try {
-            List<Map<Keyword, ?>> history = getObjectHistory(db, docRef);
-            Map<Keyword, Object> currentVersionTxn = null;
-            Map<Keyword, Object> previousVersionTxn = null;
+            List<Map<Keyword, Object>> history = getPreviousVersion(db, docRef);
+            Relationship restored = null;
             if (history != null && history.size() > 1) {
                 // There must be a minimum of two entries in the history for us to have a previous version to go to.
-                currentVersionTxn = new HashMap<>(history.get(0));
-                previousVersionTxn = new HashMap<>(history.get(1));
-            }
-            Relationship restored = null;
-            if (currentVersionTxn != null) {
-                // Note that here we will not pass-through the opened DB as these methods will need to retrieve a different
-                // point-in-time view anyway (so cannot use the opened DB resource)
-                Map<Keyword, Object> currentVersionCrux = getCruxObjectByReference(docRef, currentVersionTxn);
-                RelationshipMapping rmC = new RelationshipMapping(this, currentVersionCrux, db);
+                RelationshipMapping rmC = new RelationshipMapping(this, history.get(0), db);
                 Relationship current = rmC.toEgeria();
                 long currentVersion = current.getVersion();
-                Map<Keyword, Object> previousVersionCrux = getCruxObjectByReference(docRef, previousVersionTxn);
-                RelationshipMapping rmP = new RelationshipMapping(this, previousVersionCrux, db);
+                RelationshipMapping rmP = new RelationshipMapping(this, history.get(1), db);
                 restored = rmP.toEgeria();
                 // Update the version of the restored instance to be one more than the latest (current) version, the update
                 // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
@@ -1263,48 +1263,90 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             closeDb(db);
             throw e;
         }
+
     }
 
     /**
-     * Retrieve the transaction history for the provided Crux object, which will be of a form like the following:
-     * <code>
-     * {
-     *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
-     *     :crux.tx/tx-id 2,
-     *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-     *     :crux.db/content-hash #crux/id "..."
-     * }
-     * </code>
-     * @param reference indicating the primary key of the object for which to retrieve the transaction history.
-     * @return {@code List<Map<Keyword, ?>>} of the transaction history
+     * Retrieve only the current and previous versions for the provided Crux object, lazily instantiated so that we do
+     * not need to pull back the entire history for an object that has changed many times.
+     * @param reference indicating the primary key of the object for which to retrieve the previous version
+     * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the the previous version as the second element (or null if there is no previous version)
      */
-    private List<Map<Keyword, ?>> getObjectHistory(Keyword reference) {
+    private List<Map<Keyword, Object>> getPreviousVersion(Keyword reference) {
+
         HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
-        List<Map<Keyword, ?>> history = cruxAPI.db().entityHistory(reference, options);
-        log.debug("Found history: {}", history);
-        return history;
+        List<Map<Keyword, Object>> results = null;
+
+        // try-with to ensure that the ICursor resource is closed, even if any exception is thrown
+        try (ICursor<Map<Keyword, ?>> lazyCursor = cruxAPI.db().openEntityHistory(reference, options)) {
+            results = getPreviousVersionFromCursor(lazyCursor, reference);
+        } catch (Exception e) {
+            log.error("Unable to lazily query history for: {}", reference, e);
+        }
+
+        return results;
+
     }
 
     /**
-     * Retrieve the transaction history for the provided Crux object, from an already-opened point-in-time view of the
-     * repository, which will be of a form like the following:
-     * <code>
-     * {
-     *     :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
-     *     :crux.tx/tx-id 2,
-     *     :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-     *     :crux.db/content-hash #crux/id "..."
-     * }
-     * </code>
-     * @param db from which to retrieve the transaction history
-     * @param reference indicating the primary key of the object for which to retrieve the transaction history.
-     * @return {@code List<Map<Keyword, ?>>} of the transaction history
+     * Retrieve only the current and previous versions for the provided Crux object, from an already-opened
+     * point-in-time view of the repository, lazily instantiated so that we do not need to pull back the entire history
+     * for an object that has changed many times.
+     * @param db from which to retrieve the previous version
+     * @param reference indicating the primary key of the object for which to retrieve the previous version
+     * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
      */
-    private List<Map<Keyword, ?>> getObjectHistory(ICruxDatasource db, Keyword reference) {
+    private List<Map<Keyword, Object>> getPreviousVersion(ICruxDatasource db, Keyword reference) {
+
         HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
-        List<Map<Keyword, ?>> history = db.entityHistory(reference, options);
-        log.debug("Found history: {}", history);
-        return history;
+        List<Map<Keyword, Object>> results = null;
+
+        // try-with to ensure that the ICursor resource is closed, even if any exception is thrown
+        try (ICursor<Map<Keyword, ?>> lazyCursor = db.openEntityHistory(reference, options)) {
+            // Note that here we will not pass-through the opened DB as this method will need to retrieve a different
+            // point-in-time view of the details of each entity anyway (based on the transaction dates from the cursor,
+            // rather than the already-opened DB resource)
+            results = getPreviousVersionFromCursor(lazyCursor, reference);
+        } catch (Exception e) {
+            log.error("Unable to lazily query history for: {}", reference, e);
+        }
+
+        return results;
+
+    }
+
+    /**
+     * Retrieve only the current and previous versions of the provided Crux reference, from an already-opened lazily-
+     * evaluated cursor.
+     * @param cursor from which to lazily-evaluate the current and previous versions
+     * @param reference indicating the primary key of the object for which to retrieve the current and previous version
+     * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
+     */
+    private List<Map<Keyword, Object>> getPreviousVersionFromCursor(ICursor<Map<Keyword, ?>> cursor, Keyword reference) {
+        List<Map<Keyword, Object>> results = new ArrayList<>();
+        // History entries themselves will just be transaction details like the following:
+        // { :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
+        //   :crux.tx/tx-id 2,
+        //   :crux.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
+        //   :crux.db/content-hash #crux/id "..." }
+        if (cursor != null) {
+            if (cursor.hasNext()) {
+                Map<Keyword, ?> currentVersionTxn = cursor.next();
+                if (cursor.hasNext()) {
+                    // ... so use these transaction details to retrieve the actual objects, and return those
+                    Map<Keyword, ?> previousVersionTxn = cursor.next();
+                    Map<Keyword, Object> current = getCruxObjectByReference(reference, currentVersionTxn);
+                    if (current != null) {
+                        results.add(current);
+                    }
+                    Map<Keyword, Object> previous = getCruxObjectByReference(reference, previousVersionTxn);
+                    if (previous != null) {
+                        results.add(previous);
+                    }
+                }
+            }
+        }
+        return results;
     }
 
     /**
@@ -1415,10 +1457,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param txnDetails containing the valid-time and tx-time of the precise version of the document to retrieve
      * @return {@code Map<Keyword, Object>} of the object's properties
      */
-    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Map<Keyword, Object> txnDetails) {
-        Date validTime = (Date) txnDetails.get(Constants.CRUX_VALID_TIME);
-        Date txnTime   = (Date) txnDetails.get(Constants.CRUX_TX_TIME);
-        return cruxAPI.db(validTime, txnTime).entity(reference);
+    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Map<Keyword, ?> txnDetails) {
+        Object oValid = txnDetails.get(Constants.CRUX_VALID_TIME);
+        Object oTxn   = txnDetails.get(Constants.CRUX_TX_TIME);
+        if (oValid instanceof Date && oTxn instanceof Date) {
+            return cruxAPI.db((Date) oValid, (Date) oTxn).entity(reference);
+        }
+        return null;
     }
 
     /**
@@ -1530,7 +1575,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     public Collection<List<?>> searchCruxLucene(TypeDefCategory category,
                                                 String typeGuid,
@@ -1542,7 +1586,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
-                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
+                                                String namespace) throws TypeErrorException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateTextQuery(query,
                 category,
@@ -1575,7 +1619,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param namespace by which to qualify the matchProperties
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     public Collection<List<?>> searchCruxLucene(ICruxDatasource db,
                                                 TypeDefCategory category,
@@ -1587,7 +1630,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
                                                 int pageSize,
-                                                String namespace) throws TypeErrorException, FunctionNotSupportedException {
+                                                String namespace) throws TypeErrorException {
         CruxQuery query = new CruxQuery(getMaxPageSize());
         updateTextQuery(query,
                 category,
@@ -1723,7 +1766,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the sequencing property (if any)
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws FunctionNotSupportedException if the requested regular expression cannot be supported
      */
     private void updateTextQuery(CruxQuery query,
                                  TypeDefCategory category,
@@ -1735,13 +1777,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                  String sequencingProperty,
                                  SequencingOrder sequencingOrder,
                                  int pageSize,
-                                 String namespace) throws TypeErrorException, FunctionNotSupportedException {
+                                 String namespace) throws TypeErrorException {
         query.addTypeCondition(typeGuid, null);
         query.addTypeDefCategoryCondition(category);
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, null, namespace);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName);
-        query.addWildcardTextCondition(searchCriteria, completeTypeSet, namespace, repositoryHelper, repositoryName);
-        //query.addWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName);
+        if (luceneConfigured) {
+            query.addWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace);
+        } else {
+            query.addWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace);
+        }
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addPaging(fromElement, pageSize);
         query.addStatusLimiters(limitResultsByStatus);
@@ -1815,12 +1860,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param statements to submit in the same transaction
      * @return {@code Map<Keyword, ?>} transaction details
      */
-    public Map<Keyword, ?> runSynchronousTx(List<List<?>> statements) {
-        log.debug("Synchronously transacting with: {}", statements);
+    public Map<Keyword, ?> runTx(List<List<?>> statements) {
+        log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements);
         Map<Keyword, ?> tx = cruxAPI.submitTx(statements);
         // Null for the timeout here means use the default (which is therefore configurable directly by the Crux
         // configurationProperties of the connector)
-        return cruxAPI.awaitTx(tx, null);
+        if (synchronousIndex) {
+            return cruxAPI.awaitTx(tx, null);
+        } else {
+            return tx;
+        }
     }
 
     /**

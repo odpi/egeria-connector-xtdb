@@ -1578,7 +1578,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         List<List<?>> statements = cruxRepositoryConnector.getPurgeEntityStatements(entity.getGUID());
         statements.addAll(cruxRepositoryConnector.getCreateEntityStatements(updatedEntity));
-        cruxRepositoryConnector.runSynchronousTx(statements);
+        cruxRepositoryConnector.runTx(statements);
 
         return updatedEntity;
 
@@ -1700,7 +1700,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         List<List<?>> statements = cruxRepositoryConnector.getPurgeRelationshipStatements(relationshipGUID);
         statements.addAll(cruxRepositoryConnector.getCreateRelationshipStatements(updatedRelationship));
-        cruxRepositoryConnector.runSynchronousTx(statements);
+        cruxRepositoryConnector.runTx(statements);
 
         return updatedRelationship;
 
@@ -2059,7 +2059,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityTwoProxy()));
         }
         statements.addAll(cruxRepositoryConnector.getSaveReferenceCopyStatements(relationship));
-        cruxRepositoryConnector.runSynchronousTx(statements);
+        cruxRepositoryConnector.runTx(statements);
 
     }
 

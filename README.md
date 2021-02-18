@@ -169,8 +169,8 @@ and place them into the same location as the connector itself (ie. the `LOADER_P
 
 (For a direct download, use a URL like: https://clojars.org/repo/juxt/crux-rocksdb/21.01-1.14.0-beta/crux-rocksdb-21.01-1.14.0-beta.jar)
 
-You should send through the configuration using the JSON format listed on Crux's site, directly within the
-`configurationProperties` map of the connector. As an example, the following will configure the Crux repository
+You should send through the configuration using the JSON format listed on Crux's site, directly within a `cruxConfig` key
+of the `configurationProperties` map of the connector. As an example, the following will configure the Crux repository
 with RocksDB as both the index store and document store (sharing an LRU block cache of 1 GB), and Kafka as the
 transaction log (using the topic `crux-tx-log` and a poll-time of 1 second):
 
@@ -182,33 +182,35 @@ transaction log (using the topic `crux-tx-log` and a poll-time of 1 second):
     "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
   },
   "configurationProperties": {
-    "crux.rocksdb/block-cache": {
-      "crux/module": "crux.rocksdb/->lru-block-cache",
-      "cache-size": 1073741824
-    },
-    "crux/index-store": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-index",
-        "block-cache": "crux.rocksdb/block-cache"
-      }
-    },
-    "crux/document-store": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-docs",
-        "block-cache": "crux.rocksdb/block-cache"
-      }
-    },
-    "crux/tx-log": {
-      "crux/module": "crux.kafka/->tx-log",
-      "kafka-config": {
-        "bootstrap-servers": "localhost:9092"
+    "cruxConfig": {
+      "crux.rocksdb/block-cache": {
+        "crux/module": "crux.rocksdb/->lru-block-cache",
+        "cache-size": 1073741824
       },
-      "tx-topic-opts": {
-        "topic-name": "crux-tx-log"
+      "crux/index-store": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-index",
+          "block-cache": "crux.rocksdb/block-cache"
+        }
       },
-      "poll-wait-duration": "PT1S"
+      "crux/document-store": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-docs",
+          "block-cache": "crux.rocksdb/block-cache"
+        }
+      },
+      "crux/tx-log": {
+        "crux/module": "crux.kafka/->tx-log",
+        "kafka-config": {
+          "bootstrap-servers": "localhost:9092"
+        },
+        "tx-topic-opts": {
+          "topic-name": "crux-tx-log"
+        },
+        "poll-wait-duration": "PT1S"
+      }
     }
   }
 }
@@ -251,19 +253,21 @@ be configured using options like the following:
     "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
   },
   "configurationProperties": {
-    "crux.metrics/metrics": {
-      "with-index-store-metrics?": true,
-      "with-query-metrics?": true
-    },
-    "crux.metrics.csv/reporter": {
-      "output-file": "data/servers/crux/metrics",
-      "report-frequency": "PT1S",
-      "rate-unit": "seconds",
-      "duration-unit": "seconds"
-    },
-    "crux/index-store": { },
-    "crux/document-store": { },
-    "crux/tx-log": { }
+    "cruxConfig": {
+      "crux.metrics/metrics": {
+        "with-index-store-metrics?": true,
+        "with-query-metrics?": true
+      },
+      "crux.metrics.csv/reporter": {
+        "output-file": "data/servers/crux/metrics",
+        "report-frequency": "PT1S",
+        "rate-unit": "seconds",
+        "duration-unit": "seconds"
+      },
+      "crux/index-store": {},
+      "crux/document-store": {},
+      "crux/tx-log": {}
+    }
   }
 }
 ```

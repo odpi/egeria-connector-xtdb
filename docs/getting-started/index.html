@@ -743,9 +743,10 @@ mode/repository-proxy/connection
 						<p style="font-size: x-large; text-align: left;">
 							To enable persistence, send in the JSON document configuration outlined in
 							<a href="https://opencrux.com/reference/configuration.html" target="crux">Crux's own documentation</a>
-							directly to the <code>configurationProperties</code> property of Egeria's connector configuration:
+							directly to the <code>cruxConfig</code> key of the <code>configurationProperties</code>
+							property of Egeria's connector configuration:
 						</p>
-						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="7-26">
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="8-28">
 {
   "class": "Connection",
   "connectorType": {
@@ -753,22 +754,24 @@ mode/repository-proxy/connection
     "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
   },
   "configurationProperties": {
-    "crux/index-store": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-index"
-      }
-    },
-    "crux/document-store": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-docs"
-      }
-    },
-    "crux/tx-log": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-tx"
+    "cruxConfig": {
+      "crux/index-store": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-index"
+        }
+      },
+      "crux/document-store": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-docs"
+        }
+      },
+      "crux/tx-log": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-tx"
+        }
       }
     }
   }
@@ -777,7 +780,7 @@ mode/repository-proxy/connection
 					</section>
 					<section data-transition="fade" data-auto-animate>
 						<h4 style="text-align: left;">Configure Crux persistence</h4>
-						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="7-26">
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="8-28">
 {
   "class": "Connection",
   "connectorType": {
@@ -785,22 +788,24 @@ mode/repository-proxy/connection
     "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
   },
   "configurationProperties": {
-    "crux/index-store": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-index"
-      }
-    },
-    "crux/document-store": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-docs"
-      }
-    },
-    "crux/tx-log": {
-      "kv-store": {
-        "crux/module": "crux.rocksdb/->kv-store",
-        "db-dir": "data/servers/crux/rdb-tx"
+    "cruxConfig": {
+      "crux/index-store": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-index"
+        }
+      },
+      "crux/document-store": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-docs"
+        }
+      },
+      "crux/tx-log": {
+        "kv-store": {
+          "crux/module": "crux.rocksdb/->kv-store",
+          "db-dir": "data/servers/crux/rdb-tx"
+        }
       }
     }
   }
