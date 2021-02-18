@@ -31,6 +31,9 @@ public class Constants {
     // Graph query limits
     public static final int MAX_TRAVERSAL_DEPTH = 40;
 
+    // Cascading limits
+    public static final int CASCADE_DELETES_PAGE_SIZE = 10000;
+
     /**
      * Retrieve an insertion vector for Crux (applicable for any write operation, since it is append-only).
      * @param properties map to include in the insertion
