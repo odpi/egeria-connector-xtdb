@@ -294,8 +294,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param guid of the entity to retrieve
      * @return EntityDetail as it existed at the specified database's point-in-time view
      */
-    public EntityDetail getEntity(ICruxDatasource db, String guid) {
-        return getEntity(db, EntityDetailMapping.getReference(guid));
+    public EntityDetail getEntityByGuid(ICruxDatasource db, String guid) {
+        return getEntityByRef(db, EntityDetailMapping.getReference(guid));
     }
 
     /**
@@ -304,7 +304,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param ref of the entity to retrieve
      * @return EntityDetail as it existed at the specified database's point-in-time view
      */
-    private EntityDetail getEntity(ICruxDatasource db, Keyword ref) {
+    private EntityDetail getEntityByRef(ICruxDatasource db, String ref) {
         Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, ref);
         if (cruxDoc == null) {
             return null;
@@ -423,7 +423,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         if (cruxResults != null) {
             results = new ArrayList<>();
             for (List<?> cruxResult : cruxResults) {
-                Keyword docRef = (Keyword) cruxResult.get(0);
+                String docRef = (String) cruxResult.get(0);
                 Map<Keyword, Object> cruxDoc = getCruxObjectByReference(docRef, asOfTime);
                 if (cruxDoc == null) {
                     log.warn("Unable to resolve search result into full doc: {}", cruxResult);
@@ -539,7 +539,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             // Start the InstanceGraph off with the entity starting point that was requested
             // (not clear if this is the intended logic, but follows other repository implementations)
             List<EntityDetail> startingEntities = new ArrayList<>();
-            EntityDetail startingEntity = this.getEntity(db, entityGUID);
+            EntityDetail startingEntity = this.getEntityByGuid(db, entityGUID);
 
             if (startingEntity != null) {
                 startingEntities.add(startingEntity);
@@ -628,10 +628,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         limitResultsByClassification);
                 log.debug("Found neighborhood results: {}", nextDegree);
                 for (List<?> candidateTuple : nextDegree) {
-                    Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
-                    Keyword candidateRelationshipRef = getRelationshipRefFromGraphTuple(candidateTuple);
-                    String entityGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
-                    String relationshipGuid = Constants.trimGuidFromReference(candidateRelationshipRef.toString());
+                    String candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
+                    String candidateRelationshipRef = getRelationshipRefFromGraphTuple(candidateTuple);
+                    String entityGuid = InstanceHeaderMapping.trimGuidFromReference(candidateEntityRef);
+                    String relationshipGuid = InstanceHeaderMapping.trimGuidFromReference(candidateRelationshipRef);
                     if (!entityGUIDsVisited.contains(entityGuid) || !relationshipGUIDsVisited.contains(relationshipGuid)) {
                         // If either the entity or the relationship has not been seen, add the tuple
                         consolidated.add(candidateTuple);
@@ -679,7 +679,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             // Start the InstanceGraph off with the entity starting point that was requested
             // (not clear if this is the intended logic, but follows other repository implementations)
             List<EntityDetail> startingEntities = new ArrayList<>();
-            EntityDetail startingEntity = this.getEntity(db, startEntityGUID);
+            EntityDetail startingEntity = this.getEntityByGuid(db, startEntityGUID);
 
             if (startingEntity == null) {
                 throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
@@ -750,18 +750,18 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         limitResultsByStatus,
                         null);
                 log.debug("Found traversal results: {}", nextLevel);
-                Keyword startRef = EntitySummaryMapping.getReference(startEntityGUID);
-                Keyword endRef = EntitySummaryMapping.getReference(endEntityGUID);
+                String startRef = EntitySummaryMapping.getReference(startEntityGUID);
+                String endRef = EntitySummaryMapping.getReference(endEntityGUID);
                 if (nextLevel != null && !nextLevel.isEmpty()) {
                     // As long as there is something to check in the next level, do so...
                     for (List<?> candidateTuple : nextLevel) {
-                        Keyword candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
+                        String candidateEntityRef = getEntityRefFromGraphTuple(candidateTuple);
                         if (endRef.equals(candidateEntityRef)) {
                             // If we found the endEntityGUID in the results, add it to the set of successful traversals
                             consolidated.add(candidateTuple);
                         } else if (!startRef.equals(candidateEntityRef)) {
                             // Otherwise, so long as we have not circled back to the starting point, continue traversing
-                            String nextStartGuid = Constants.trimGuidFromReference(candidateEntityRef.toString());
+                            String nextStartGuid = InstanceHeaderMapping.trimGuidFromReference(candidateEntityRef);
                             if (!entityGUIDsVisited.contains(nextStartGuid)) {
                                 // If we have not already traversed this GUID, continue traversing...
                                 entityGUIDsVisited.add(nextStartGuid);
@@ -848,8 +848,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             List<Relationship> relationships = new ArrayList<>();
             List<EntityDetail> entities = new ArrayList<>();
             for (List<?> cruxResult : cruxResults) {
-                Keyword entityRef = getEntityRefFromGraphTuple(cruxResult);
-                String entityGuid = Constants.trimGuidFromReference(entityRef.toString());
+                String entityRef = getEntityRefFromGraphTuple(cruxResult);
+                String entityGuid = InstanceHeaderMapping.trimGuidFromReference(entityRef);
                 if (!entityGUIDsVisited.contains(entityGuid)) {
                     EntityDetail entity = getEntityByRef(db, entityRef);
                     if (entity == null) {
@@ -858,8 +858,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         entities.add(entity);
                     }
                 }
-                Keyword relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
-                String relationshipGuid = Constants.trimGuidFromReference(relationshipRef.toString());
+                String relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
+                String relationshipGuid = InstanceHeaderMapping.trimGuidFromReference(relationshipRef);
                 if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
                     Relationship relationship = getRelationshipByRef(db, relationshipRef);
                     if (relationship == null) {
@@ -884,9 +884,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     private List<String> getEntityGUIDsFromGraphResults(Collection<List<?>> cruxResults) {
         List<String> list = new ArrayList<>();
         for (List<?> result : cruxResults) {
-            Keyword entityRef = getEntityRefFromGraphTuple(result);
+            String entityRef = getEntityRefFromGraphTuple(result);
             if (entityRef != null) {
-                String guid = Constants.trimGuidFromReference(entityRef.toString());
+                String guid = InstanceHeaderMapping.trimGuidFromReference(entityRef);
                 if (!list.contains(guid)) {
                     list.add(guid);
                 }
@@ -898,19 +898,19 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     /**
      * Retrieve the entity reference from the provided graph query result.
      * @param tuple graph query result
-     * @return Keyword reference for the entity
+     * @return String reference for the entity
      */
-    private Keyword getEntityRefFromGraphTuple(List<?> tuple) {
-        return tuple == null ? null : (Keyword) tuple.get(0);
+    private String getEntityRefFromGraphTuple(List<?> tuple) {
+        return tuple == null ? null : (String) tuple.get(0);
     }
 
     /**
      * Retrieve the relationship reference from the provided graph query result.
      * @param tuple graph query result
-     * @return Keyword reference for the relationship
+     * @return String reference for the relationship
      */
-    private Keyword getRelationshipRefFromGraphTuple(List<?> tuple) {
-        return tuple == null ? null : (Keyword) tuple.get(1);
+    private String getRelationshipRefFromGraphTuple(List<?> tuple) {
+        return tuple == null ? null : (String) tuple.get(1);
     }
 
     /**
@@ -1049,7 +1049,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         if (cruxResults != null) {
             results = new ArrayList<>();
             for (List<?> cruxResult : cruxResults) {
-                Keyword docRef = (Keyword) cruxResult.get(0);
+                String docRef = (String) cruxResult.get(0);
                 Relationship relationship = getRelationshipByRef(db, docRef);
                 if (relationship == null) {
                     log.warn("Unable to translate Crux result into Relationship: {}", cruxResult);
@@ -1067,26 +1067,11 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param ref reference to the relationship document
      * @return Relationship
      */
-    private Relationship getRelationshipByRef(ICruxDatasource db, Keyword ref) {
+    private Relationship getRelationshipByRef(ICruxDatasource db, String ref) {
         Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, ref);
         if (cruxDoc != null) {
             RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
             return rm.toEgeria();
-        }
-        return null;
-    }
-
-    /**
-     * Translate the provided Crux document reference into an Egeria relationship.
-     * @param db already opened point-in-time view of the database
-     * @param ref reference to the relationship document
-     * @return Relationship
-     */
-    private EntityDetail getEntityByRef(ICruxDatasource db, Keyword ref) {
-        Map<Keyword, Object> cruxDoc = getCruxObjectByReference(db, ref);
-        if (cruxDoc != null) {
-            EntityDetailMapping edm = new EntityDetailMapping(this, cruxDoc);
-            return edm.toEgeria();
         }
         return null;
     }
@@ -1191,7 +1176,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
      */
     public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) throws RepositoryErrorException {
-        Keyword docRef = EntitySummaryMapping.getReference(guid);
+        String docRef = EntitySummaryMapping.getReference(guid);
         List<Map<Keyword, Object>> history = getPreviousVersion(docRef);
         if (history != null && history.size() > 1) {
             // There must be a minimum of two entries in the history for us to have a previous version to go to.
@@ -1227,7 +1212,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     public Relationship restorePreviousVersionOfRelationship(String userId, String guid) throws RepositoryErrorException {
 
         final String methodName = "restorePreviousVersionOfRelationship";
-        Keyword docRef = RelationshipMapping.getReference(guid);
+        String docRef = RelationshipMapping.getReference(guid);
         Relationship restored = null;
 
         try (ICruxDatasource db = cruxAPI.openDB()) {
@@ -1264,7 +1249,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the the previous version as the second element (or null if there is no previous version)
      * @throws RepositoryErrorException if any issue closing the open lazy-evaluating cursor
      */
-    private List<Map<Keyword, Object>> getPreviousVersion(Keyword reference) throws RepositoryErrorException {
+    private List<Map<Keyword, Object>> getPreviousVersion(String reference) throws RepositoryErrorException {
 
         final String methodName = "getPreviousVersion";
         HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
@@ -1291,7 +1276,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
      * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
      */
-    private List<Map<Keyword, Object>> getPreviousVersion(ICruxDatasource db, Keyword reference) throws RepositoryErrorException {
+    private List<Map<Keyword, Object>> getPreviousVersion(ICruxDatasource db, String reference) throws RepositoryErrorException {
 
         final String methodName = "getPreviousVersion";
         HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
@@ -1319,7 +1304,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param reference indicating the primary key of the object for which to retrieve the current and previous version
      * @return {@code List<Map<Keyword, Object>>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
      */
-    private List<Map<Keyword, Object>> getPreviousVersionFromCursor(ICursor<Map<Keyword, ?>> cursor, Keyword reference) {
+    private List<Map<Keyword, Object>> getPreviousVersionFromCursor(ICursor<Map<Keyword, ?>> cursor, String reference) {
         List<Map<Keyword, Object>> results = new ArrayList<>();
         // History entries themselves will just be transaction details like the following:
         // { :crux.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
@@ -1419,7 +1404,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param reference indicating the primary key of the Crux object to retrieve
      * @return {@code Map<Keyword, Object>} of the object's properties
      */
-    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference) {
+    public Map<Keyword, Object> getCruxObjectByReference(String reference) {
         return getCruxObjectByReference(reference, (Date) null);
     }
 
@@ -1429,7 +1414,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param asOfTime view of the object at this particular point in time (or null for current)
      * @return {@code Map<Keyword, Object>} of the object's properties
      */
-    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Date asOfTime) {
+    public Map<Keyword, Object> getCruxObjectByReference(String reference, Date asOfTime) {
         if (asOfTime != null) {
             return cruxAPI.db(asOfTime).entity(reference);
         } else {
@@ -1443,7 +1428,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param reference indicating the primary key of the Crux object to retrieve
      * @return {@code Map<Keyword, Object>} of the object's properties
      */
-    public Map<Keyword, Object> getCruxObjectByReference(ICruxDatasource db, Keyword reference) {
+    public Map<Keyword, Object> getCruxObjectByReference(ICruxDatasource db, String reference) {
         return db.entity(reference);
     }
 
@@ -1455,7 +1440,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param txnDetails containing the valid-time and tx-time of the precise version of the document to retrieve
      * @return {@code Map<Keyword, Object>} of the object's properties
      */
-    public Map<Keyword, Object> getCruxObjectByReference(Keyword reference, Map<Keyword, ?> txnDetails) {
+    public Map<Keyword, Object> getCruxObjectByReference(String reference, Map<Keyword, ?> txnDetails) {
         Object oValid = txnDetails.get(Constants.CRUX_VALID_TIME);
         Object oTxn   = txnDetails.get(Constants.CRUX_TX_TIME);
         if (oValid instanceof Date && oTxn instanceof Date) {
@@ -1881,7 +1866,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param docRef giving the primary key of the document to permanently remove
      * @return {@code List<List<?>>} of statements
      */
-    private List<List<?>> getEvictDocStatements(Keyword docRef) {
+    private List<List<?>> getEvictDocStatements(String docRef) {
         List<List<?>> statements = new ArrayList<>();
         statements.add(Constants.evict(docRef));
         return statements;

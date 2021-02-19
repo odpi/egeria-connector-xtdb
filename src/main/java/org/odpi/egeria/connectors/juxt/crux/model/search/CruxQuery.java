@@ -3,7 +3,6 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
@@ -11,7 +10,6 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.FunctionNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,7 +122,7 @@ public class CruxQuery {
      * Add a condition to match either endpoint of a relationship to the provided reference (primary key).
      * @param reference the primary key value of an entity, used to match either end of a relationship
      */
-    public void addRelationshipEndpointConditions(Keyword reference) {
+    public void addRelationshipEndpointConditions(String reference) {
         List<Object> orConditions = new ArrayList<>();
         orConditions.add(OR_OPERATOR);
         orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_ONE_PROXY, reference));
@@ -138,7 +136,7 @@ public class CruxQuery {
      * @param reference the primary key value to which the property should refer
      * @return PersistentVector for the condition
      */
-    protected PersistentVector getReferenceCondition(Keyword property, Keyword reference) {
+    protected PersistentVector getReferenceCondition(Keyword property, String reference) {
         return PersistentVector.create(DOC_ID, property, reference);
     }
 

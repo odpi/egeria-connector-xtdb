@@ -81,9 +81,9 @@ public class EntityDetailMapping extends EntitySummaryMapping {
     /**
      * Translate the provided GUID into a Crux reference.
      * @param guid to translate
-     * @return Keyword reference for Crux
+     * @return String reference for Crux
      */
-    public static Keyword getReference(String guid) {
+    public static String getReference(String guid) {
         return EntitySummaryMapping.getReference(guid);
     }
 

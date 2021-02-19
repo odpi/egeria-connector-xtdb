@@ -93,7 +93,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
             Object objValue = cruxMap.getOrDefault(property, null);
             String value = objValue == null ? null : objValue.toString();
             if (GUID.equals(property)) {
-                instanceHeader.setGUID(value == null ? null : Constants.trimGuidFromReference(value));
+                instanceHeader.setGUID(value == null ? null : trimGuidFromReference(value));
             } else if (INSTANCE_URL.equals(property)) {
                 instanceHeader.setInstanceURL(value);
             } else {
@@ -105,9 +105,9 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
     /**
      * Translate the provided InstanceHeader information into a Crux reference to the GUID of the instance.
      * @param ih to translate
-     * @return Keyword for the Crux reference
+     * @return String for the Crux reference
      */
-    public static Keyword getGuidReference(InstanceHeader ih) {
+    public static String getGuidReference(InstanceHeader ih) {
         TypeDefCategory type = ih.getType().getTypeDefCategory();
         if (type.equals(TypeDefCategory.ENTITY_DEF)) {
             return getGuid(EntitySummaryMapping.INSTANCE_REF_PREFIX, ih.getGUID());
@@ -120,13 +120,22 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
     }
 
     /**
+     * Retrieve only the GUID portion of a Crux reference.
+     * @param reference from which to trim the GUID
+     * @return String of only the GUID portion of the reference
+     */
+    public static String trimGuidFromReference(String reference) {
+        return reference.substring(reference.indexOf("_") + 1);
+    }
+
+    /**
      * Translate the provided details into a Crux reference.
      * @param instanceType of the instance (from TypeDefCategory name)
      * @param guid of the instance
-     * @return Keyword for the Crux reference
+     * @return String for the Crux reference
      */
-    protected static Keyword getGuid(String instanceType, String guid) {
-        return Keyword.intern(instanceType, guid);
+    protected static String getGuid(String instanceType, String guid) {
+        return instanceType + "_" + guid;
     }
 
 }

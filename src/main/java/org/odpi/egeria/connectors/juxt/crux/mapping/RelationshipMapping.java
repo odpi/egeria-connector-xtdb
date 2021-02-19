@@ -19,7 +19,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
 
     private static final Logger log = LoggerFactory.getLogger(RelationshipMapping.class);
 
-    public static final String INSTANCE_REF_PREFIX = "relationship";
+    public static final String INSTANCE_REF_PREFIX = "r";
 
     public static final String RELATIONSHIP_PROPERTIES_NS = "relationshipProperties";
     public static final String N_ENTITY_ONE_PROXY = "entityOneProxy";
@@ -96,13 +96,13 @@ public class RelationshipMapping extends InstanceHeaderMapping {
         super.fromMap();
         try {
             Object oneRef = cruxMap.getOrDefault(ENTITY_ONE_PROXY, null);
-            if (oneRef instanceof Keyword) {
-                EntityProxy one = getEntityProxyFromRef((Keyword) oneRef);
+            if (oneRef instanceof String) {
+                EntityProxy one = getEntityProxyFromRef((String) oneRef);
                 ((Relationship) instanceHeader).setEntityOneProxy(one);
             }
             Object twoRef = cruxMap.getOrDefault(ENTITY_TWO_PROXY, null);
-            if (twoRef instanceof Keyword) {
-                EntityProxy two = getEntityProxyFromRef((Keyword) twoRef);
+            if (twoRef instanceof String) {
+                EntityProxy two = getEntityProxyFromRef((String) twoRef);
                 ((Relationship) instanceHeader).setEntityTwoProxy(two);
             }
             InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, cruxMap, RELATIONSHIP_PROPERTIES_NS);
@@ -119,7 +119,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
      * @return EntityProxy
      * @throws RepositoryErrorException logic error in the repository with corrupted entity proxy
      */
-    private EntityProxy getEntityProxyFromRef(Keyword ref) throws RepositoryErrorException {
+    private EntityProxy getEntityProxyFromRef(String ref) throws RepositoryErrorException {
         Map<Keyword, Object> epMap = cruxConnector.getCruxObjectByReference(db, ref);
         return EntityProxyMapping.getFromMap(cruxConnector, epMap);
     }
@@ -127,9 +127,9 @@ public class RelationshipMapping extends InstanceHeaderMapping {
     /**
      * Retrieve the canonical reference to the relationship with the specified GUID.
      * @param guid of the relationship to reference
-     * @return Keyword giving the Crux reference to this relationship document
+     * @return String giving the Crux reference to this relationship document
      */
-    public static Keyword getReference(String guid) {
+    public static String getReference(String guid) {
         return getGuid(INSTANCE_REF_PREFIX, guid);
     }
 

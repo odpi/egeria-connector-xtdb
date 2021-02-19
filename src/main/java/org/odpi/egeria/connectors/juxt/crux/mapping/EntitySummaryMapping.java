@@ -15,7 +15,7 @@ import java.util.Map;
  */
 public class EntitySummaryMapping extends InstanceHeaderMapping {
 
-    public static final String INSTANCE_REF_PREFIX = "entity";
+    public static final String INSTANCE_REF_PREFIX = "e";
     public static final String N_CLASSIFICATIONS = "classifications";
 
     /**
@@ -83,9 +83,9 @@ public class EntitySummaryMapping extends InstanceHeaderMapping {
     /**
      * Retrieve the canonical reference to the entity summary with the specified GUID.
      * @param guid of the entity summary to reference
-     * @return Keyword giving the Crux reference to this entity summary document
+     * @return String giving the Crux reference to this entity summary document
      */
-    public static Keyword getReference(String guid) {
+    public static String getReference(String guid) {
         return getGuid(INSTANCE_REF_PREFIX, guid);
     }
 
