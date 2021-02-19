@@ -114,9 +114,9 @@ public class EntityProxyMapping extends EntitySummaryMapping {
     /**
      * Retrieve the canonical reference to the entity summary with the specified GUID.
      * @param guid of the entity summary to reference
-     * @return Keyword giving the Crux reference to this entity summary document
+     * @return String giving the Crux reference to this entity summary document
      */
-    public static Keyword getReference(String guid) {
+    public static String getReference(String guid) {
         return EntitySummaryMapping.getReference(guid);
     }
 

@@ -64,17 +64,8 @@ public class Constants {
      * @param docRef giving the "primary key" of the record to be permanently removed
      * @return PersistentVector containing the Crux instruction
      */
-    public static PersistentVector evict(Keyword docRef) {
+    public static PersistentVector evict(String docRef) {
         return PersistentVector.create(Constants.CRUX_EVICT, docRef);
-    }
-
-    /**
-     * Retrieve only the GUID portion of a Crux reference.
-     * @param reference from which to trim the GUID
-     * @return String of only the GUID portion of the reference
-     */
-    public static String trimGuidFromReference(String reference) {
-        return reference.substring(reference.indexOf("/") + 1);
     }
 
 }

@@ -20,7 +20,7 @@ public class CruxGraphQuery extends CruxQuery {
     private static final Symbol ROOT_ENTITY = Symbol.intern("se");
     private static final Symbol RELATIONSHIP = Symbol.intern("r");
 
-    private Keyword rootEntityRef;
+    private String rootEntityRef;
 
     /**
      * Default constructor for a new query.
