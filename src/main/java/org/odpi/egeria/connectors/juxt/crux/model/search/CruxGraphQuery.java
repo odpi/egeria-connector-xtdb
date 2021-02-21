@@ -24,11 +24,9 @@ public class CruxGraphQuery extends CruxQuery {
 
     /**
      * Default constructor for a new query.
-     * @param defaultPageSize to use if no other is specified via addPaging
-     * @see #addPaging(int, int)
      */
-    public CruxGraphQuery(int defaultPageSize) {
-        super(defaultPageSize);
+    public CruxGraphQuery() {
+        super();
         rootEntityRef = null;
     }
 
