@@ -66,8 +66,10 @@
         <open-metadata.version>2.7-SNAPSHOT</open-metadata.version>
         <crux.version>21.01-1.14.0-beta</crux.version>
         <crux-alpha.version>21.01-1.14.0-alpha</crux-alpha.version>
+        <!-- <crux-alpha.version>dev-SNAPSHOT</crux-alpha.version> -->
         <clojure.version>1.10.2</clojure.version>
         <jackson.version>2.12.1</jackson.version>
+        <lucene.version>8.6.1</lucene.version>
         <slf4j.version>1.7.30</slf4j.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -161,6 +163,12 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-queryparser</artifactId>
+                <version>${lucene.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
@@ -177,6 +185,18 @@
         <dependency>
             <groupId>juxt</groupId>
             <artifactId>crux-metrics</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>juxt</groupId>
+            <artifactId>crux-lucene</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>juxt</groupId>
+            <artifactId>crux-rocksdb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>juxt</groupId>
+            <artifactId>crux-kafka</artifactId>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -197,6 +217,10 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
