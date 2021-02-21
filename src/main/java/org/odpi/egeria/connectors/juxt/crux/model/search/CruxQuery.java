@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
@@ -38,6 +39,7 @@ public class CruxQuery {
 
     // Predicates (for comparisons)
     protected static final Symbol WILDCARD_TEXT_SEARCH = Symbol.intern("wildcard-text-search");
+    protected static final Symbol TEXT_SEARCH = Symbol.intern("text-search");
     protected static final Symbol OR_OPERATOR = Symbol.intern("or");
     protected static final Symbol AND_OPERATOR = Symbol.intern("and");
     protected static final Symbol NOT_OPERATOR = Symbol.intern("not");
@@ -72,50 +74,22 @@ public class CruxQuery {
         return map;
     }
 
-    protected static final List<String> LUCENE_SPECIAL_CHARS = createLuceneSpecialCharsList();
-    private static List<String> createLuceneSpecialCharsList() {
-        List<String> list = new ArrayList<>();
-        list.add("+");
-        list.add("-");
-        list.add("&&");
-        list.add("||");
-        list.add("!");
-        list.add("(");
-        list.add(")");
-        list.add("{");
-        list.add("}");
-        list.add("[");
-        list.add("]");
-        list.add("^");
-        list.add("\"");
-        list.add("~");
-        list.add("*");
-        list.add("?");
-        list.add(":");
-        list.add("\\");
-        list.add("/");
-        return list;
-    }
+    private static final Pattern ESCAPE_SPACES = Pattern.compile("(\\s)");
 
     private IPersistentMap query;
     private final List<Symbol> findElements;
     protected final List<IPersistentCollection> conditions;
     private final List<IPersistentVector> sequencing;
-    private int limit;
-    private int offset = 0;
 
     /**
      * Default constructor for a new query.
-     * @param defaultPageSize to use if no other is specified via addPaging
-     * @see #addPaging(int, int)
      */
-    public CruxQuery(int defaultPageSize) {
+    public CruxQuery() {
         query = PersistentArrayMap.EMPTY;
         findElements = new ArrayList<>();
         findElements.add(DOC_ID); // Always have the DocID itself as the first element, to ease parsing of results
         conditions = new ArrayList<>();
         sequencing = new ArrayList<>();
-        limit = defaultPageSize;
     }
 
     /**
@@ -196,14 +170,19 @@ public class CruxQuery {
      * @param repositoryName of the repository (for logging)
      * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
      * @param namespace by which to qualify the properties
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      */
     public void addWildcardTextCondition(String regexCriteria,
                                          OMRSRepositoryHelper repositoryHelper,
                                          String repositoryName,
                                          Set<String> typesToInclude,
-                                         String namespace) {
+                                         String namespace,
+                                         boolean luceneEnabled,
+                                         boolean luceneRegexes) {
 
         final String methodName = "addWildcardTextCondition";
+        log.debug("Falling back to a non-Lucene wildcard text condition (likely to be slow!): {}", regexCriteria);
 
         PrimitivePropertyValue string = new PrimitivePropertyValue();
         string.setPrimitiveDefCategory(PrimitiveDefCategory.OM_PRIMITIVE_TYPE_STRING);
@@ -229,20 +208,33 @@ public class CruxQuery {
         }
 
         List<Object> wrapped = new ArrayList<>();
-        wrapped.add(OR_JOIN);
-        wrapped.add(PersistentVector.create(DOC_ID));
+        // Note that we will only wrap with OR if there is more than a single condition...
+        if (stringProperties.size() > 1) {
+            wrapped.add(OR_OPERATOR);
+        }
         // For each string attribute, add an "or" condition that matches against the provided regex
         for (Keyword propertyRef : stringProperties) {
             Symbol var = Symbol.intern("v");
-            List<IPersistentCollection> conditions = getConditionForPropertyRef(propertyRef,
+            List<IPersistentCollection> propertyConditions = getConditionForPropertyRef(
+                    propertyRef,
                     PropertyComparisonOperator.LIKE,
                     string,
                     MatchCriteria.ANY,
                     var,
-                    repositoryHelper);
-            wrapped.addAll(conditions);
+                    repositoryHelper,
+                    luceneEnabled,
+                    luceneRegexes
+            );
+            if (stringProperties.size() == 1) {
+                // If there is only a single property, add it directly without any wrapping
+                conditions.addAll(propertyConditions);
+            } else {
+                wrapped.addAll(propertyConditions);
+            }
         }
-        conditions.add(PersistentList.create(wrapped));
+        if (!wrapped.isEmpty()) {
+            conditions.add(PersistentList.create(wrapped));
+        }
 
     }
 
@@ -254,12 +246,14 @@ public class CruxQuery {
      * @param repositoryName of the repository (for logging)
      * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
      * @param namespace by which to qualify the properties
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      */
     public void addWildcardLuceneCondition(String regexCriteria,
                                            OMRSRepositoryHelper repositoryHelper,
                                            String repositoryName,
                                            Set<String> typesToInclude,
-                                           String namespace) {
+                                           String namespace,
+                                           boolean luceneRegexes) {
 
         // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
         // will be to add the Lucene condition first, to narrow the results as far as we can via the index, but
@@ -269,60 +263,107 @@ public class CruxQuery {
         // It is still necessary to do this further regex check after the Lucene index hit because the Lucene index
         // gives case-insensitive results on its own...
         if (regexCriteria != null && !regexCriteria.equals("")) {
-            if (repositoryHelper.isExactMatchRegex(regexCriteria)
-                    || repositoryHelper.isStartsWithRegex(regexCriteria)
-                    || repositoryHelper.isContainsRegex(regexCriteria)
-                    || repositoryHelper.isEndsWithRegex(regexCriteria)) {
-                // Note that only these basic regex conditions allow us to easily un-qualify to a plain string that we
-                // can use to hit the Lucene index, so these will be the only ones we attempt to support
-                String searchString = repositoryHelper.getUnqualifiedLiteralString(regexCriteria);
-                if (repositoryHelper.isStartsWithRegex(regexCriteria)) {
-                    searchString = escapeLuceneSpecialCharacters(searchString) + "*";
-                } else if (repositoryHelper.isEndsWithRegex(regexCriteria)) {
-                    searchString = "*" + escapeLuceneSpecialCharacters(searchString);
-                } else if (repositoryHelper.isContainsRegex(regexCriteria)) {
-                    searchString = "*" + escapeLuceneSpecialCharacters(searchString) + "*";
-                }
-                // Note that we need to wrap these conditions into an or-join so that we can de-duplicate the resulting
-                // documents (if the same document has multiple attributes that all match the search criteria, we will
-                // get one result for every match -- so the same document multiple times. The or-join prevents this).
-                // (or-join [e] (and ... ) )
-                List<Object> wrapped = new ArrayList<>();
-                wrapped.add(OR_JOIN);
-                wrapped.add(PersistentVector.create(DOC_ID));
-                List<Object> andCond = new ArrayList<>();
-                andCond.add(AND_OPERATOR);
-                // Create the lucene query:
-                // [(wildcard-text-search "text") [[e v a s]]
-                List<Object> luceneCriteria = new ArrayList<>();
-                luceneCriteria.add(WILDCARD_TEXT_SEARCH);
-                luceneCriteria.add(searchString);
-                IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
-                List<IPersistentCollection> luceneQuery = new ArrayList<>();
-                luceneQuery.add(PersistentList.create(luceneCriteria));
-                luceneQuery.add(deStructured);
-                // ... (and [(wildcard-text-search "text") [[e v a s]]
-                andCond.add(PersistentVector.create(luceneQuery));
-                // Add the further regular expression match:
-                // [(re-matches #"regex" v)]
+            String searchString = getLuceneComparisonString(regexCriteria, repositoryHelper, luceneRegexes);
+            if (searchString == null) {
+                // If we cannot run a Lucene-optimised query, then we will fallback to a full OR-based text condition
+                // comparison: which will be VERY slow, but as long as it does not exceed the query timeout threshold
+                // should at least still return accurate results
+                addWildcardTextCondition(
+                        regexCriteria,
+                        repositoryHelper,
+                        repositoryName,
+                        typesToInclude,
+                        namespace,
+                        true,
+                        luceneRegexes
+                );
+            } else {
+                // Otherwise, it is some basic regex condition that has been translate to a simplified Lucene form,
+                // which we must therefore combine with a further Java regex match against the actual value to
+                // ensure that we cater for things like case sensitivity
                 List<Object> regexConditions = new ArrayList<>();
                 Pattern regex = Pattern.compile(regexCriteria);
                 regexConditions.add(REGEX_OPERATOR);
                 regexConditions.add(regex);
                 regexConditions.add(MATCHED_VALUE);
-                // ... (and [(wildcard-text-search "text") [[e v a s]] [(re-matches #"regex" v)])
-                andCond.add(PersistentVector.create(PersistentList.create(regexConditions)));
-                wrapped.add(PersistentList.create(andCond));
-                // All together:
-                // (or-join [e] (and [(wildcard-text-search "text") [[e v a s]] [(re-matches #"regex" v)]))
-                conditions.add(PersistentList.create(wrapped));
-            } else {
-                // If we cannot run a Lucene-optimised query, then we will fallback to a full OR-based text condition
-                // comparison: which will be VERY slow, but as long as it does not exceed the query timeout threshold
-                // should at least still return accurate results
-                addWildcardTextCondition(regexCriteria, repositoryHelper, repositoryName, typesToInclude, namespace);
+                // Add the lucene query: [(wildcard-text-search "text") [[e v a s]]]
+                conditions.add(getLuceneWildcardClause(searchString));
+                // Add a further regex confirmation against the query result's value (to handle case-sensitivity):
+                // [(re-matches #"regex" v)]
+                conditions.add(PersistentVector.create(PersistentList.create(regexConditions)));
             }
         }
+    }
+
+    /**
+     * Translate the provided String expression into one that can be used against a Lucene index (or null if not possible).
+     * @param regexCriteria expression to be translated
+     * @param repositoryHelper through which we can check the regular expression in the criteria
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
+     * @return String that is usable for Lucene, or null if no Lucene search is possible
+     */
+    private String getLuceneComparisonString(String regexCriteria, OMRSRepositoryHelper repositoryHelper, boolean luceneRegexes) {
+        if (repositoryHelper.isExactMatchRegex(regexCriteria)
+                || repositoryHelper.isStartsWithRegex(regexCriteria)
+                || repositoryHelper.isContainsRegex(regexCriteria)
+                || repositoryHelper.isEndsWithRegex(regexCriteria)) {
+            // For these basic regex conditions we can easily un-qualify to a plain string that we
+            // can use to hit the Lucene index, so do so
+            String searchString = repositoryHelper.getUnqualifiedLiteralString(regexCriteria);
+            if (repositoryHelper.isStartsWithRegex(regexCriteria)) {
+                searchString = escapeLucenePhrase(searchString) + "*";
+            } else if (repositoryHelper.isEndsWithRegex(regexCriteria)) {
+                searchString = "*" + escapeLucenePhrase(searchString);
+            } else if (repositoryHelper.isContainsRegex(regexCriteria)) {
+                searchString = "*" + escapeLucenePhrase(searchString) + "*";
+            }
+            return searchString;
+        } else if (luceneRegexes) {
+            // Otherwise, we must assume it is a more complex regex. If we are treating unquoted regexes as
+            // Lucene-compatible, create a direct Lucene condition for it
+            // Note: we must first ensure that the value is qualified as a regex for Lucene, by wrapping it in
+            // forward slashes
+            if (! (regexCriteria.startsWith("/") && regexCriteria.endsWith("/")) ) {
+                regexCriteria = "/" + regexCriteria + "/";
+            }
+            return regexCriteria;
+        }
+        // In any other scenario, we are unable to handle the query via Lucene, so return a null
+        return null;
+    }
+
+    /**
+     * Retrieve a Lucene-oriented <code>wildcard-text-search</code> clause of the form: <code>[(wildcard-text-search "searchString") [[e v a s ]]]</code>
+     * @param searchString to use for the wildcard-text-search
+     * @return IPersistentVector of the form <code>[(wildcard-text-search "searchString") [[e v a s]]]</code>
+     */
+    private IPersistentVector getLuceneWildcardClause(String searchString) {
+        List<Object> luceneCriteria = new ArrayList<>();
+        luceneCriteria.add(WILDCARD_TEXT_SEARCH);
+        luceneCriteria.add(searchString);
+        IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
+        List<IPersistentCollection> luceneQuery = new ArrayList<>();
+        luceneQuery.add(PersistentList.create(luceneCriteria));
+        luceneQuery.add(deStructured);
+        return PersistentVector.create(luceneQuery);
+    }
+
+    /**
+     * Retrieve a Lucene-oriented <code>text-search</code> clause of the form: <code>[(text-search :property "searchString") [[e v s]]]</code>
+     * @param propertyRef property whose value the text should be matched against
+     * @param searchString to use for the text-search
+     * @return IPersistentVector of the form <code>[(text-search :property "searchString") [[e v s]]]</code>
+     */
+    private IPersistentVector getLuceneTermClause(Keyword propertyRef, String searchString) {
+        List<Object> luceneCriteria = new ArrayList<>();
+        luceneCriteria.add(TEXT_SEARCH);
+        luceneCriteria.add(propertyRef);
+        luceneCriteria.add(searchString);
+        IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_SCORE));
+        List<IPersistentCollection> luceneQuery = new ArrayList<>();
+        luceneQuery.add(PersistentList.create(luceneCriteria));
+        luceneQuery.add(deStructured);
+        return PersistentVector.create(luceneQuery);
     }
 
     /**
@@ -332,13 +373,26 @@ public class CruxQuery {
      * @param typeNames of all of the types we are including in the search
      * @param repositoryHelper through which we can lookup type information and properties
      * @param repositoryName of the repository (for logging)
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      */
     public void addPropertyConditions(SearchProperties searchProperties,
                                       String namespace,
                                       Set<String> typeNames,
                                       OMRSRepositoryHelper repositoryHelper,
-                                      String repositoryName) {
-        List<IPersistentCollection> cruxConditions = getPropertyConditions(searchProperties, namespace, false, typeNames, repositoryHelper, repositoryName);
+                                      String repositoryName,
+                                      boolean luceneEnabled,
+                                      boolean luceneRegexes) {
+        List<IPersistentCollection> cruxConditions = getPropertyConditions(
+                searchProperties,
+                namespace,
+                false,
+                typeNames,
+                repositoryHelper,
+                repositoryName,
+                luceneEnabled,
+                luceneRegexes
+        );
         if (cruxConditions != null) {
             conditions.addAll(cruxConditions);
         }
@@ -350,12 +404,23 @@ public class CruxQuery {
      * @param typeNames of all of the types we are including in the search
      * @param repositoryHelper through which we can lookup type information and properties
      * @param repositoryName of the repository (for logging)
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      */
     public void addClassificationConditions(SearchClassifications searchClassifications,
                                             Set<String> typeNames,
                                             OMRSRepositoryHelper repositoryHelper,
-                                            String repositoryName) {
-        List<IPersistentCollection> cruxConditions = getClassificationConditions(searchClassifications, typeNames, repositoryHelper, repositoryName);
+                                            String repositoryName,
+                                            boolean luceneEnabled,
+                                            boolean luceneRegexes) {
+        List<IPersistentCollection> cruxConditions = getClassificationConditions(
+                searchClassifications,
+                typeNames,
+                repositoryHelper,
+                repositoryName,
+                luceneEnabled,
+                luceneRegexes
+        );
         if (cruxConditions != null) {
             conditions.addAll(cruxConditions);
         }
@@ -367,12 +432,16 @@ public class CruxQuery {
      * @param typeNames of all of the types we are including in the search
      * @param repositoryHelper through which we can lookup type information and properties
      * @param repositoryName of the repository (for logging)
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>}
      */
     protected List<IPersistentCollection> getClassificationConditions(SearchClassifications searchClassifications,
                                                                       Set<String> typeNames,
                                                                       OMRSRepositoryHelper repositoryHelper,
-                                                                      String repositoryName) {
+                                                                      String repositoryName,
+                                                                      boolean luceneEnabled,
+                                                                      boolean luceneRegexes) {
         if (searchClassifications != null) {
             // Since classifications can only be applied to entities, we can draw the namespace directly
             String namespace = EntitySummaryMapping.N_CLASSIFICATIONS;
@@ -392,7 +461,10 @@ public class CruxQuery {
                             matchCriteria.equals(MatchCriteria.ANY),
                             typeNames,
                             repositoryHelper,
-                            repositoryName);
+                            repositoryName,
+                            luceneEnabled,
+                            luceneRegexes
+                    );
                     if (matchConditions != null) {
                         allConditions.addAll(matchConditions);
                     }
@@ -411,6 +483,8 @@ public class CruxQuery {
      * @param typeNames of all of the types we are including in the search
      * @param repositoryHelper through which we can lookup type information and properties
      * @param repositoryName of the repository (for logging)
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>}
      */
     protected List<IPersistentCollection> getPropertyConditions(SearchProperties searchProperties,
@@ -418,7 +492,9 @@ public class CruxQuery {
                                                                 boolean orNested,
                                                                 Set<String> typeNames,
                                                                 OMRSRepositoryHelper repositoryHelper,
-                                                                String repositoryName) {
+                                                                String repositoryName,
+                                                                boolean luceneEnabled,
+                                                                boolean luceneRegexes) {
         if (searchProperties != null) {
             List<PropertyCondition> propertyConditions = searchProperties.getConditions();
             MatchCriteria matchCriteria = searchProperties.getMatchCriteria();
@@ -432,7 +508,9 @@ public class CruxQuery {
                             namespace,
                             typeNames,
                             repositoryHelper,
-                            repositoryName
+                            repositoryName,
+                            luceneEnabled,
+                            luceneRegexes
                     );
                     if (cruxConditions != null && !cruxConditions.isEmpty()) {
                         allConditions.addAll(cruxConditions);
@@ -454,16 +532,16 @@ public class CruxQuery {
                         break;
                     case ANY:
                         // (or-join [e] (and [e :property var] [(predicate ... var)]) )
-                        predicatedConditions.add(OR_JOIN);
-                        predicatedConditions.add(PersistentVector.create(DOC_ID));
+                        predicatedConditions.add(OR_OPERATOR);
+                        //predicatedConditions.add(PersistentVector.create(DOC_ID));
                         predicatedConditions.addAll(allConditions);
                         break;
                     case NONE:
                         // (not (or-join [e] ... ) )
                         predicatedConditions.add(NOT_OPERATOR);
                         List<Object> orJoin = new ArrayList<>();
-                        orJoin.add(OR_JOIN);
-                        orJoin.add(PersistentVector.create(DOC_ID));
+                        orJoin.add(OR_OPERATOR);
+                        //orJoin.add(PersistentVector.create(DOC_ID));
                         orJoin.addAll(allConditions);
                         predicatedConditions.add(PersistentList.create(orJoin));
                         break;
@@ -490,15 +568,19 @@ public class CruxQuery {
      * @param typeNames of all of the types we are including in the search
      * @param repositoryHelper through which we can lookup type information and properties
      * @param repositoryName of the repository (for logging)
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} giving the appropriate Crux query condition(s)
-     * @see #getPropertyConditions(SearchProperties, String, boolean, Set, OMRSRepositoryHelper, String)
+     * @see #getPropertyConditions(SearchProperties, String, boolean, Set, OMRSRepositoryHelper, String, boolean, boolean)
      */
     protected List<IPersistentCollection> getSinglePropertyCondition(PropertyCondition singleCondition,
                                                                      MatchCriteria outerCriteria,
                                                                      String namespace,
                                                                      Set<String> typeNames,
                                                                      OMRSRepositoryHelper repositoryHelper,
-                                                                     String repositoryName) {
+                                                                     String repositoryName,
+                                                                     boolean luceneEnabled,
+                                                                     boolean luceneRegexes) {
         SearchProperties nestedConditions = singleCondition.getNestedConditions();
         if (nestedConditions != null) {
             // If the conditions are nested, simply recurse back on getPropertyConditions
@@ -509,7 +591,10 @@ public class CruxQuery {
                     matchCriteria.equals(MatchCriteria.ANY),
                     typeNames,
                     repositoryHelper,
-                    repositoryName);
+                    repositoryName,
+                    luceneEnabled,
+                    luceneRegexes
+            );
         } else {
             // Otherwise, parse through and process a single value condition
             String simpleName = singleCondition.getProperty();
@@ -519,7 +604,16 @@ public class CruxQuery {
                 // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
                 // InstanceValueProperties but simple native types
                 Keyword propertyRef = getAuditHeaderPropertyRef(namespace, simpleName);
-                return getConditionForPropertyRef(propertyRef, comparator, value, outerCriteria, Symbol.intern(simpleName), repositoryHelper);
+                return getConditionForPropertyRef(
+                        propertyRef,
+                        comparator,
+                        value,
+                        outerCriteria,
+                        Symbol.intern(simpleName),
+                        repositoryHelper,
+                        luceneEnabled,
+                        luceneRegexes
+                );
             } else {
                 // Any others we should assume are InstanceProperties, which will need namespace AND type AND '.value'
                 // qualification to be searchable (of which there could be multiple, for a single given property, if
@@ -558,7 +652,16 @@ public class CruxQuery {
                     Symbol symbolForVariable = Symbol.intern(simpleName);
                     List<IPersistentCollection> conditionAggregator = new ArrayList<>();
                     for (Keyword qualifiedPropertyRef : qualifiedSearchProperties) {
-                        List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(qualifiedPropertyRef, comparator, value, outerCriteria, symbolForVariable, repositoryHelper);
+                        List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(
+                                qualifiedPropertyRef,
+                                comparator,
+                                value,
+                                outerCriteria,
+                                symbolForVariable,
+                                repositoryHelper,
+                                luceneEnabled,
+                                luceneRegexes
+                        );
                         if (conditionsForOneProperty.size() > 1) {
                             // There are cases where the above could return more than one condition, in which case we should
                             // (and )-wrap it, since we'll be within an or-join
@@ -575,8 +678,8 @@ public class CruxQuery {
                         // If the outer criteria is ALL, then we will need to or-join the combined set of conditions, as
                         // only one of the property variations needs to match to meet that criteria.
                         List<Object> orJoin = new ArrayList<>();
-                        orJoin.add(OR_JOIN);
-                        orJoin.add(PersistentVector.create(DOC_ID));
+                        orJoin.add(OR_OPERATOR);
+                        //orJoin.add(PersistentVector.create(DOC_ID));
                         orJoin.addAll(conditionAggregator);
                         allPropertyConditions.add(PersistentList.create(orJoin));
                     } else {
@@ -621,6 +724,8 @@ public class CruxQuery {
      * @param outerCriteria matching criteria inside of which this condition will exist
      * @param variable to which to compare
      * @param repositoryHelper through which we can introspect regular expressions
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} of the conditions
      */
     protected List<IPersistentCollection> getConditionForPropertyRef(Keyword propertyRef,
@@ -628,10 +733,14 @@ public class CruxQuery {
                                                                      InstancePropertyValue value,
                                                                      MatchCriteria outerCriteria,
                                                                      Symbol variable,
-                                                                     OMRSRepositoryHelper repositoryHelper) {
+                                                                     OMRSRepositoryHelper repositoryHelper,
+                                                                     boolean luceneEnabled,
+                                                                     boolean luceneRegexes) {
 
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
-        List<IPersistentVector> predicateConditions = new ArrayList<>();
+        List<IPersistentCollection> predicateConditions = new ArrayList<>();
+
+        // TODO: cleanup / simplify this method
 
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
             // For equality we can compare directly to the value
@@ -650,6 +759,7 @@ public class CruxQuery {
             Symbol predicate = getPredicateForOperator(comparator);
             List<Object> predicateComparison = new ArrayList<>();
             boolean alreadyCovered = false;
+            boolean needsPropertyToVariable = false;
             if (REGEX_OPERATOR.equals(predicate)) {
                 Object compareTo = InstancePropertyValueMapping.getValueForComparison(value);
                 if (compareTo instanceof String) {
@@ -666,7 +776,28 @@ public class CruxQuery {
                         String unqualifiedLiteralString = repositoryHelper.getUnqualifiedLiteralString(regexSearchString);
                         propertyConditions.add(getEqualsConditions(propertyRef, unqualifiedLiteralString));
                         alreadyCovered = true;
-                    } else {
+                    } else if (luceneEnabled) {
+                        // If Lucene is enabled, use it's search clauses here rather than reverting straight to a full Java regex
+                        String searchString = getLuceneComparisonString(regexSearchString, repositoryHelper, luceneRegexes);
+                        if (searchString != null) {
+                            // We must combine with a further Java regex match against the actual value of a query result to
+                            // ensure that we cater for things like case sensitivity
+                            List<Object> regexConditions = new ArrayList<>();
+                            Pattern regex = Pattern.compile(regexSearchString);
+                            regexConditions.add(REGEX_OPERATOR);
+                            regexConditions.add(regex);
+                            regexConditions.add(MATCHED_VALUE);
+                            // Add the term-based Lucene clause:  [(text-search :property "text") [[e v s]]]
+                            predicateConditions.add(getLuceneTermClause(propertyRef, searchString));
+                            // Add the further pure regex against the result's value (to handle case-sensitivity): [(re-matches #"regex" v)]
+                            predicateConditions.add(PersistentVector.create(PersistentList.create(regexConditions)));
+                        }
+                        // If we cannot run a Lucene-optimised query (searchString is null), then we will fallback to a
+                        // full OR-based text condition comparison (immediately below): which will be VERY slow, but as
+                        // long as it does not exceed the query timeout threshold should at least still return accurate
+                        // results
+                    }
+                    if (!alreadyCovered && predicateConditions.isEmpty()) {
                         // Otherwise we will retrieve an optimal predicate-based comparison depending on the
                         // regex requested
                         //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
@@ -674,6 +805,7 @@ public class CruxQuery {
                         //  [(predicate #"regex" s_variable)] - for a regex-based (string) predicate
                         predicateComparison = getRegexCondition(regexSearchString, nonNullStringVar, repositoryHelper);
                         predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                        needsPropertyToVariable = true;
                     }
                 } else {
                     log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
@@ -699,6 +831,7 @@ public class CruxQuery {
                 predicateComparison.add(listAsSet);
                 predicateComparison.add(variable);
                 predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                needsPropertyToVariable = true;
             } else {
                 // For everything else, we need a (predicate variable value) pattern
                 // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
@@ -707,6 +840,7 @@ public class CruxQuery {
                 predicateComparison.add(variable);
                 predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
                 predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+                needsPropertyToVariable = true;
             }
             if (!alreadyCovered) {
                 // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (an or-join))
@@ -717,13 +851,17 @@ public class CruxQuery {
                     // (and the calling method will further wrap this with an 'or-join')
                     List<Object> andWrapper = new ArrayList<>();
                     andWrapper.add(AND_OPERATOR);
-                    andWrapper.add(propertyToVariable);
+                    if (needsPropertyToVariable) {
+                        andWrapper.add(propertyToVariable);
+                    }
                     andWrapper.addAll(predicateConditions);
                     propertyConditions.add(PersistentList.create(andWrapper));
                 } else {
                     // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
-                    // 'not-join' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not-join)
-                    propertyConditions.add(propertyToVariable);
+                    // 'not' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not)
+                    if (needsPropertyToVariable) {
+                        propertyConditions.add(propertyToVariable);
+                    }
                     propertyConditions.addAll(predicateConditions);
                 }
             }
@@ -978,22 +1116,6 @@ public class CruxQuery {
     }
 
     /**
-     * Add the paging information onto the query.
-     * @param fromElement starting element for the results
-     * @param pageSize maximum number of results
-     */
-    public void addPaging(int fromElement, int pageSize) {
-        offset = fromElement;
-        if (pageSize > 0) {
-            // If the pageSize is 0, then we would return no results (no point in searching), so we will only bother
-            // to override the pageSize if a value greater than 0 has been provided. (Some of the REST requests classes
-            // in Egeria core default the pageSize to 0 if it has not been specified explicitly, which does not really
-            // make any sense: we will instead use the overall default page size setup as part of the query constructor).
-            limit = pageSize;
-        }
-    }
-
-    /**
      * Retrieve the query object, as ready-to-be-submitted to Crux API's query method.
      * @return IPersistentMap containing the query
      */
@@ -1004,10 +1126,6 @@ public class CruxQuery {
         query = query.assoc(Keyword.intern("where"), PersistentVector.create(conditions));
         // Add the sequencing information to the query:  :order-by [[ ... ]]
         query = query.assoc(Keyword.intern("order-by"), PersistentVector.create(sequencing));
-        // Add the limit information to the query:  :limit n
-        query = query.assoc(Keyword.intern("limit"), limit);
-        // Add the offset information to the query:  :offset n
-        query = query.assoc(Keyword.intern("offset"), offset);
         return query;
     }
 
@@ -1033,16 +1151,21 @@ public class CruxQuery {
     }
 
     /**
-     * Escape any of Lucene's special characters in the provided input string.
-     * @param input to escape
-     * @return String with escapes inserted for any special characters
+     * Escape the provided string so that it is interpreted as a complete literal phrase by Lucene.
+     * @param phrase to escape
+     * @return String that should be interpreted by Lucene as a complete phrase
      */
-    protected String escapeLuceneSpecialCharacters(String input) {
-        String revised = input;
-        for (String s : LUCENE_SPECIAL_CHARS) {
-            revised = revised.replace(s, "\\" + s);
+    private String escapeLucenePhrase(String phrase) {
+        if (phrase != null) {
+            String escaped = QueryParser.escape(phrase);
+            // In addition to escaping special characters, we need to also escape spaces to avoid
+            // the query parser interpreting a phrase as multiple words that each need to be matched as
+            // anchored terms (which will likely always fail given a KeywordAnalyzer) -- for the sake of completeness
+            // we will do this strictly against Java whitespace (space, tabs, newlines, etc) to ensure we match
+            // even in those scenarios where there are multiple spaces together (each one will be individually escaped)
+            return ESCAPE_SPACES.matcher(escaped).replaceAll("\\\\$1");
         }
-        return input;
+        return null;
     }
 
 }

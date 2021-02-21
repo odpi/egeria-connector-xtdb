@@ -25,6 +25,13 @@ import java.util.List;
  *     <li><code>syncIndex</code>: a boolean indicating whether writes should be done synchronously (true, default) to
  *         ensure the index is up-to-date before returning, or asynchronously (false) to ensure that the transaction is
  *         recorded but that the index can be eventually consistent (faster writes)</li>
+ *     <li><code>luceneRegexes</code>: a boolean indicating whether any unquoted regexes (those not surrounded by
+ *         <code>\Q</code> and <code>\E</code>) should be treated as Lucene regexes (true) or not (false). Technically
+ *         the search interfaces are meant to take Java regexes; however, if usage of the connector is only expected to
+ *         pass fairly simple regexes that are also supported by Lucene, enabling this should significantly improve the
+ *         performance of queries against text data that involves regexes that are unquoted. (Regexes that are quoted
+ *         will be handled appropriately irrespective of this setting.)  Note that this will have no impact if Lucene
+ *         itself is not configured.</li>
  * </ul><br>
  * For example:
  * <code>
@@ -59,7 +66,8 @@ import java.util.List;
  *         "poll-wait-duration": "PT1S"
  *       }
  *     },
- *     "syncIndex": false
+ *     "syncIndex": false,
+ *     "luceneRegexes": true
  *   }
  * }
  * </code>
@@ -72,6 +80,7 @@ public class CruxOMRSRepositoryConnectorProvider extends OMRSRepositoryConnector
 
     public static final String CRUX_CONFIG = "cruxConfig";
     public static final String SYNCHRONOUS_INDEX = "syncIndex";
+    public static final String LUCENE_REGEXES = "luceneRegexes";
 
     /**
      * Constructor used to initialize the ConnectorProviderBase with the Java class name of the specific
@@ -93,6 +102,7 @@ public class CruxOMRSRepositoryConnectorProvider extends OMRSRepositoryConnector
         List<String> configProperties = new ArrayList<>();
         configProperties.add(CRUX_CONFIG);
         configProperties.add(SYNCHRONOUS_INDEX);
+        configProperties.add(LUCENE_REGEXES);
         connectorType.setRecognizedConfigurationProperties(configProperties);
 
         super.connectorTypeBean = connectorType;
