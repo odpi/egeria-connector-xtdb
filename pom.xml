@@ -69,7 +69,7 @@
         <!-- <crux-alpha.version>dev-SNAPSHOT</crux-alpha.version> -->
         <clojure.version>1.10.2</clojure.version>
         <jackson.version>2.12.1</jackson.version>
-        <lucene.version>8.6.1</lucene.version>
+        <lucene.version>8.8.0</lucene.version>
         <slf4j.version>1.7.30</slf4j.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
