@@ -29,6 +29,16 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: init-and-report
     spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - crux
+              topologyKey: "kubernetes.io/hostname"
       serviceAccountName: {{ .Release.Name }}-cts
       # Wait for all of the services to be up before attempting initial configuration
       initContainers:
