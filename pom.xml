@@ -64,7 +64,7 @@
 
     <properties>
         <open-metadata.version>2.7-SNAPSHOT</open-metadata.version>
-        <crux.version>21.01-1.14.0-beta</crux.version>
+        <crux.version>21.02-1.15.0-beta</crux.version>
         <crux-alpha.version>21.01-1.14.0-alpha</crux-alpha.version>
         <!-- <crux-alpha.version>dev-SNAPSHOT</crux-alpha.version> -->
         <clojure.version>1.10.2</clojure.version>
