@@ -41,7 +41,6 @@ spec:
       app.kubernetes.io/name: {{ include "myapp.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: crux-service
-      app: crux
   strategy: {}
   template:
     metadata:
@@ -50,7 +49,6 @@ spec:
         app.kubernetes.io/name: {{ include "myapp.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: crux-service
-        app: crux
     spec:
       volumes:
         - name: egeria-crux-connector-volume

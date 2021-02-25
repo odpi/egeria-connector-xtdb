@@ -54,10 +54,10 @@ kafka:
         requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchExpressions:
-                - key: app
+                - key: app.kubernetes.io/instance
                   operator: In
                   values:
-                    - crux
+                    - cr5
             topologyKey: "kubernetes.io/hostname"
   persistence:
     enabled: false
@@ -66,9 +66,9 @@ kafka:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchExpressions:
-              - key: app
+              - key: app.kubernetes.io/instance
                 operator: In
                 values:
-                  - crux
+                  - cr5
           topologyKey: "kubernetes.io/hostname"
 ...
