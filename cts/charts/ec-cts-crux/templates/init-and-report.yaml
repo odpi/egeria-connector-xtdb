@@ -29,6 +29,16 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: init-and-report
     spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/instance
+                    operator: In
+                    values:
+                      - {{ .Release.Name }}
+              topologyKey: "kubernetes.io/hostname"
       serviceAccountName: {{ .Release.Name }}-cts
       # Wait for all of the services to be up before attempting initial configuration
       initContainers:
@@ -101,7 +111,7 @@ spec:
                 curl -f -k --verbose --basic admin:admin -X POST
                 --header "Content-Type: application/json"
                 ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/local-repository/mode/repository-proxy/connection
-                --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"},"configurationProperties":{"crux/index-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-index"}},"crux/document-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-docs"}},"crux/tx-log":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-tx"}}}}'
+                --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"},"configurationProperties":{"cruxConfig":{"crux/index-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-index"}},"crux/document-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-docs"}},"crux/tx-log":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-tx"}},"crux.lucene/lucene-store":{"db-dir":"data/servers/crux/lucene"}}}}'
                 &&
                 curl -f -k --verbose --basic admin:admin -X POST
                 ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/cohorts/${EGERIA_COHORT}

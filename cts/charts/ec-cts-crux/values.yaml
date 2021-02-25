@@ -31,7 +31,7 @@ image:
 crux:
   version: 21.01-1.14.0-beta
   connectorversion: 1.0-SNAPSHOT
-  snapshotversion: 1.0-20210217.010758-11
+  snapshotversion: 1.0-20210218.201936-12
   snapshottoken: ""
   proxyserver: crux
 
@@ -49,5 +49,26 @@ kafka:
   zookeeper:
     persistence:
       enabled: false
+    affinity:
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                    - cr5
+            topologyKey: "kubernetes.io/hostname"
   persistence:
     enabled: false
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - cr5
+          topologyKey: "kubernetes.io/hostname"
+...

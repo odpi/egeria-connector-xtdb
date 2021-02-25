@@ -32,14 +32,17 @@ public class CruxQuery {
     protected static final Symbol MATCHED_VALUE = Symbol.intern("v");
     protected static final Symbol MATCHED_ATTRIBUTE = Symbol.intern("a");
     protected static final Symbol MATCHED_SCORE = Symbol.intern("s");
+    protected static final Symbol ELIDE = Symbol.intern("_");
 
     // Sort orders
     protected static final Keyword SORT_ASCENDING = Keyword.intern("asc");
     protected static final Keyword SORT_DESCENDING = Keyword.intern("desc");
 
     // Predicates (for comparisons)
-    protected static final Symbol WILDCARD_TEXT_SEARCH = Symbol.intern("wildcard-text-search");
-    protected static final Symbol TEXT_SEARCH = Symbol.intern("text-search");
+    protected static final Symbol WILDCARD_TEXT_SEARCH_CI = Symbol.intern("wildcard-text-search-ci");
+    protected static final Symbol WILDCARD_TEXT_SEARCH_CS = Symbol.intern("wildcard-text-search-cs");
+    protected static final Symbol TEXT_SEARCH_CI = Symbol.intern("text-search-ci");
+    protected static final Symbol TEXT_SEARCH_CS = Symbol.intern("text-search-cs");
     protected static final Symbol OR_OPERATOR = Symbol.intern("or");
     protected static final Symbol AND_OPERATOR = Symbol.intern("and");
     protected static final Symbol NOT_OPERATOR = Symbol.intern("not");
@@ -278,19 +281,19 @@ public class CruxQuery {
                         luceneRegexes
                 );
             } else {
-                // Otherwise, it is some basic regex condition that has been translate to a simplified Lucene form,
+                // Otherwise, it is some basic regex condition that has been translated to a simplified Lucene form,
                 // which we must therefore combine with a further Java regex match against the actual value to
                 // ensure that we cater for things like case sensitivity
-                List<Object> regexConditions = new ArrayList<>();
+                /*List<Object> regexConditions = new ArrayList<>();
                 Pattern regex = Pattern.compile(regexCriteria);
                 regexConditions.add(REGEX_OPERATOR);
                 regexConditions.add(regex);
-                regexConditions.add(MATCHED_VALUE);
+                regexConditions.add(MATCHED_VALUE);*/
                 // Add the lucene query: [(wildcard-text-search "text") [[e v a s]]]
-                conditions.add(getLuceneWildcardClause(searchString));
+                conditions.add(getLuceneWildcardClause(searchString, repositoryHelper.isCaseInsensitiveRegex(regexCriteria)));
                 // Add a further regex confirmation against the query result's value (to handle case-sensitivity):
                 // [(re-matches #"regex" v)]
-                conditions.add(PersistentVector.create(PersistentList.create(regexConditions)));
+                /*conditions.add(PersistentVector.create(PersistentList.create(regexConditions)));*/
             }
         }
     }
@@ -335,13 +338,19 @@ public class CruxQuery {
     /**
      * Retrieve a Lucene-oriented <code>wildcard-text-search</code> clause of the form: <code>[(wildcard-text-search "searchString") [[e v a s ]]]</code>
      * @param searchString to use for the wildcard-text-search
-     * @return IPersistentVector of the form <code>[(wildcard-text-search "searchString") [[e v a s]]]</code>
+     * @param isCaseInsensitive indicates whether the query should be case insensitive (true) or case sensitive (false)
+     * @return IPersistentVector of the form <code>[(wildcard-text-search-[ci|cs] "searchString") [[e v a s]]]</code>
      */
-    private IPersistentVector getLuceneWildcardClause(String searchString) {
+    private IPersistentVector getLuceneWildcardClause(String searchString, boolean isCaseInsensitive) {
         List<Object> luceneCriteria = new ArrayList<>();
-        luceneCriteria.add(WILDCARD_TEXT_SEARCH);
+        if (isCaseInsensitive) {
+            luceneCriteria.add(WILDCARD_TEXT_SEARCH_CI);
+        } else {
+            luceneCriteria.add(WILDCARD_TEXT_SEARCH_CS);
+        }
         luceneCriteria.add(searchString);
-        IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
+        //IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
+        IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, ELIDE));
         List<IPersistentCollection> luceneQuery = new ArrayList<>();
         luceneQuery.add(PersistentList.create(luceneCriteria));
         luceneQuery.add(deStructured);
@@ -352,14 +361,20 @@ public class CruxQuery {
      * Retrieve a Lucene-oriented <code>text-search</code> clause of the form: <code>[(text-search :property "searchString") [[e v s]]]</code>
      * @param propertyRef property whose value the text should be matched against
      * @param searchString to use for the text-search
-     * @return IPersistentVector of the form <code>[(text-search :property "searchString") [[e v s]]]</code>
+     * @param isCaseInsensitive indicates whether the query should be case insensitive (true) or case sensitive (false)
+     * @return IPersistentVector of the form <code>[(text-search-[ci|cs] :property "searchString") [[e v s]]]</code>
      */
-    private IPersistentVector getLuceneTermClause(Keyword propertyRef, String searchString) {
+    private IPersistentVector getLuceneTermClause(Keyword propertyRef, String searchString, boolean isCaseInsensitive) {
         List<Object> luceneCriteria = new ArrayList<>();
-        luceneCriteria.add(TEXT_SEARCH);
+        if (isCaseInsensitive) {
+            luceneCriteria.add(TEXT_SEARCH_CI);
+        } else {
+            luceneCriteria.add(TEXT_SEARCH_CS);
+        }
         luceneCriteria.add(propertyRef);
         luceneCriteria.add(searchString);
-        IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_SCORE));
+        //IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_SCORE));
+        IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, ELIDE));
         List<IPersistentCollection> luceneQuery = new ArrayList<>();
         luceneQuery.add(PersistentList.create(luceneCriteria));
         luceneQuery.add(deStructured);
@@ -521,8 +536,9 @@ public class CruxQuery {
                 switch (matchCriteria) {
                     case ALL:
                         // TODO: do we need to make this distinction any longer?
-                        if (orNested) {
-                            // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate
+                        if (orNested && allConditions.size() > 1) {
+                            // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate and
+                            // there is more than a single condition
                             predicatedConditions.add(AND_OPERATOR);
                             predicatedConditions.addAll(allConditions);
                         } else {
@@ -532,6 +548,10 @@ public class CruxQuery {
                         break;
                     case ANY:
                         // (or-join [e] (and [e :property var] [(predicate ... var)]) )
+                        if (allConditions.size() == 1) {
+                            // If only a single condition, return it directly (no wrapping necessary)
+                            return allConditions;
+                        }
                         predicatedConditions.add(OR_OPERATOR);
                         //predicatedConditions.add(PersistentVector.create(DOC_ID));
                         predicatedConditions.addAll(allConditions);
@@ -650,7 +670,7 @@ public class CruxQuery {
                     // through and build up a set of conditions for each variation of the property
                     List<IPersistentCollection> allPropertyConditions = new ArrayList<>();
                     Symbol symbolForVariable = Symbol.intern(simpleName);
-                    List<IPersistentCollection> conditionAggregator = new ArrayList<>();
+                    List<List<IPersistentCollection>> conditionAggregator = new ArrayList<>();
                     for (Keyword qualifiedPropertyRef : qualifiedSearchProperties) {
                         List<IPersistentCollection> conditionsForOneProperty = getConditionForPropertyRef(
                                 qualifiedPropertyRef,
@@ -662,33 +682,87 @@ public class CruxQuery {
                                 luceneEnabled,
                                 luceneRegexes
                         );
-                        if (conditionsForOneProperty.size() > 1) {
-                            // There are cases where the above could return more than one condition, in which case we should
-                            // (and )-wrap it, since we'll be within an or-join
+                        conditionAggregator.add(conditionsForOneProperty);
+                        // The call above will AND-wrap its nested conditions if we are within an ANY, and we do
+                        // not need any wrapping for an ALL or a NONE -- so just add the condition(s) directly.
+                        //conditionAggregator.addAll(conditionsForOneProperty);
+                        /*if (conditionsForOneProperty.size() > 1 && MatchCriteria.ANY.equals(outerCriteria)) {
+                            // If the above returns more than one condition, and we are nested in an ANY, we should
+                            // AND-wrap the conditions, since we'll be within an OR
                             List<Object> andList = new ArrayList<>();
                             andList.add(AND_OPERATOR);
+                            asdf -- not AND-wrapping this means we pick up multiple conditions below under the ALL and OR them...
                             andList.addAll(conditionsForOneProperty);
                             conditionAggregator.add(PersistentList.create(andList));
                         } else {
-                            // This is really just adding the single embedded element, without risking a .get() IndexOutOfBounds
+                            // Otherwise (just a single condition, or multiple but we are not within an ANY), add all
+                            // of the condition(s) without any AND-wrapping
                             conditionAggregator.addAll(conditionsForOneProperty);
+                        }*/
+                    }
+                    if (conditionAggregator.size() == 1) {
+                        // If there is only a single condition, we can just add it directly:
+                        // - ALL and ANY are the same with a single condition
+                        // - NONE will already be wrapping the condition appropriately
+                        allPropertyConditions.addAll(conditionAggregator.get(0));
+                    } else {
+                        // Otherwise, there are multiple conditions...
+                        if (MatchCriteria.ALL.equals(outerCriteria)) {
+                            // If the outer criteria is ALL, and there is more than one property variation to check, then we will
+                            // need to OR the combined set of conditions, as only one of the property variations needs to
+                            // match to meet that criteria. (Note: this is costly, but unavoidable so long as there are no
+                            // type limiters specified by the caller)
+                            List<Object> or = new ArrayList<>();
+                            or.add(OR_OPERATOR);
+                            for (List<IPersistentCollection> subList : conditionAggregator) {
+                                if (subList.size() == 1) {
+                                    // If there is only a single clause, add it directly to the OR
+                                    or.addAll(subList);
+                                } else {
+                                    // If there are multiple, however, wrap them with an AND
+                                    List<Object> andList = new ArrayList<>();
+                                    andList.add(AND_OPERATOR);
+                                    andList.addAll(subList);
+                                    or.add(PersistentList.create(andList));
+                                }
+                            }
+                            //orJoin.addAll(conditionAggregator);
+                            allPropertyConditions.add(PersistentList.create(or));
+                        } else {
+                            // For a NONE, we actually want to ensure that all of the conditions are AND-ed, so no need to
+                            // wrap.
+                            // For an ANY, there will already be an OR wrapped around the conditions by the
+                            // caller of this method, so no need to wrap them again here.
+                            // Therefore, in both cases, we just need to put all the conditions together and return them.
+                            for (List<IPersistentCollection> subList : conditionAggregator) {
+                                allPropertyConditions.addAll(subList);
+                            }
                         }
                     }
-                    if (MatchCriteria.ALL.equals(outerCriteria)) {
-                        // If the outer criteria is ALL, then we will need to or-join the combined set of conditions, as
-                        // only one of the property variations needs to match to meet that criteria.
-                        List<Object> orJoin = new ArrayList<>();
-                        orJoin.add(OR_OPERATOR);
-                        //orJoin.add(PersistentVector.create(DOC_ID));
-                        orJoin.addAll(conditionAggregator);
-                        allPropertyConditions.add(PersistentList.create(orJoin));
+                    /*if (MatchCriteria.ALL.equals(outerCriteria) && conditionAggregator.size() > 1) {
+                        // If the outer criteria is ALL, and there is more than one property variation to check, then we will
+                        // need to OR the combined set of conditions, as only one of the property variations needs to
+                        // match to meet that criteria. (Note: this is costly, but unavoidable so long as there are no
+                        // type limiters specified by the caller)
+                        List<Object> or = new ArrayList<>();
+                        or.add(OR_OPERATOR);
+                        for (List<IPersistentCollection> subList : conditionAggregator) {
+                            List<Object> andList = new ArrayList<>();
+                            andList.add(AND_OPERATOR);
+                            andList.addAll(subList);
+                            or.add(PersistentList.create(andList));
+                        }
+                        //orJoin.addAll(conditionAggregator);
+                        allPropertyConditions.add(PersistentList.create(or));
                     } else {
                         // For a NONE, we actually want to ensure that all of the conditions are AND-ed, so no need to
-                        // wrap. And for an ANY, there will already be an or-join wrapped around the conditions by the
-                        // caller of this method, so no need to wrap them again here. Therefore, in both cases, we just
-                        // need to put all the conditions together and return them.
+                        // wrap.
+                        // For an ANY, there will already be an OR wrapped around the conditions by the
+                        // caller of this method, so no need to wrap them again here.
+                        // When there is only a single property, an ALL is the same as an ANY.
+                        // Therefore, in all remaining cases, we just need to put all the conditions together and return them.
                         allPropertyConditions.addAll(conditionAggregator);
-                    }
+                    }*/
                     return allPropertyConditions;
                 }
             }
@@ -782,15 +856,15 @@ public class CruxQuery {
                         if (searchString != null) {
                             // We must combine with a further Java regex match against the actual value of a query result to
                             // ensure that we cater for things like case sensitivity
-                            List<Object> regexConditions = new ArrayList<>();
+                            /*List<Object> regexConditions = new ArrayList<>();
                             Pattern regex = Pattern.compile(regexSearchString);
                             regexConditions.add(REGEX_OPERATOR);
                             regexConditions.add(regex);
-                            regexConditions.add(MATCHED_VALUE);
+                            regexConditions.add(MATCHED_VALUE);*/
                             // Add the term-based Lucene clause:  [(text-search :property "text") [[e v s]]]
-                            predicateConditions.add(getLuceneTermClause(propertyRef, searchString));
+                            predicateConditions.add(getLuceneTermClause(propertyRef, searchString, repositoryHelper.isCaseInsensitiveRegex(regexSearchString)));
                             // Add the further pure regex against the result's value (to handle case-sensitivity): [(re-matches #"regex" v)]
-                            predicateConditions.add(PersistentVector.create(PersistentList.create(regexConditions)));
+                            /*predicateConditions.add(PersistentVector.create(PersistentList.create(regexConditions)));*/
                         }
                         // If we cannot run a Lucene-optimised query (searchString is null), then we will fallback to a
                         // full OR-based text condition comparison (immediately below): which will be VERY slow, but as
@@ -843,12 +917,11 @@ public class CruxQuery {
                 needsPropertyToVariable = true;
             }
             if (!alreadyCovered) {
-                // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (an or-join))
-                if (MatchCriteria.ANY.equals(outerCriteria)) {
+                // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (will be OR-wrapped))
+                if (MatchCriteria.ANY.equals(outerCriteria) && (needsPropertyToVariable || predicateConditions.size() > 1)) {
                     // Since the variables involved across multiple conditions can be different, and an OR predicate
                     // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
-                    // two conditions together with an AND predicate
-                    // (and the calling method will further wrap this with an 'or-join')
+                    // two conditions together with an AND predicate (if there is more than one condition)
                     List<Object> andWrapper = new ArrayList<>();
                     andWrapper.add(AND_OPERATOR);
                     if (needsPropertyToVariable) {
