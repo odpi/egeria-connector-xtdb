@@ -99,8 +99,8 @@ public class CruxQuery {
     public void addRelationshipEndpointConditions(String reference) {
         List<Object> orConditions = new ArrayList<>();
         orConditions.add(OR_OPERATOR);
-        orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_ONE_PROXY, reference));
-        orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_TWO_PROXY, reference));
+        orConditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_ONE_PROXY), reference));
+        orConditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_TWO_PROXY), reference));
         conditions.add(PersistentList.create(orConditions));
     }
 
@@ -138,15 +138,15 @@ public class CruxQuery {
         if (subtypeLimits != null && !subtypeLimits.isEmpty()) {
             // If subtypes were specified, search only for those (explicitly)
             for (String subtypeGuid : subtypeLimits) {
-                orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUID, subtypeGuid));
-                orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, subtypeGuid));
+                orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), subtypeGuid));
+                orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), subtypeGuid));
             }
         } else {
             // Otherwise, search for any matches against the typeGuid exactly or where it is a supertype
             // - exactly matching the TypeDef:  [e :type.guid "..."]
-            orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUID, typeGuid));
+            orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), typeGuid));
             // - matching any of the super types:  [e :type.supers "...]
-            orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, typeGuid));
+            orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), typeGuid));
         }
         return PersistentList.create(orConditions);
     }
@@ -158,7 +158,7 @@ public class CruxQuery {
      */
     public void addTypeDefCategoryCondition(TypeDefCategory category) {
         if (category != null) {
-            conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY, category.getOrdinal()));
+            conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
         }
     }
 
@@ -196,7 +196,7 @@ public class CruxQuery {
             if (typeDef != null) {
                 List<TypeDefAttribute> properties = repositoryHelper.getAllPropertiesForTypeDef(repositoryName, typeDef, methodName);
                 for (TypeDefAttribute property : properties) {
-                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
                             repositoryHelper,
                             property.getAttributeName(),
                             namespace,
@@ -624,14 +624,14 @@ public class CruxQuery {
                     Set<String> classificationTypes = new HashSet<>();
                     String classificationTypeName = ClassificationMapping.getClassificationNameFromNamespace(EntitySummaryMapping.N_CLASSIFICATIONS, namespace);
                     classificationTypes.add(classificationTypeName);
-                    qualifiedSearchProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
                             repositoryHelper,
                             simpleName,
                             classificationNamespace,
                             classificationTypes,
                             value);
                 } else {
-                    qualifiedSearchProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
                             repositoryHelper,
                             simpleName,
                             namespace,
@@ -1038,7 +1038,7 @@ public class CruxQuery {
         for (InstanceStatus limitByStatus : limitResultsByStatus) {
             Integer ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(limitByStatus);
             if (ordinal != null) {
-                statusConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.CURRENT_STATUS, ordinal));
+                statusConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS), ordinal));
             }
         }
         if (!statusConditions.isEmpty()) {
@@ -1075,7 +1075,7 @@ public class CruxQuery {
         if (sequencingProperty != null) {
             // Translate the provided sequencingProperty name into all of its possible appropriate property name
             // references (depends on the type limiting used for the search)
-            qualifiedSortProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames, null);
+            qualifiedSortProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames, null);
         }
         if (sequencingOrder == null) {
             // Default to sorting by GUID, if no sorting is defined (for consistent result ordering, paging, etc)
@@ -1087,22 +1087,22 @@ public class CruxQuery {
         switch (sequencingOrder) {
             case LAST_UPDATE_OLDEST:
                 addFindElement(UPDATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.UPDATE_TIME, UPDATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
                 sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_ASCENDING));
                 break;
             case LAST_UPDATE_RECENT:
                 addFindElement(UPDATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.UPDATE_TIME, UPDATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
                 sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_DESCENDING));
                 break;
             case CREATION_DATE_OLDEST:
                 addFindElement(CREATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.CREATE_TIME, CREATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
                 sequencing.add(PersistentVector.create(CREATE_TIME, SORT_ASCENDING));
                 break;
             case CREATION_DATE_RECENT:
                 addFindElement(CREATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.CREATE_TIME, CREATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
                 sequencing.add(PersistentVector.create(CREATE_TIME, SORT_DESCENDING));
                 break;
             case PROPERTY_ASCENDING:
@@ -1187,7 +1187,7 @@ public class CruxQuery {
      */
     protected static List<IPersistentCollection> getNoResultsCondition() {
         List<IPersistentCollection> conditions = new ArrayList<>();
-        conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
+        conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
         return conditions;
     }
 

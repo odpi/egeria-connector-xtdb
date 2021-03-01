@@ -2,15 +2,13 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
-import clojure.lang.Keyword;
+import crux.api.CruxDocument;
 import crux.api.ICruxDatasource;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * Maps the properties of Relationships between persistence and objects.
@@ -25,8 +23,8 @@ public class RelationshipMapping extends InstanceHeaderMapping {
     public static final String N_ENTITY_ONE_PROXY = "entityOneProxy";
     public static final String N_ENTITY_TWO_PROXY = "entityTwoProxy";
 
-    public static final Keyword ENTITY_ONE_PROXY = Keyword.intern(N_ENTITY_ONE_PROXY);
-    public static final Keyword ENTITY_TWO_PROXY = Keyword.intern(N_ENTITY_TWO_PROXY);
+    public static final String ENTITY_ONE_PROXY = getKeyword(N_ENTITY_ONE_PROXY);
+    public static final String ENTITY_TWO_PROXY = getKeyword(N_ENTITY_TWO_PROXY);
 
     private ICruxDatasource db;
 
@@ -43,25 +41,25 @@ public class RelationshipMapping extends InstanceHeaderMapping {
     /**
      * Construct a mapping from a Crux map (to map to an Egeria representation).
      * @param cruxConnector connectivity to Crux
-     * @param cruxMap from which to map
+     * @param cruxDoc from which to map
      * @param db an open database connection for a point-in-time appropriate to the mapping
      */
     public RelationshipMapping(CruxOMRSRepositoryConnector cruxConnector,
-                               Map<Keyword, Object> cruxMap,
+                               CruxDocument cruxDoc,
                                ICruxDatasource db) {
-        super(cruxConnector, cruxMap);
+        super(cruxConnector, cruxDoc);
         this.db = db;
     }
 
     /**
      * Map from Crux to Egeria.
      * @return EntityDetail
-     * @see #RelationshipMapping(CruxOMRSRepositoryConnector, Map, ICruxDatasource)
+     * @see #RelationshipMapping(CruxOMRSRepositoryConnector, CruxDocument, ICruxDatasource)
      */
     public Relationship toEgeria() {
-        if (instanceHeader == null && cruxMap != null) {
+        if (instanceHeader == null && cruxDoc != null) {
             instanceHeader = new Relationship();
-            fromMap();
+            fromDoc();
         }
         if (instanceHeader != null) {
             return (Relationship) instanceHeader;
@@ -74,39 +72,36 @@ public class RelationshipMapping extends InstanceHeaderMapping {
      * {@inheritDoc}
      */
     @Override
-    protected void toMap() {
-        super.toMap();
+    protected CruxDocument.Builder toDoc() {
+        CruxDocument.Builder builder = super.toDoc();
         Relationship relationship = (Relationship) instanceHeader;
         EntityProxy one = relationship.getEntityOneProxy();
         EntityProxy two = relationship.getEntityTwoProxy();
-        cruxMap.put(ENTITY_ONE_PROXY, EntityProxyMapping.getReference(one.getGUID()));
-        cruxMap.put(ENTITY_TWO_PROXY, EntityProxyMapping.getReference(two.getGUID()));
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, relationship.getType(), relationship.getProperties(), RELATIONSHIP_PROPERTIES_NS);
-        Map<Keyword, Object> propertyMap = ipm.toCrux();
-        if (propertyMap != null) {
-            cruxMap.putAll(propertyMap);
-        }
+        builder.put(ENTITY_ONE_PROXY, EntityProxyMapping.getReference(one.getGUID()));
+        builder.put(ENTITY_TWO_PROXY, EntityProxyMapping.getReference(two.getGUID()));
+        InstancePropertiesMapping.addToDoc(cruxConnector, builder, relationship.getType(), relationship.getProperties(), RELATIONSHIP_PROPERTIES_NS);
+        return builder;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void fromMap() {
-        super.fromMap();
+    protected void fromDoc() {
+        super.fromDoc();
         try {
-            Object oneRef = cruxMap.getOrDefault(ENTITY_ONE_PROXY, null);
+            Object oneRef = cruxDoc.get(ENTITY_ONE_PROXY);
             if (oneRef instanceof String) {
                 EntityProxy one = getEntityProxyFromRef((String) oneRef);
                 ((Relationship) instanceHeader).setEntityOneProxy(one);
             }
-            Object twoRef = cruxMap.getOrDefault(ENTITY_TWO_PROXY, null);
+            Object twoRef = cruxDoc.get(ENTITY_TWO_PROXY);
             if (twoRef instanceof String) {
                 EntityProxy two = getEntityProxyFromRef((String) twoRef);
                 ((Relationship) instanceHeader).setEntityTwoProxy(two);
             }
-            InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, cruxMap, RELATIONSHIP_PROPERTIES_NS);
-            ((Relationship) instanceHeader).setProperties(ipm.toEgeria());
+            InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, RELATIONSHIP_PROPERTIES_NS);
+            ((Relationship) instanceHeader).setProperties(ip);
         } catch (RepositoryErrorException e) {
             log.error("Unable to retrieve entity proxy, nullifying the relationship.", e);
             instanceHeader = null;
@@ -120,8 +115,8 @@ public class RelationshipMapping extends InstanceHeaderMapping {
      * @throws RepositoryErrorException logic error in the repository with corrupted entity proxy
      */
     private EntityProxy getEntityProxyFromRef(String ref) throws RepositoryErrorException {
-        Map<Keyword, Object> epMap = cruxConnector.getCruxObjectByReference(db, ref);
-        return EntityProxyMapping.getFromMap(cruxConnector, epMap);
+        CruxDocument epDoc = cruxConnector.getCruxObjectByReference(db, ref);
+        return EntityProxyMapping.getFromDoc(cruxConnector, epDoc);
     }
 
     /**

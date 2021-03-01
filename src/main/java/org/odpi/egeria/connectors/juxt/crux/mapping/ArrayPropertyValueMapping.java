@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 
@@ -24,32 +25,21 @@ import java.util.*;
 public class ArrayPropertyValueMapping extends InstancePropertyValueMapping {
 
     /**
-     * Construct a mapping from ArrayPropertyValue (to map to a Crux representation).
-     * @param cruxConnector connectivity to Crux
-     * @param instanceType of the instance for which the value needs to be mapped
-     * @param propertyName of the property to map
-     * @param value from which to map
-     * @param namespace by which to qualify properties
+     * Add the provided array value to the Crux document.
+     * @param cruxConnector connectivity to the repository
+     * @param instanceType of the instance for which this value applies
+     * @param builder to which to add the property value
+     * @param propertyName of the property
+     * @param namespace by which to qualify the property
+     * @param value of the property
      */
-    public ArrayPropertyValueMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                     InstanceType instanceType,
-                                     String propertyName,
-                                     ArrayPropertyValue value,
-                                     String namespace) {
-        super(cruxConnector, instanceType, propertyName, value, namespace);
-    }
-
-    /**
-     * Add the provided primitive value to the map.
-     */
-    @Override
-    protected void addValueToMap() {
-        if (value instanceof ArrayPropertyValue) {
-            ArrayPropertyValue apv = (ArrayPropertyValue) value;
-            cruxMap.put(getPropertyValueKeyword(), getArrayPropertyValueForComparison(apv));
-        } else {
-            cruxMap.put(getPropertyValueKeyword(), null);
-        }
+    public static void addArrayPropertyValueToDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                                  InstanceType instanceType,
+                                                  CruxDocument.Builder builder,
+                                                  String propertyName,
+                                                  String namespace,
+                                                  ArrayPropertyValue value) {
+        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getArrayPropertyValueForComparison(value));
     }
 
     /**

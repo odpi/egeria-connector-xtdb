@@ -36,6 +36,32 @@ public abstract class AbstractMapping {
     }
 
     /**
+     * Construct a string representation of a keyword.
+     * @param name of the keyword
+     * @return String representation of the form ':name'
+     */
+    public static String getKeyword(String name) {
+        return getKeyword(null, name);
+    }
+
+    /**
+     * Construct a string representation of a keyword.
+     * @param namespace of the keyword (optional)
+     * @param name of the keyword
+     * @return String representation of the form ':namespace/name'
+     */
+    public static String getKeyword(String namespace, String name) {
+        if (name == null || name.equals("")) {
+            return null;
+        }
+        if (namespace == null || namespace.equals("")) {
+            return name;
+        } else {
+            return namespace + "/" + name;
+        }
+    }
+
+    /**
      * Retrieve an embedded JSON-serialized form of a given object. This will prevent the object from being searchable,
      * but provides an efficient means to store structured information.
      * @param value to JSON-serialize

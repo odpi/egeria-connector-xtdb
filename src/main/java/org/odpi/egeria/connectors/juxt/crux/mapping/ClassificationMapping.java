@@ -3,8 +3,9 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import clojure.lang.IPersistentMap;
-import clojure.lang.Keyword;
+import clojure.lang.IPersistentVector;
 import clojure.lang.PersistentVector;
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     }
 
     private List<Classification> classifications;
-    private Map<Keyword, Object> cruxMap;
+    private CruxDocument cruxDoc;
     private final String namespace;
 
     /**
@@ -73,31 +74,36 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     /**
      * Construct a mapping from a Crux map (to map to an Egeria representation).
      * @param cruxConnector connectivity to Crux
-     * @param cruxMap from which to map
+     * @param cruxDoc from which to map
      * @param namespace under which the classifications are qualified
      */
     public ClassificationMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                 Map<Keyword, Object> cruxMap,
+                                 CruxDocument cruxDoc,
                                  String namespace) {
         super(cruxConnector);
-        this.cruxMap = cruxMap;
+        this.cruxDoc = cruxDoc;
         this.namespace = namespace;
     }
 
     /**
-     * Map from Egeria to Crux.
-     * @return {@code Map<Keyword, Object>}
-     * @see #ClassificationMapping(CruxOMRSRepositoryConnector, List, String)
+     * Add the details of the mapping to the provided CruxDocument builder.
+     * @param builder into which to add the classification details
      */
-    public Map<Keyword, Object> toCrux() {
+    public void addToCruxDoc(CruxDocument.Builder builder) {
 
-        if (cruxMap == null && classifications != null && !classifications.isEmpty()) {
-            cruxMap = toMap(classifications);
-        }
-        if (cruxMap != null) {
-            return cruxMap;
-        } else {
-            return null;
+        if (classifications != null) {
+            List<String> classificationNames = new ArrayList<>();
+            for (Classification classification : classifications) {
+                String classificationName = classification.getName();
+                classificationNames.add(classificationName);
+                String qualifiedNamespace = getNamespaceForClassification(classificationName);
+                super.buildDoc(builder, classification, qualifiedNamespace);
+                builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
+                builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
+                InstancePropertiesMapping.addToDoc(cruxConnector, builder, classification.getType(), classification.getProperties(), qualifiedNamespace + "." + CLASSIFICATION_PROPERTIES_NS);
+            }
+            // Add the list of classification names, for easing search
+            builder.put(getKeyword(namespace), PersistentVector.create(classificationNames));
         }
 
     }
@@ -105,119 +111,55 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     /**
      * Map from Crux to Egeria.
      * @return {@code List<Classification>}
-     * @see #ClassificationMapping(CruxOMRSRepositoryConnector, Map, String)
+     * @see #ClassificationMapping(CruxOMRSRepositoryConnector, CruxDocument, String)
      */
     public List<Classification> toEgeria() {
 
         if (classifications != null) {
             return classifications;
-        } else if (cruxMap == null) {
+        } else if (cruxDoc == null) {
             return null;
         } else {
-            return fromMap(cruxMap);
+            return fromDoc();
         }
-
-    }
-
-    /**
-     * Translate the provided Egeria representation into a Crux map.
-     * @param cls Egeria representation from which to map
-     * @return {@code Map<Keyword, Object>} Crux representation
-     */
-    protected Map<Keyword, Object> toMap(List<Classification> cls) {
-
-        Map<Keyword, Object> map = new HashMap<>();
-        List<String> classificationNames = new ArrayList<>();
-
-        for (Classification classification : cls) {
-            String classificationName = classification.getName();
-            classificationNames.add(classificationName);
-            String qualifiedNamespace = getNamespaceForClassification(classificationName);
-            Map<Keyword, Object> mapForClassification = super.toMap(classification, qualifiedNamespace);
-            if (mapForClassification == null) {
-                mapForClassification = new HashMap<>();
-            }
-            mapForClassification.put(Keyword.intern(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
-            mapForClassification.put(Keyword.intern(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
-            InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, classification.getType(), classification.getProperties(), qualifiedNamespace + "." + CLASSIFICATION_PROPERTIES_NS);
-            Map<Keyword, Object> propertyMap = ipm.toCrux();
-            if (propertyMap != null) {
-                mapForClassification.putAll(propertyMap);
-            }
-            map.putAll(mapForClassification);
-        }
-
-        // Add the list of classification names, for easing search
-        map.put(Keyword.intern(namespace), PersistentVector.create(classificationNames));
-
-        return map;
 
     }
 
     /**
      * Translate the provided Crux representation into an Egeria representation.
-     * @param map from which to map
      * @return {@code List<Classification>}
      */
-    protected List<Classification> fromMap(Map<Keyword, Object> map) {
+    protected List<Classification> fromDoc() {
 
-        Map<String, Classification> classNameToDetails = new TreeMap<>();
-        Map<String, Map<String, InstancePropertyValue>> classNameToPropertiesMap = new TreeMap<>();
+        List<Classification> list = new ArrayList<>();
+        // Start by retrieving the list of classification names
+        IPersistentVector classificationNames = (IPersistentVector) cruxDoc.get(getKeyword(namespace));
 
-        // We will need to loop through all objects in the doc to find all the classifications
-        for (Map.Entry<Keyword, Object> entry : map.entrySet()) {
+        if (classificationNames != null) {
+            // Then, for each classification associated with the document...
+            for (int i = 0; i < classificationNames.length(); i++) {
 
-            Keyword property = entry.getKey();
-            Object objValue = entry.getValue();
-            String detectedNamespace = property.getNamespace();
+                String classificationName = (String) classificationNames.nth(i);
+                String namespaceForClassification = getNamespaceForClassification(classificationName);
 
-            if (detectedNamespace != null && detectedNamespace.startsWith(namespace)) {
-                // Only here do we know we have a classification to be mapped...
-                String value = objValue == null ? null : objValue.toString();
-                IPersistentMap embeddedValue = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
-                String classificationName = getClassificationNameFromNamespace(detectedNamespace);
-                String propertyName = property.getName();
-                if (detectedNamespace.endsWith("." + CLASSIFICATION_PROPERTIES_NS)) {
-                    // We've hit classification-specific instance properties, which we need to consolidate
-                    if (!classNameToPropertiesMap.containsKey(classificationName)) {
-                        classNameToPropertiesMap.put(classificationName, new HashMap<>());
-                    }
-                    InstancePropertyValueMapping.addInstancePropertyValueToMap(classNameToPropertiesMap.get(classificationName), propertyName, embeddedValue);
-                } else {
-                    // Otherwise it should just be a "normal" property
-                    if (!classNameToDetails.containsKey(classificationName)) {
-                        Classification classification = new Classification();
-                        // Initialise with the name and other header properties
-                        classification.setName(classificationName);
-                        super.fromMap(classification, map, detectedNamespace);
-                        classNameToDetails.put(classificationName, classification);
-                    }
-                    if (N_CLASSIFICATION_ORIGIN.equals(propertyName)) {
-                        classNameToDetails.get(classificationName).setClassificationOrigin(getClassificationOriginFromSymbolicName(value));
-                    } else if (N_CLASSIFICATION_ORIGIN_GUID.equals(propertyName)) {
-                        classNameToDetails.get(classificationName).setClassificationOriginGUID(value);
-                    }
+                Classification classification = new Classification();
+                classification.setName(classificationName);
+                super.fromDoc(classification, cruxDoc, namespaceForClassification);
+
+                // Retrieve its embedded type details (doing this rather than going to TypeDef from repositoryHelper,
+                // since these could change over history of the document)
+                IPersistentMap embeddedType = (IPersistentMap) cruxDoc.get(getKeyword(namespaceForClassification, "type"));
+                InstanceType classificationType = getDeserializedValue(embeddedType, mapper.getTypeFactory().constructType(InstanceType.class));
+
+                // And use these to retrieve the property mappings for this classification (only)
+                InstanceProperties ip = InstancePropertiesMapping.getFromDoc(classificationType, cruxDoc, namespaceForClassification + "." + CLASSIFICATION_PROPERTIES_NS);
+
+                if (ip != null) {
+                    classification.setProperties(ip);
                 }
 
+                list.add(classification);
             }
-
-        }
-
-        // Now we need to iterate through the classifications we parsed out, to:
-        // 1. set their instance properties (only possible now after they've all been consolidated by iterating above)
-        // 2. put the overall results into a list
-        List<Classification> list = new ArrayList<>();
-        for (Map.Entry<String, Classification> entry : classNameToDetails.entrySet()) {
-            String classificationName = entry.getKey();
-            Classification classification = entry.getValue();
-            Map<String, InstancePropertyValue> propertiesMap = classNameToPropertiesMap.getOrDefault(classificationName, null);
-            if (propertiesMap != null) {
-                // Set the classification properties (if they are non-empty)
-                InstanceProperties ip = new InstanceProperties();
-                ip.setInstanceProperties(propertiesMap);
-                classification.setProperties(ip);
-            }
-            list.add(classification);
         }
 
         return list.isEmpty() ? null : list;
@@ -258,15 +200,6 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
      */
     private String getNamespaceForClassification(String classificationName) {
         return getNamespaceForClassification(namespace, classificationName);
-    }
-
-    /**
-     * Given a qualified namespace, parse out the name of the classification.
-     * @param ns from which to parse the classification name
-     * @return String classification name
-     */
-    private String getClassificationNameFromNamespace(String ns) {
-        return getClassificationNameFromNamespace(namespace, ns);
     }
 
     /**

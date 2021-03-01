@@ -112,8 +112,8 @@ public class CruxGraphQuery extends CruxQuery {
      * @param variable to match
      * @return PersistentVector for the condition
      */
-    protected PersistentVector getRelatedToCondition(Keyword property, Symbol variable) {
-        return PersistentVector.create(RELATIONSHIP, property, variable);
+    protected PersistentVector getRelatedToCondition(String property, Symbol variable) {
+        return PersistentVector.create(RELATIONSHIP, Keyword.intern(property), variable);
     }
 
 }

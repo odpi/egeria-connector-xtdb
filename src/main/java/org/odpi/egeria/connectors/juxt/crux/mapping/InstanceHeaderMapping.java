@@ -2,16 +2,15 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
-import clojure.lang.Keyword;
-import clojure.lang.PersistentVector;
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityDetail;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceHeader;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -23,27 +22,25 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
 
     private static final Logger log = LoggerFactory.getLogger(InstanceHeaderMapping.class);
 
-    private static final Keyword GUID = Constants.CRUX_PK;
-    private static final Keyword INSTANCE_URL = Keyword.intern("instanceURL");
+    private static final String INSTANCE_URL = ("instanceURL");
 
-    private static final Set<Keyword> KNOWN_PROPERTIES = createKnownProperties();
-    private static Set<Keyword> createKnownProperties() {
-        Set<Keyword> set = new HashSet<>();
-        set.add(GUID);
+    private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
+    private static Set<String> createKnownProperties() {
+        Set<String> set = new HashSet<>();
         set.add(INSTANCE_URL);
         return set;
     }
 
     protected InstanceHeader instanceHeader;
-    protected Map<Keyword, Object> cruxMap;
+    protected CruxDocument cruxDoc;
 
     /**
      * Construct a mapping from an InstanceAuditHeader (to map to a Crux representation).
      * @param cruxConnector connectivity to Crux
      * @param instanceHeader from which to map
      */
-    public InstanceHeaderMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                 InstanceHeader instanceHeader) {
+    protected InstanceHeaderMapping(CruxOMRSRepositoryConnector cruxConnector,
+                                    InstanceHeader instanceHeader) {
         super(cruxConnector);
         this.instanceHeader = instanceHeader;
     }
@@ -51,50 +48,48 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
     /**
      * Construct a mapping from a Crux map (to map to an Egeria representation).
      * @param cruxConnector connectivity to Crux
-     * @param cruxMap from which to map
+     * @param cruxDoc from which to map
      */
-    public InstanceHeaderMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                 Map<Keyword, Object> cruxMap) {
+    protected InstanceHeaderMapping(CruxOMRSRepositoryConnector cruxConnector,
+                                    CruxDocument cruxDoc) {
         super(cruxConnector);
-        this.cruxMap = cruxMap;
+        this.cruxDoc = cruxDoc;
     }
 
     /**
      * Map from Egeria to Crux.
-     * @return PersistentVector
+     * @return CruxDocument
      * @see #InstanceHeaderMapping(CruxOMRSRepositoryConnector, InstanceHeader)
      */
-    public PersistentVector toCrux() {
-        if (cruxMap == null && instanceHeader != null) {
-            toMap();
+    public CruxDocument toCrux() {
+        if (cruxDoc == null && instanceHeader != null) {
+            cruxDoc = toDoc().build();
         }
-        if (cruxMap != null) {
-            return Constants.put(cruxMap);
-        } else {
-            return null;
-        }
+        return cruxDoc;
     }
 
     /**
-     * Translate the provided Egeria representation into a Crux map.
+     * Translate the provided Egeria representation into a Crux document.
+     * @return CruxDocument.Builder from which to build the document
      */
-    protected void toMap() {
-        cruxMap = super.toMap(instanceHeader);
-        cruxMap.put(GUID, getGuidReference(instanceHeader));
-        cruxMap.put(INSTANCE_URL, instanceHeader.getInstanceURL());
+    protected CruxDocument.Builder toDoc() {
+        CruxDocument.Builder builder = CruxDocument.builder(getGuidReference(instanceHeader));
+        super.buildDoc(builder, instanceHeader);
+        builder.put(INSTANCE_URL, instanceHeader.getInstanceURL());
+        return builder;
     }
 
     /**
      * Translate the provided Crux representation into an Egeria representation.
      */
-    protected void fromMap() {
-        super.fromMap(instanceHeader, cruxMap);
-        for (Keyword property : KNOWN_PROPERTIES) {
-            Object objValue = cruxMap.getOrDefault(property, null);
+    protected void fromDoc() {
+        super.fromDoc(instanceHeader, cruxDoc);
+        String guid = (String) cruxDoc.getId();
+        instanceHeader.setGUID(guid == null ? null : trimGuidFromReference(guid));
+        for (String property : KNOWN_PROPERTIES) {
+            Object objValue = cruxDoc.get(property);
             String value = objValue == null ? null : objValue.toString();
-            if (GUID.equals(property)) {
-                instanceHeader.setGUID(value == null ? null : trimGuidFromReference(value));
-            } else if (INSTANCE_URL.equals(property)) {
+            if (INSTANCE_URL.equals(property)) {
                 instanceHeader.setInstanceURL(value);
             } else {
                 log.warn("Unmapped InstanceHeader property ({}): {}", property, objValue);

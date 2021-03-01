@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
+import crux.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
@@ -1573,9 +1574,10 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         updatedEntity.setGUID(newEntityGUID);
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
-        List<List<?>> statements = cruxRepositoryConnector.getPurgeEntityStatements(entity.getGUID());
-        statements.addAll(cruxRepositoryConnector.getCreateEntityStatements(updatedEntity));
-        cruxRepositoryConnector.runTx(statements);
+        Transaction.Builder tx = Transaction.builder();
+        cruxRepositoryConnector.addPurgeEntityStatements(tx, entity.getGUID());
+        cruxRepositoryConnector.addCreateEntityStatements(tx, updatedEntity);
+        cruxRepositoryConnector.runTx(tx.build());
 
         return updatedEntity;
 
@@ -1695,9 +1697,10 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         updatedRelationship.setGUID(newRelationshipGUID);
         updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
 
-        List<List<?>> statements = cruxRepositoryConnector.getPurgeRelationshipStatements(relationshipGUID);
-        statements.addAll(cruxRepositoryConnector.getCreateRelationshipStatements(updatedRelationship));
-        cruxRepositoryConnector.runTx(statements);
+        Transaction.Builder tx = Transaction.builder();
+        cruxRepositoryConnector.addPurgeRelationshipStatements(tx, relationshipGUID);
+        cruxRepositoryConnector.addCreateRelationshipStatements(tx, updatedRelationship);
+        cruxRepositoryConnector.runTx(tx.build());
 
         return updatedRelationship;
 
@@ -2048,15 +2051,15 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         // Only create entity proxies if the above retrievals indicated that they do not yet exist
         // TODO: there may be a more optimal way of achieving this directly through the Crux statements -- future optimisation?
-        List<List<?>> statements = new ArrayList<>();
+        Transaction.Builder tx = Transaction.builder();
         if (one == null) {
-            statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityOneProxy()));
+            cruxRepositoryConnector.addCreateEntityProxyStatements(tx, relationship.getEntityOneProxy());
         }
         if (two == null) {
-            statements.addAll(cruxRepositoryConnector.getCreateEntityProxyStatements(relationship.getEntityTwoProxy()));
+            cruxRepositoryConnector.addCreateEntityProxyStatements(tx, relationship.getEntityTwoProxy());
         }
-        statements.addAll(cruxRepositoryConnector.getSaveReferenceCopyStatements(relationship));
-        cruxRepositoryConnector.runTx(statements);
+        cruxRepositoryConnector.addSaveReferenceCopyStatements(tx, relationship);
+        cruxRepositoryConnector.runTx(tx.build());
 
     }
 

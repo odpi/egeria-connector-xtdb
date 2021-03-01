@@ -2,7 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
-import clojure.lang.Keyword;
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProperties;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
@@ -11,6 +11,7 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Maps the properties of InstanceProperties between persistence and objects.
@@ -18,146 +19,79 @@ import java.util.Map;
  * The values of the properties (InstancePropertyValue) will be both JSON-serialized and searchable.
  * @see InstancePropertyValueMapping
  */
-public class InstancePropertiesMapping extends AbstractMapping {
-
-    private String namespace;
-    private InstanceType instanceType;
-    private InstanceProperties instanceProperties;
-    private Map<Keyword, Object> cruxMap;
+public class InstancePropertiesMapping {
 
     /**
-     * Default constructor.
-     * @param cruxConnector connectivity to Crux
+     * Retrieve the instance property values from the provided Crux document.
+     * @param type of the Egeria instance from which we are retrieving the values
+     * @param cruxDoc from which to retrieve the values
+     * @param namespace by which the properties to retrieve are qualified
+     * @return InstanceProperties
      */
-    protected InstancePropertiesMapping(CruxOMRSRepositoryConnector cruxConnector) {
-        super(cruxConnector);
-    }
+    public static InstanceProperties getFromDoc(InstanceType type,
+                                                CruxDocument cruxDoc,
+                                                String namespace) {
 
-    /**
-     * Construct a mapping from InstanceProperties (to map to a Crux representation).
-     * @param cruxConnector connectivity to Crux
-     * @param instanceType of instance in which the properties exist
-     * @param instanceProperties from which to map
-     * @param namespace by which to qualify properties
-     */
-    public InstancePropertiesMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                     InstanceType instanceType,
-                                     InstanceProperties instanceProperties,
-                                     String namespace) {
-        this(cruxConnector);
-        this.instanceType = instanceType;
-        this.instanceProperties = instanceProperties;
-        this.cruxMap = null;
-        this.namespace = namespace;
-    }
+        List<String> validProperties = type.getValidInstanceProperties();
 
-    /**
-     * Construct a mapping from a Crux map (to map to an Egeria representation).
-     * @param cruxConnector connectivity to Crux
-     * @param cruxMap from which to map
-     * @param namespace by which properties are qualified
-     */
-    public InstancePropertiesMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                     Map<Keyword, Object> cruxMap,
-                                     String namespace) {
-        this(cruxConnector);
-        this.instanceProperties = null;
-        this.cruxMap = cruxMap;
-        this.namespace = namespace;
-    }
-
-    /**
-     * Map from Egeria to Crux.
-     * @return {@code Map<Keyword, Object>}
-     * @see #InstancePropertiesMapping(CruxOMRSRepositoryConnector, InstanceType, InstanceProperties, String)
-     */
-    public Map<Keyword, Object> toCrux() {
-
-        if (cruxMap == null && instanceProperties != null) {
-            toMap();
-        }
-        if (cruxMap != null) {
-            return cruxMap;
-        } else {
-            return null;
+        // Iterate through each of the properties this instance could contain and add them to the map of values
+        if (validProperties != null && !validProperties.isEmpty()) {
+            Map<String, InstancePropertyValue> values = new TreeMap<>();
+            for (String propertyName : validProperties) {
+                InstancePropertyValue value = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(cruxDoc, namespace, propertyName);
+                if (value != null) {
+                    values.put(propertyName, value);
+                }
+            }
+            InstanceProperties ip = new InstanceProperties();
+            ip.setInstanceProperties(values);
+            return ip;
         }
 
-    }
-
-    /**
-     * Map from Crux to Egeria.
-     * @return EntityDetail
-     * @see #InstancePropertiesMapping(CruxOMRSRepositoryConnector, Map, String)
-     */
-    public InstanceProperties toEgeria() {
-
-        if (instanceProperties != null) {
-            return instanceProperties;
-        } else if (cruxMap == null) {
-            return null;
-        } else {
-            fromMap();
-            return instanceProperties;
-        }
+        return null;
 
     }
 
     /**
-     * Translate the provided Egeria representation into a Crux map.
+     * Add the provided instance property values to the Crux document.
+     * @param cruxConnector connectivity to the repository
+     * @param builder to which to add the properties
+     * @param type of the Egeria instance to which the values are being added
+     * @param properties to add
+     * @param namespace by which the properties should be qualified
      */
-    protected void toMap() {
-        cruxMap = new HashMap<>();
-        if (instanceProperties == null) {
-            cruxMap.put(Keyword.intern(namespace), null);
-        } else {
-            Map<String, InstancePropertyValue> propertyMap = instanceProperties.getInstanceProperties();
+    public static void addToDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                CruxDocument.Builder builder,
+                                InstanceType type,
+                                InstanceProperties properties,
+                                String namespace) {
+
+        Map<String, InstancePropertyValue> propertyMap;
+        if (properties != null) {
+            propertyMap = properties.getInstanceProperties();
             if (propertyMap != null) {
                 for (Map.Entry<String, InstancePropertyValue> entry : propertyMap.entrySet()) {
-                    String propertyName = entry.getKey();
-                    InstancePropertyValue value = entry.getValue();
-                    if (value != null) {
-                        InstancePropertyValueMapping mapping = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, value, namespace);
-                        if (mapping != null) {
-                            Map<Keyword, Object> singlePropertyMap = mapping.toCrux();
-                            if (singlePropertyMap != null) {
-                                cruxMap.putAll(singlePropertyMap);
-                            }
-                        }
-                    }
+                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(cruxConnector, type, builder, entry.getKey(), namespace, entry.getValue());
                 }
             } else {
-                // Create an empty map if there is not one, for next set of checks
-                propertyMap = new HashMap<>();
+                propertyMap = new HashMap<>(); // Create an empty map if there is not one, for next set of checks
             }
-            // explicitly set any other properties on the instance to null, so that we can still include them
-            // if sorting, or running an explicit 'IS_NULL' or 'NOT_NULL' search against appropriately
-            List<String> allProperties = instanceType.getValidInstanceProperties();
-            if (allProperties != null) {
-                for (String propertyName : allProperties) {
-                    if (!propertyMap.containsKey(propertyName)) {
-                        // Only explicitly set to null if the earlier processing has not already set a value on the property
-                        InstancePropertyValueMapping mapping = InstancePropertyValueMapping.getInstancePropertyValueMappingForValue(cruxConnector, instanceType, propertyName, null, namespace);
-                        if (mapping != null) {
-                            Map<Keyword, Object> singlePropertyMap = mapping.toCrux();
-                            if (singlePropertyMap != null) {
-                                cruxMap.putAll(singlePropertyMap);
-                            }
-                        }
-                    }
+        } else {
+            propertyMap = new HashMap<>();     // Create an empty map if there is not one, for next set of checks
+        }
+
+        // explicitly set any other properties on the instance to null, so that we can still include them
+        // if sorting, or running an explicit 'IS_NULL' or 'NOT_NULL' search against appropriately
+        List<String> allProperties = type.getValidInstanceProperties();
+        if (allProperties != null) {
+            for (String propertyName : allProperties) {
+                if (!propertyMap.containsKey(propertyName)) {
+                    // Only explicitly set to null if the earlier processing has not already set a value on the property
+                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(cruxConnector, type, builder, propertyName, namespace, null);
                 }
             }
         }
-    }
 
-    /**
-     * Translate the provided Crux representation into an Egeria representation.
-     */
-    protected void fromMap() {
-        Map<String, InstancePropertyValue> propertyValues = InstancePropertyValueMapping.getInstancePropertyValuesFromMap(cruxMap, namespace);
-        if (!propertyValues.isEmpty()) {
-            instanceProperties = new InstanceProperties();
-            instanceProperties.setInstanceProperties(propertyValues);
-        }
     }
 
 }

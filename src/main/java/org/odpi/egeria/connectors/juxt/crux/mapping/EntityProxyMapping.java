@@ -2,14 +2,12 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
-import clojure.lang.Keyword;
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityProxy;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * Maps the properties of EntityProxies between persistence and objects.
@@ -20,7 +18,7 @@ public class EntityProxyMapping extends EntitySummaryMapping {
 
     private static final String UNIQUE_PROPERTIES_NS = "uniqueProperties";
 
-    public static final Keyword ENTITY_PROXY_ONLY_MARKER = Keyword.intern(EntitySummaryMapping.INSTANCE_REF_PREFIX, "proxy");
+    public static final String ENTITY_PROXY_ONLY_MARKER = getKeyword(EntitySummaryMapping.INSTANCE_REF_PREFIX, "proxy");
 
     /**
      * Construct a mapping from an EntityDetail (to map to a Crux representation).
@@ -35,23 +33,23 @@ public class EntityProxyMapping extends EntitySummaryMapping {
     /**
      * Construct a mapping from a Crux map (to map to an Egeria representation).
      * @param cruxConnector connectivity to Crux
-     * @param cruxMap from which to map
+     * @param cruxDoc from which to map
      */
     public EntityProxyMapping(CruxOMRSRepositoryConnector cruxConnector,
-                              Map<Keyword, Object> cruxMap) {
-        super(cruxConnector, cruxMap);
+                              CruxDocument cruxDoc) {
+        super(cruxConnector, cruxDoc);
     }
 
     /**
      * Map from Crux to Egeria.
      * @return EntityProxy
-     * @see #EntityProxyMapping(CruxOMRSRepositoryConnector, Map)
+     * @see #EntityProxyMapping(CruxOMRSRepositoryConnector, CruxDocument)
      */
     @Override
     public EntityProxy toEgeria() {
-        if (instanceHeader == null && cruxMap != null) {
+        if (instanceHeader == null && cruxDoc != null) {
             instanceHeader = new EntityProxy();
-            fromMap();
+            fromDoc();
         }
         if (instanceHeader != null) {
             return (EntityProxy) instanceHeader;
@@ -64,44 +62,41 @@ public class EntityProxyMapping extends EntitySummaryMapping {
      * Translate the provided Egeria representation into a Crux map.
      */
     @Override
-    protected void toMap() {
-        super.toMap();
-        // set an internal marker that this is only a proxy
-        cruxMap.put(ENTITY_PROXY_ONLY_MARKER, true);
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, instanceHeader.getType(), ((EntityProxy) instanceHeader).getUniqueProperties(), UNIQUE_PROPERTIES_NS);
-        Map<Keyword, Object> propertyMap = ipm.toCrux();
-        if (propertyMap != null) {
-            cruxMap.putAll(propertyMap);
-        }
+    protected CruxDocument.Builder toDoc() {
+        CruxDocument.Builder builder = super.toDoc();
+        builder.put(ENTITY_PROXY_ONLY_MARKER, true); // set an internal marker that this is only a proxy
+        InstancePropertiesMapping.addToDoc(cruxConnector, builder, instanceHeader.getType(), ((EntityProxy) instanceHeader).getUniqueProperties(), UNIQUE_PROPERTIES_NS);
+        return builder;
     }
 
     /**
      * Translate the provided Crux representation into an Egeria representation.
      */
-    protected void fromMap() {
-        super.fromMap();
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, cruxMap, UNIQUE_PROPERTIES_NS);
-        ((EntityProxy) instanceHeader).setUniqueProperties(ipm.toEgeria());
+    @Override
+    protected void fromDoc() {
+        super.fromDoc();
+        InstanceProperties uniqueProperties = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, UNIQUE_PROPERTIES_NS);
+        ((EntityProxy) instanceHeader).setUniqueProperties(uniqueProperties);
     }
 
     /**
      * Translate the provided Crux representation of an entity into an EntityProxy.
      * @param cruxConnector connectivity to the Crux environment
-     * @param map containing the Crux representation of the entity
+     * @param doc containing the Crux representation of the entity
      * @return EntityProxy
      */
-    public static EntityProxy getFromMap(CruxOMRSRepositoryConnector cruxConnector,
-                                         Map<Keyword, Object> map) {
-        if (map == null) {
+    public static EntityProxy getFromDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                         CruxDocument doc) {
+        if (doc == null) {
             return null;
-        } else if (isOnlyAProxy(map)) {
+        } else if (isOnlyAProxy(doc)) {
             // if this is only a proxy, do a direct EntityProxyMapping
-            EntityProxyMapping epm = new EntityProxyMapping(cruxConnector, map);
+            EntityProxyMapping epm = new EntityProxyMapping(cruxConnector, doc);
             return epm.toEgeria();
         } else {
             // otherwise, we'll retrieve a full EntityDetail anyway so use the helper to translate to an EntityProxy
             // (which ensures that we populate uniqueProperties accordingly)
-            EntityDetailMapping edm = new EntityDetailMapping(cruxConnector, map);
+            EntityDetailMapping edm = new EntityDetailMapping(cruxConnector, doc);
             try {
                 return cruxConnector.getRepositoryHelper().getNewEntityProxy(cruxConnector.getRepositoryName(), edm.toEgeria());
             } catch (RepositoryErrorException e) {
@@ -122,11 +117,12 @@ public class EntityProxyMapping extends EntitySummaryMapping {
 
     /**
      * Indicates whether the provided map represents only an EntityProxy (true) or a full EntityDetail (false).
-     * @param map containing the Crux representation
+     * @param doc containing the Crux representation
      * @return boolean
      */
-    public static boolean isOnlyAProxy(Map<Keyword, Object> map) {
-        return (Boolean) map.getOrDefault(ENTITY_PROXY_ONLY_MARKER, false);
+    public static boolean isOnlyAProxy(CruxDocument doc) {
+        Boolean only = (Boolean) doc.get(ENTITY_PROXY_ONLY_MARKER);
+        return only != null && only;
     }
 
 }

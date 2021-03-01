@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.slf4j.Logger;
@@ -26,32 +27,21 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
     private static final Logger log = LoggerFactory.getLogger(EnumPropertyValueMapping.class);
 
     /**
-     * Construct a mapping from PrimitivePropertyValue (to map to a Crux representation).
-     * @param cruxConnector connectivity to Crux
-     * @param instanceType of the instance for which the value needs to be mapped
-     * @param propertyName of the property to map
-     * @param value from which to map
-     * @param namespace by which to qualify properties
+     * Add the provided enum value to the Crux document.
+     * @param cruxConnector connectivity to the repository
+     * @param instanceType of the instance for which this value applies
+     * @param builder to which to add the property value
+     * @param propertyName of the property
+     * @param namespace by which to qualify the property
+     * @param value of the property
      */
-    public EnumPropertyValueMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                    InstanceType instanceType,
-                                    String propertyName,
-                                    EnumPropertyValue value,
-                                    String namespace) {
-        super(cruxConnector, instanceType, propertyName, value, namespace);
-    }
-
-    /**
-     * Add the provided primitive value to the map.
-     */
-    @Override
-    protected void addValueToMap() {
-        if (value instanceof EnumPropertyValue) {
-            EnumPropertyValue epv = (EnumPropertyValue) value;
-            cruxMap.put(getPropertyValueKeyword(), getEnumPropertyValueForComparison(epv));
-        } else {
-            cruxMap.put(getPropertyValueKeyword(), null);
-        }
+    public static void addEnumPropertyValueToDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                                 InstanceType instanceType,
+                                                 CruxDocument.Builder builder,
+                                                 String propertyName,
+                                                 String namespace,
+                                                 EnumPropertyValue value) {
+        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getEnumPropertyValueForComparison(value));
     }
 
     /**
