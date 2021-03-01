@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
@@ -35,83 +36,15 @@ import java.util.*;
  * See the subclasses of this class, which handle mappings for the various subtypes of InstancePropertyValue for
  * details of each '.value' representation.
  */
-public class InstancePropertyValueMapping extends AbstractMapping {
+public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
     private static final Logger log = LoggerFactory.getLogger(InstancePropertyValueMapping.class);
 
-    protected String namespace;
-    protected InstanceType instanceType;
-    protected String propertyName;
-    protected InstancePropertyValue value = null;
-    protected Map<Keyword, Object> cruxMap = null;
-
     /**
-     * Default constructor.
-     * @param cruxConnector connectivity to Crux
+     * Necessary default constructor to ensure we can use the static objectMapper of the base class.
      */
-    private InstancePropertyValueMapping(CruxOMRSRepositoryConnector cruxConnector) {
-        super(cruxConnector);
-    }
-
-    /**
-     * Construct a mapping from InstancePropertyValue (to map to a Crux representation).
-     * @param cruxConnector connectivity to Crux
-     * @param instanceType of the instance for which the value needs to be mapped
-     * @param propertyName of the property to map
-     * @param value from which to map
-     * @param namespace by which to qualify properties
-     */
-    protected InstancePropertyValueMapping(CruxOMRSRepositoryConnector cruxConnector,
-                                           InstanceType instanceType,
-                                           String propertyName,
-                                           InstancePropertyValue value,
-                                           String namespace) {
-        this(cruxConnector);
-        this.instanceType = instanceType;
-        this.propertyName = propertyName;
-        this.value = value;
-        this.namespace = namespace;
-    }
-
-    /**
-     * Construct a mapping from InstancePropertyValue (to map to a Crux representation).
-     * @param cruxConnector connectivity to Crux
-     * @param instanceType of the instance for which the value is being mapped
-     * @param propertyName of the property to map
-     * @param value from which to map
-     * @param namespace by which to qualify properties
-     * @return InstancePropertyValueMapping appropriate to the type of the value
-     */
-    public static InstancePropertyValueMapping getInstancePropertyValueMappingForValue(CruxOMRSRepositoryConnector cruxConnector,
-                                                                                       InstanceType instanceType,
-                                                                                       String propertyName,
-                                                                                       InstancePropertyValue value,
-                                                                                       String namespace) {
-        InstancePropertyValueMapping mapping;
-        if (value != null) {
-            InstancePropertyCategory category = value.getInstancePropertyCategory();
-            switch (category) {
-                case PRIMITIVE:
-                    mapping = new PrimitivePropertyValueMapping(cruxConnector, instanceType, propertyName, (PrimitivePropertyValue) value, namespace);
-                    break;
-                case ENUM:
-                    mapping = new EnumPropertyValueMapping(cruxConnector, instanceType, propertyName, (EnumPropertyValue) value, namespace);
-                    break;
-                case ARRAY:
-                    mapping = new ArrayPropertyValueMapping(cruxConnector, instanceType, propertyName, (ArrayPropertyValue) value, namespace);
-                    break;
-                case MAP:
-                case STRUCT:
-                case UNKNOWN:
-                default:
-                    mapping = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, value, namespace);
-                    break;
-            }
-        } else {
-            // Even if the value is null, create a mapping for it (so we explicitly set the property to null for searching)
-            mapping = new InstancePropertyValueMapping(cruxConnector, instanceType, propertyName, null, namespace);
-        }
-        return mapping;
+    protected InstancePropertyValueMapping() {
+        super(null);
     }
 
     /**
@@ -143,127 +76,135 @@ public class InstancePropertyValueMapping extends AbstractMapping {
     }
 
     /**
-     * Construct a mapping of the InstancePropertyValues (from a Crux representation), as a singular pass through the
-     * map (rather than inefficiently trying to do so property-by-property).
-     * @param cruxMap from which to map
-     * @param namespace by which the properties are qualified
-     * @return {@code Map<String, InstancePropertyValue>} keyed by Egeria property name
+     * Retrieve a single property value from the provided Crux representation.
+     * @param cruxDoc from which to retrieve the value
+     * @param namespace by which the property is qualified
+     * @param propertyName of the property
+     * @return InstancePropertyValue giving Egeria representation of the value
      */
-    public static Map<String, InstancePropertyValue> getInstancePropertyValuesFromMap(Map<Keyword, Object> cruxMap,
-                                                                                      String namespace) {
-        Map<String, InstancePropertyValue> propertyValues = new HashMap<>();
-        for (Map.Entry<Keyword, Object> entry : cruxMap.entrySet()) {
-            Keyword property = entry.getKey();
-            String detectedNamespace = property.getNamespace();
-            if (detectedNamespace != null && detectedNamespace.equals(namespace)) {
-                String propertyName = property.getName();
-                if (propertyName.endsWith(".json")) {
-                    // We'll pull values from the '.json'-qualified portion, given this is a complete JSON serialization
-                    Object objValue = entry.getValue();
-                    IPersistentMap value = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
-                    InstancePropertyValueMapping.addInstancePropertyValueToMap(propertyValues, propertyName, value);
-                }
-            }
+    public static InstancePropertyValue getInstancePropertyValueFromDoc(CruxDocument cruxDoc,
+                                                                        String namespace,
+                                                                        String propertyName) {
+
+        // We will only pull values from the '.json'-qualified portion, given this is a complete JSON serialization
+        Object objValue = cruxDoc.get(getKeyword(namespace, propertyName + ".json"));
+        IPersistentMap embeddedValue = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
+        if (embeddedValue != null) {
+            return getInstancePropertyValue(embeddedValue);
         }
-        return propertyValues;
+        return null;
+
     }
 
     /**
-     * Map from Egeria to Crux.
-     * @return {@code Map<Keyword, Object>}
-     * @see #InstancePropertyValueMapping(CruxOMRSRepositoryConnector, InstanceType, String, InstancePropertyValue, String)
+     * Add a single property value to the provided Crux representation.
+     * @param cruxConnector connectivity to the repository
+     * @param instanceType describing the instance to which this property applies
+     * @param builder through which to add the property
+     * @param propertyName of the property to add / replace
+     * @param namespace by which the property should be qualified
+     * @param value of the property
      */
-    public Map<Keyword, Object> toCrux() {
-        // Note that we are explicitly not checking whether the value is null, as we want to map all values (even nulls)
-        // for allowing them to be searched
-        if (cruxMap == null) {
-            toMap();
-        }
-        if (cruxMap != null) {
-            return cruxMap;
-        } else {
-            return null;
-        }
-    }
+    public static void addInstancePropertyValueToDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                                     InstanceType instanceType,
+                                                     CruxDocument.Builder builder,
+                                                     String propertyName,
+                                                     String namespace,
+                                                     InstancePropertyValue value) {
 
-    /**
-     * Translate the provided Egeria representation into the Crux map.
-     */
-    protected void toMap() {
-        cruxMap = new HashMap<>();
+        // Persist the serialized form in all cases
+        builder.put(getSerializedPropertyKeyword(namespace, propertyName), getEmbeddedSerializedForm(value));
+
+        // And then also persist a searchable form
         if (value != null) {
-            addFullJSONToMap();
+            InstancePropertyCategory category = value.getInstancePropertyCategory();
+            switch (category) {
+                case PRIMITIVE:
+                    PrimitivePropertyValueMapping.addPrimitivePropertyValueToDoc(
+                            cruxConnector,
+                            instanceType,
+                            builder,
+                            propertyName,
+                            namespace,
+                            (PrimitivePropertyValue) value
+                    );
+                    break;
+                case ENUM:
+                    EnumPropertyValueMapping.addEnumPropertyValueToDoc(
+                            cruxConnector,
+                            instanceType,
+                            builder,
+                            propertyName,
+                            namespace,
+                            (EnumPropertyValue) value
+                    );
+                    break;
+                case ARRAY:
+                    ArrayPropertyValueMapping.addArrayPropertyValueToDoc(
+                            cruxConnector,
+                            instanceType,
+                            builder,
+                            propertyName,
+                            namespace,
+                            (ArrayPropertyValue) value
+                    );
+                    break;
+                case MAP:
+                case STRUCT:
+                case UNKNOWN:
+                default:
+                    log.warn("No searchable mapping yet implemented for InstancePropertyValue category: {}", category);
+                    break;
+            }
+        } else {
+            // If the value is null, create a null mapping for it (so we explicitly set the property to null for searching)
+            builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), null);
         }
-        addValueToMap();
+
     }
 
     /**
-     * Add the specified property value as a fully-serialized JSON representation to the map (for expedient retrieval
-     * later back into an Egeria object).
+     * Retrieve the keyword to use to store the serialized value of the property.
+     * @param namespace by which to qualify the property
+     * @param propertyName of the property
+     * @return String giving the qualified keyword
      */
-    protected void addFullJSONToMap() {
-        cruxMap.put(getSerializedPropertyKeyword(), getEmbeddedSerializedForm(value));
-    }
-
-    /**
-     * Add the specified value to the map. (Note that this method will generally be overridden by the subclasses to
-     * define how the subclass-specific values are translated appropriately.) If it is NOT overridden, the value will
-     * be written in a non-searchable JSON-serialized form.
-     */
-    protected void addValueToMap() {
-        cruxMap.put(getPropertyValueKeyword(), getEmbeddedSerializedForm(value));
-    }
-
-    /**
-     * Retrieve the qualified Crux name for the type of the property.
-     * @return Keyword
-     */
-    protected Keyword getSerializedPropertyKeyword() {
-        return Keyword.intern(namespace, propertyName + ".json");
+    protected static String getSerializedPropertyKeyword(String namespace, String propertyName) {
+        return getKeyword(namespace, propertyName + ".json");
     }
 
     /**
      * Retrieve the qualified Crux name for the value of the property.
-     * @return Keyword
+     * @param cruxConnector connectivity to the repository
+     * @param instanceType of the instance for which this property applies
+     * @param propertyName of the property
+     * @param namespace by which to qualify the property
+     * @return String
      */
-    protected Keyword getPropertyValueKeyword() {
+    protected static String getPropertyValueKeyword(CruxOMRSRepositoryConnector cruxConnector,
+                                                     InstanceType instanceType,
+                                                     String propertyName,
+                                                     String namespace) {
         // Note that different TypeDefinitions may include the same attribute name, but with different types (eg. 'position'
         // meaning order (int) as well as role (string) -- we must therefore fully-qualify the propertyName with the
         // name of the typedef in which it is defined -- and that must be done here so that it flows down to any
         // subclasses as well.
         Set<String> typesToConsider = new HashSet<>();
         typesToConsider.add(instanceType.getTypeDefName());
-        Set<Keyword> names = getNamesForProperty(cruxConnector.getRepositoryName(),
+        Set<String> names = getNamesForProperty(cruxConnector.getRepositoryName(),
                 cruxConnector.getRepositoryHelper(),
                 propertyName,
                 namespace,
                 typesToConsider,
                 null);
-        Keyword qualified = null;
+        String qualified = null;
         if (names.size() > 1) {
             log.error("Found more than one property in this instanceType ({}) with the name '{}': {}", instanceType.getTypeDefName(), propertyName, names);
         }
-        for (Keyword name : names) {
+        for (String name : names) {
             qualified = name;
         }
         return qualified;
-    }
-
-    /**
-     * Add the specified value for the specified property name to the provided map of values.
-     * @param propertyValues map of values
-     * @param propertyName to add
-     * @param jsonValue to add
-     */
-    public static void addInstancePropertyValueToMap(Map<String, InstancePropertyValue> propertyValues, String propertyName, IPersistentMap jsonValue) {
-        // Only process the propertyName if it ends with the '.json' qualification
-        // (This logic is intentionally in this method as it is called from elsewhere, like ClassificationMapping)
-        if (propertyName.endsWith(".json")) {
-            // Need to remove the '.json' qualifier before mapping to the Egeria property name
-            String actualPropertyName = propertyName.substring(0, propertyName.length() - 5);
-            InstancePropertyValue ipv = getInstancePropertyValue(jsonValue);
-            propertyValues.put(actualPropertyName, ipv);
-        }
     }
 
     /**
@@ -286,25 +227,25 @@ public class InstancePropertyValueMapping extends AbstractMapping {
      * @param namespace under which to qualify the properties
      * @param limitToTypes limit the type-specific qualifications to only properties that are applicable to these types
      * @param value that will be used for comparison, to limit the properties to include based on their type
-     * @return {@code Set<Keyword>} of the property references
+     * @return {@code Set<String>} of the property references
      */
-    public static Set<Keyword> getNamesForProperty(String repositoryName,
-                                                   OMRSRepositoryHelper repositoryHelper,
-                                                   String propertyName,
-                                                   String namespace,
-                                                   Set<String> limitToTypes,
-                                                   InstancePropertyValue value) {
+    public static Set<String> getNamesForProperty(String repositoryName,
+                                                  OMRSRepositoryHelper repositoryHelper,
+                                                  String propertyName,
+                                                  String namespace,
+                                                  Set<String> limitToTypes,
+                                                  InstancePropertyValue value) {
         final String methodName = "getNamesForProperty";
 
         // Start by determining all valid combinations of propertyName in every type name provided in limitToTypes
         Set<String> validTypesForProperty = repositoryHelper.getAllTypeDefsForProperty(repositoryName, propertyName, methodName);
-        Set<Keyword> qualifiedNames = new TreeSet<>();
+        Set<String> qualifiedNames = new TreeSet<>();
 
         // since the property itself may actually be defined at the super-type level of one of the limited types, we
         // cannot simply do a set intersection between types but must traverse and take the appropriate (super)type name
         // for qualification
         for (String typeNameWithProperty : validTypesForProperty) {
-            Keyword candidateRef = getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName);
+            String candidateRef = getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName);
             if (!qualifiedNames.contains(candidateRef)) { // short-circuit if we already have this one in the list
                 for (String limitToType : limitToTypes) {
                     // Only if the type definition by which we are limiting is a subtype of this type definition should
@@ -324,14 +265,41 @@ public class InstancePropertyValueMapping extends AbstractMapping {
     }
 
     /**
+     * Retrieve the fully-qualified names for the provided property, everywhere it could appear within a given type.
+     * Note that generally the returned Set will only have a single element, however if requested from a sufficiently
+     * abstract type (eg. Referenceable) under which different subtypes have the same property defined, the Set will
+     * contain a property reference for each of those subtypes' properties.
+     * @param repositoryName of the repository (for logging)
+     * @param repositoryHelper utilities for introspecting type definitions and their properties
+     * @param propertyName of the property for which to qualify type-specific references
+     * @param namespace under which to qualify the properties
+     * @param limitToTypes limit the type-specific qualifications to only properties that are applicable to these types
+     * @param value that will be used for comparison, to limit the properties to include based on their type
+     * @return {@code Set<Keyword>} of the property references
+     */
+    public static Set<Keyword> getKeywordsForProperty(String repositoryName,
+                                                      OMRSRepositoryHelper repositoryHelper,
+                                                      String propertyName,
+                                                      String namespace,
+                                                      Set<String> limitToTypes,
+                                                      InstancePropertyValue value) {
+        Set<Keyword> keywords = new TreeSet<>();
+        Set<String> strings = getNamesForProperty(repositoryName, repositoryHelper, propertyName, namespace, limitToTypes, value);
+        for (String string : strings) {
+            keywords.add(Keyword.intern(string));
+        }
+        return keywords;
+    }
+
+    /**
      * Retrieve a fully-qualified property name that can be used for value comparison purposes (ie. searching).
      * @param namespace under which to qualify the property
      * @param typeName by which to qualify the property (ie. ensure it is type-specific)
      * @param propertyName of the property to reference
      * @return Keyword reference to the property (fully-qualified)
      */
-    private static Keyword getFullyQualifiedPropertyNameForValue(String namespace, String typeName, String propertyName) {
-        return Keyword.intern(namespace, typeName + "." + propertyName + ".value");
+    private static String getFullyQualifiedPropertyNameForValue(String namespace, String typeName, String propertyName) {
+        return getKeyword(namespace, typeName + "." + propertyName + ".value");
     }
 
     /**

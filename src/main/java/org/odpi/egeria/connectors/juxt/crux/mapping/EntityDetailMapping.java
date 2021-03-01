@@ -2,11 +2,9 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
-import clojure.lang.Keyword;
+import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
-
-import java.util.Map;
 
 /**
  * Maps the properties of EntityDetails between persistence and objects.
@@ -28,23 +26,23 @@ public class EntityDetailMapping extends EntitySummaryMapping {
     /**
      * Construct a mapping from a Crux map (to map to an Egeria representation).
      * @param cruxConnector connectivity to Crux
-     * @param cruxMap from which to map
+     * @param cruxDoc from which to map
      */
     public EntityDetailMapping(CruxOMRSRepositoryConnector cruxConnector,
-                               Map<Keyword, Object> cruxMap) {
-        super(cruxConnector, cruxMap);
+                               CruxDocument cruxDoc) {
+        super(cruxConnector, cruxDoc);
     }
 
     /**
      * Map from Crux to Egeria.
      * @return EntityDetail
-     * @see #EntityDetailMapping(CruxOMRSRepositoryConnector, Map)
+     * @see #EntityDetailMapping(CruxOMRSRepositoryConnector, CruxDocument)
      */
     @Override
     public EntityDetail toEgeria() {
-        if (instanceHeader == null && cruxMap != null) {
+        if (instanceHeader == null && cruxDoc != null) {
             instanceHeader = new EntityDetail();
-            fromMap();
+            fromDoc();
         }
         if (instanceHeader != null) {
             return (EntityDetail) instanceHeader;
@@ -57,25 +55,22 @@ public class EntityDetailMapping extends EntitySummaryMapping {
      * {@inheritDoc}
      */
     @Override
-    protected void toMap() {
-        super.toMap();
+    protected CruxDocument.Builder toDoc() {
+        CruxDocument.Builder builder = super.toDoc();
         // overwrite any internal marker that this is only a proxy
-        cruxMap.put(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER, false);
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, instanceHeader.getType(), ((EntityDetail) instanceHeader).getProperties(), ENTITY_PROPERTIES_NS);
-        Map<Keyword, Object> propertyMap = ipm.toCrux();
-        if (propertyMap != null) {
-            cruxMap.putAll(propertyMap);
-        }
+        builder.put(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER, false);
+        InstancePropertiesMapping.addToDoc(cruxConnector, builder, instanceHeader.getType(), ((EntityDetail) instanceHeader).getProperties(), ENTITY_PROPERTIES_NS);
+        return builder;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void fromMap() {
-        super.fromMap();
-        InstancePropertiesMapping ipm = new InstancePropertiesMapping(cruxConnector, cruxMap, ENTITY_PROPERTIES_NS);
-        ((EntityDetail) instanceHeader).setProperties(ipm.toEgeria());
+    protected void fromDoc() {
+        super.fromDoc();
+        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, ENTITY_PROPERTIES_NS);
+        ((EntityDetail) instanceHeader).setProperties(ip);
     }
 
     /**

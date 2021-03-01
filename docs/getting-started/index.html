@@ -608,7 +608,7 @@ $ curl -k -X POST -H "Content-Type: application/json" --data '{"producer":{"boot
 {"class":"VoidResponse","relatedHTTPCode":200}
 $ curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/cohorts/mycohort"
 {"class":"VoidResponse","relatedHTTPCode":200}
-$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"}}' "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/mode/repository-proxy/connection"
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"}}' "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/mode/plugin-repository/connection"
 {"class":"VoidResponse","relatedHTTPCode":200}
 						</code></pre>
 					</section>
@@ -685,25 +685,25 @@ mycohort
 							This final call to the API configures the behavior of the Crux repository itself.
 						</p>
 						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1,3,5,7">
-$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"}}' "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/mode/repository-proxy/connection"
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"}}' "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/mode/plugin-repository/connection"
 {"class":"VoidResponse","relatedHTTPCode":200}
 						</code></pre>
 						<div class="fragment fade-in-then-semi-out">
 						<p style="font-size: x-large; text-align: left;">
 							The URL to which we post indicates that we will use the Egeria server chassis's built-in
-							proxy capability to access the Crux repository connector.
+							repository plugin capability to access the Crux repository connector.
 						</p>
 						<pre data-id="code-animation" class="text" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="2">
 https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/\
-mode/repository-proxy/connection
+mode/plugin-repository/connection
 						</code></pre>
 						</div>
 						<div class="fragment fade-in-then-semi-out">
 						<p style="font-size: x-large; text-align: left;">
-							The JSON payload's contents define how this proxy itself should be configured: specifically,
+							The JSON payload's contents define how this plugin itself should be configured: specifically,
 							which Java class should be used for the repository connection. Here we can see the payload
 							refers to the <code>CruxOMRSRepositoryConnectorProvider</code>, which therefore tells the
-							proxy to use this class -- specific to the Crux repository connector -- in order to configure
+							plugin to use this class -- specific to the Crux repository connector -- in order to configure
 							its repository connection.
 						</p>
 						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="5">
@@ -918,14 +918,14 @@ $ curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/adm
 
 Fri Feb 12 20:27:42 GMT 2021 No OMAG servers listed in startup configuration
 Fri Feb 12 20:27:49 GMT 2021 OMAG server platform ready for more configuration
-Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0064 The Open Metadata Repository Services (OMRS) has initialized the audit log for Repository Proxy called crux
+Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0064 The Open Metadata Repository Services (OMRS) has initialized the audit log for the Metadata Server called crux
 Fri Feb 12 20:34:04 GMT 2021 crux Startup OMAG-ADMIN-0001 The crux server is configured with a max page size of 1000
 Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0001 The Open Metadata Repository Services (OMRS) is initializing the subsystems to support a new server
 Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0003 The local repository is initializing the metadata collection named crux with an id of aa1f9067-7bba-4f65-ac0d-bd64e7ac7e6e
 Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0029 The local repository outbound event manager is initializing
 Fri Feb 12 20:34:04 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0001 The Crux repository is starting a new server instance
 Fri Feb 12 20:34:04 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0003 The Crux repository is starting a new in-memory instance
-Fri Feb 12 20:34:14 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0004 The Crux repository has started a new instance for server crux, detected Crux version <null>
+Fri Feb 12 20:34:14 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0004 The Crux repository has started a new instance for server crux, detected Crux version 21.02-1.15.0-beta
 Fri Feb 12 20:34:14 GMT 2021 crux Information OMRS-AUDIT-0050 The Open Metadata Repository Services (OMRS) is about to process open metadata archive Open Metadata Types
 Fri Feb 12 20:34:14 GMT 2021 crux Types OMRS-AUDIT-0301 The local server has added a new type called object with a unique identifier of 1c4b21f4-0b67-41a7-a6ed-2af185eb9b3b and a version number of 1 from ODPi Egeria (2.6)
 Fri Feb 12 20:34:14 GMT 2021 crux Types OMRS-AUDIT-0301 The local server has added a new type called boolean with a unique identifier of 3863f010-611c-41fe-aaae-5d4d427f863b and a version number of 1 from ODPi Egeria (2.6)

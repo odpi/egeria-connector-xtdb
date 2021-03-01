@@ -110,7 +110,7 @@ spec:
                 &&
                 curl -f -k --verbose --basic admin:admin -X POST
                 --header "Content-Type: application/json"
-                ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/local-repository/mode/repository-proxy/connection
+                ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/local-repository/mode/plugin-repository/connection
                 --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"},"configurationProperties":{"cruxConfig":{"crux/index-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-index"}},"crux/document-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-docs"}},"crux/tx-log":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-tx"}},"crux.lucene/lucene-store":{"db-dir":"data/servers/crux/lucene"}}}}'
                 &&
                 curl -f -k --verbose --basic admin:admin -X POST
@@ -144,9 +144,35 @@ spec:
                 sleep 20;
                 done
                 &&
-                curl -f -k --silent --basic admin:admin -X GET --max-time 900 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report > /tmp/openmetadata.conformance.testlab.results
+                curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/summary > /tmp/openmetadata_cts_summary.json
                 &&
-                cd /tmp; tar cvf ${CTS_REPORT_NAME}.tar *.config cohort.* openmetadata.conformance.testlab.results; gzip ${CTS_REPORT_NAME}.tar
+                TEST_CASES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases  | jq -r '.testCaseIds[]')
+                &&
+                PROFILES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles | jq -r '.profileNames[]')
+                &&
+                mkdir -p /tmp/profile-details
+                &&
+                while read -r line; do
+                urlencoded=$(echo ${line} | sed -e 's/ /%20/g');
+                filename=$(echo ${line} | sed -e 's/ /_/g');
+                echo "Retrieving profile details for: ${line}";
+                curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles/${urlencoded} > /tmp/profile-details/${filename}.json;
+                done < <(echo "${PROFILES}")
+                &&
+                mkdir -p /tmp/test-case-details
+                &&
+                while read -r line; do
+                echo "Retrieving test case details for: ${line}";
+                curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases/${line} > /tmp/test-case-details/${line}.json;
+                done < <(echo "${TEST_CASES}")
+                &&
+                cd /tmp
+                &&
+                tar cvf pd.tar profile-details/*.json; gzip pd.tar
+                &&
+                tar cvf tcd.tar test-case-details/*.json; gzip tcd.tar
+                &&
+                tar cvf ${CTS_REPORT_NAME}.tar *.config cohort.* openmetadata_cts_summary.json pd.tar.gz tcd.tar.gz; gzip ${CTS_REPORT_NAME}.tar
                 &&
                 echo "Complete -- CTS results available to download from /tmp/${CTS_REPORT_NAME}.tar.gz"
                 &&

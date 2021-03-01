@@ -29,9 +29,6 @@ public class CruxQuery {
     public static final Symbol CREATE_TIME = Symbol.intern("ct");
     public static final Symbol UPDATE_TIME = Symbol.intern("ut");
     public static final Symbol SORT_PROPERTY = Symbol.intern("sp");
-    protected static final Symbol MATCHED_VALUE = Symbol.intern("v");
-    protected static final Symbol MATCHED_ATTRIBUTE = Symbol.intern("a");
-    protected static final Symbol MATCHED_SCORE = Symbol.intern("s");
     protected static final Symbol ELIDE = Symbol.intern("_");
 
     // Sort orders
@@ -102,8 +99,8 @@ public class CruxQuery {
     public void addRelationshipEndpointConditions(String reference) {
         List<Object> orConditions = new ArrayList<>();
         orConditions.add(OR_OPERATOR);
-        orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_ONE_PROXY, reference));
-        orConditions.add(getReferenceCondition(RelationshipMapping.ENTITY_TWO_PROXY, reference));
+        orConditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_ONE_PROXY), reference));
+        orConditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_TWO_PROXY), reference));
         conditions.add(PersistentList.create(orConditions));
     }
 
@@ -141,15 +138,15 @@ public class CruxQuery {
         if (subtypeLimits != null && !subtypeLimits.isEmpty()) {
             // If subtypes were specified, search only for those (explicitly)
             for (String subtypeGuid : subtypeLimits) {
-                orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUID, subtypeGuid));
-                orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, subtypeGuid));
+                orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), subtypeGuid));
+                orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), subtypeGuid));
             }
         } else {
             // Otherwise, search for any matches against the typeGuid exactly or where it is a supertype
             // - exactly matching the TypeDef:  [e :type.guid "..."]
-            orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUID, typeGuid));
+            orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), typeGuid));
             // - matching any of the super types:  [e :type.supers "...]
-            orConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS, typeGuid));
+            orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), typeGuid));
         }
         return PersistentList.create(orConditions);
     }
@@ -161,7 +158,7 @@ public class CruxQuery {
      */
     public void addTypeDefCategoryCondition(TypeDefCategory category) {
         if (category != null) {
-            conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY, category.getOrdinal()));
+            conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
         }
     }
 
@@ -199,7 +196,7 @@ public class CruxQuery {
             if (typeDef != null) {
                 List<TypeDefAttribute> properties = repositoryHelper.getAllPropertiesForTypeDef(repositoryName, typeDef, methodName);
                 for (TypeDefAttribute property : properties) {
-                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
                             repositoryHelper,
                             property.getAttributeName(),
                             namespace,
@@ -259,17 +256,12 @@ public class CruxQuery {
                                            boolean luceneRegexes) {
 
         // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
-        // will be to add the Lucene condition first, to narrow the results as far as we can via the index, but
-        // then to add a secondary condition with the regex to further narrow the results -- and use as the property
-        // for this secondary condition the matching value we get back from the Lucene search, so that we only attempt
-        // the regex match on the already-limited results from Lucene (hopefully)
-        // It is still necessary to do this further regex check after the Lucene index hit because the Lucene index
-        // gives case-insensitive results on its own...
+        // will be to add the Lucene condition if we can, but if not possible we will fallback to a non-Lucene search
         if (regexCriteria != null && !regexCriteria.equals("")) {
             String searchString = getLuceneComparisonString(regexCriteria, repositoryHelper, luceneRegexes);
             if (searchString == null) {
                 // If we cannot run a Lucene-optimised query, then we will fallback to a full OR-based text condition
-                // comparison: which will be VERY slow, but as long as it does not exceed the query timeout threshold
+                // comparison: which could be VERY slow, but as long as it does not exceed the query timeout threshold
                 // should at least still return accurate results
                 addWildcardTextCondition(
                         regexCriteria,
@@ -281,19 +273,9 @@ public class CruxQuery {
                         luceneRegexes
                 );
             } else {
-                // Otherwise, it is some basic regex condition that has been translated to a simplified Lucene form,
-                // which we must therefore combine with a further Java regex match against the actual value to
-                // ensure that we cater for things like case sensitivity
-                /*List<Object> regexConditions = new ArrayList<>();
-                Pattern regex = Pattern.compile(regexCriteria);
-                regexConditions.add(REGEX_OPERATOR);
-                regexConditions.add(regex);
-                regexConditions.add(MATCHED_VALUE);*/
-                // Add the lucene query: [(wildcard-text-search "text") [[e v a s]]]
+                // Otherwise, it is some Lucene-supported search clause so we can run it directly via Lucene
+                // Add the lucene query: [(wildcard-text-search "text") [[e _]]]
                 conditions.add(getLuceneWildcardClause(searchString, repositoryHelper.isCaseInsensitiveRegex(regexCriteria)));
-                // Add a further regex confirmation against the query result's value (to handle case-sensitivity):
-                // [(re-matches #"regex" v)]
-                /*conditions.add(PersistentVector.create(PersistentList.create(regexConditions)));*/
             }
         }
     }
@@ -323,7 +305,7 @@ public class CruxQuery {
             return searchString;
         } else if (luceneRegexes) {
             // Otherwise, we must assume it is a more complex regex. If we are treating unquoted regexes as
-            // Lucene-compatible, create a direct Lucene condition for it
+            // Lucene-compatible, create a direct Lucene regex condition for it
             // Note: we must first ensure that the value is qualified as a regex for Lucene, by wrapping it in
             // forward slashes
             if (! (regexCriteria.startsWith("/") && regexCriteria.endsWith("/")) ) {
@@ -336,10 +318,10 @@ public class CruxQuery {
     }
 
     /**
-     * Retrieve a Lucene-oriented <code>wildcard-text-search</code> clause of the form: <code>[(wildcard-text-search "searchString") [[e v a s ]]]</code>
+     * Retrieve a Lucene-oriented <code>wildcard-text-search</code> clause of the form: <code>[(wildcard-text-search-[ci|cs] "searchString") [[e _]]]</code>
      * @param searchString to use for the wildcard-text-search
      * @param isCaseInsensitive indicates whether the query should be case insensitive (true) or case sensitive (false)
-     * @return IPersistentVector of the form <code>[(wildcard-text-search-[ci|cs] "searchString") [[e v a s]]]</code>
+     * @return IPersistentVector of the form <code>[(wildcard-text-search-[ci|cs] "searchString") [[e _]]]</code>
      */
     private IPersistentVector getLuceneWildcardClause(String searchString, boolean isCaseInsensitive) {
         List<Object> luceneCriteria = new ArrayList<>();
@@ -349,7 +331,6 @@ public class CruxQuery {
             luceneCriteria.add(WILDCARD_TEXT_SEARCH_CS);
         }
         luceneCriteria.add(searchString);
-        //IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_ATTRIBUTE, MATCHED_SCORE));
         IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, ELIDE));
         List<IPersistentCollection> luceneQuery = new ArrayList<>();
         luceneQuery.add(PersistentList.create(luceneCriteria));
@@ -358,11 +339,11 @@ public class CruxQuery {
     }
 
     /**
-     * Retrieve a Lucene-oriented <code>text-search</code> clause of the form: <code>[(text-search :property "searchString") [[e v s]]]</code>
+     * Retrieve a Lucene-oriented <code>text-search</code> clause of the form: <code>[(text-search-[ci|cs] :property "searchString") [[e _]]]</code>
      * @param propertyRef property whose value the text should be matched against
      * @param searchString to use for the text-search
      * @param isCaseInsensitive indicates whether the query should be case insensitive (true) or case sensitive (false)
-     * @return IPersistentVector of the form <code>[(text-search-[ci|cs] :property "searchString") [[e v s]]]</code>
+     * @return IPersistentVector of the form <code>[(text-search-[ci|cs] :property "searchString") [[e _]]]</code>
      */
     private IPersistentVector getLuceneTermClause(Keyword propertyRef, String searchString, boolean isCaseInsensitive) {
         List<Object> luceneCriteria = new ArrayList<>();
@@ -373,7 +354,6 @@ public class CruxQuery {
         }
         luceneCriteria.add(propertyRef);
         luceneCriteria.add(searchString);
-        //IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, MATCHED_VALUE, MATCHED_SCORE));
         IPersistentVector deStructured = PersistentVector.create((IPersistentVector)PersistentVector.create(DOC_ID, ELIDE));
         List<IPersistentCollection> luceneQuery = new ArrayList<>();
         luceneQuery.add(PersistentList.create(luceneCriteria));
@@ -535,7 +515,6 @@ public class CruxQuery {
                 List<Object> predicatedConditions = new ArrayList<>();
                 switch (matchCriteria) {
                     case ALL:
-                        // TODO: do we need to make this distinction any longer?
                         if (orNested && allConditions.size() > 1) {
                             // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate and
                             // there is more than a single condition
@@ -547,23 +526,21 @@ public class CruxQuery {
                         }
                         break;
                     case ANY:
-                        // (or-join [e] (and [e :property var] [(predicate ... var)]) )
                         if (allConditions.size() == 1) {
                             // If only a single condition, return it directly (no wrapping necessary)
                             return allConditions;
                         }
+                        // (or (and [e :property var] [(predicate ... var)]) )
                         predicatedConditions.add(OR_OPERATOR);
-                        //predicatedConditions.add(PersistentVector.create(DOC_ID));
                         predicatedConditions.addAll(allConditions);
                         break;
                     case NONE:
-                        // (not (or-join [e] ... ) )
+                        // (not (or ... ) )
                         predicatedConditions.add(NOT_OPERATOR);
-                        List<Object> orJoin = new ArrayList<>();
-                        orJoin.add(OR_OPERATOR);
-                        //orJoin.add(PersistentVector.create(DOC_ID));
-                        orJoin.addAll(allConditions);
-                        predicatedConditions.add(PersistentList.create(orJoin));
+                        List<Object> or = new ArrayList<>();
+                        or.add(OR_OPERATOR);
+                        or.addAll(allConditions);
+                        predicatedConditions.add(PersistentList.create(or));
                         break;
                     default:
                         log.warn("Unmapped match criteria: {}", matchCriteria);
@@ -647,14 +624,14 @@ public class CruxQuery {
                     Set<String> classificationTypes = new HashSet<>();
                     String classificationTypeName = ClassificationMapping.getClassificationNameFromNamespace(EntitySummaryMapping.N_CLASSIFICATIONS, namespace);
                     classificationTypes.add(classificationTypeName);
-                    qualifiedSearchProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
                             repositoryHelper,
                             simpleName,
                             classificationNamespace,
                             classificationTypes,
                             value);
                 } else {
-                    qualifiedSearchProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName,
+                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
                             repositoryHelper,
                             simpleName,
                             namespace,
@@ -683,22 +660,6 @@ public class CruxQuery {
                                 luceneRegexes
                         );
                         conditionAggregator.add(conditionsForOneProperty);
-                        // The call above will AND-wrap its nested conditions if we are within an ANY, and we do
-                        // not need any wrapping for an ALL or a NONE -- so just add the condition(s) directly.
-                        //conditionAggregator.addAll(conditionsForOneProperty);
-                        /*if (conditionsForOneProperty.size() > 1 && MatchCriteria.ANY.equals(outerCriteria)) {
-                            // If the above returns more than one condition, and we are nested in an ANY, we should
-                            // AND-wrap the conditions, since we'll be within an OR
-                            List<Object> andList = new ArrayList<>();
-                            andList.add(AND_OPERATOR);
-                            asdf -- not AND-wrapping this means we pick up multiple conditions below under the ALL and OR them...
-                            andList.addAll(conditionsForOneProperty);
-                            conditionAggregator.add(PersistentList.create(andList));
-                        } else {
-                            // Otherwise (just a single condition, or multiple but we are not within an ANY), add all
-                            // of the condition(s) without any AND-wrapping
-                            conditionAggregator.addAll(conditionsForOneProperty);
-                        }*/
                     }
                     if (conditionAggregator.size() == 1) {
                         // If there is only a single condition, we can just add it directly:
@@ -726,7 +687,6 @@ public class CruxQuery {
                                     or.add(PersistentList.create(andList));
                                 }
                             }
-                            //orJoin.addAll(conditionAggregator);
                             allPropertyConditions.add(PersistentList.create(or));
                         } else {
                             // For a NONE, we actually want to ensure that all of the conditions are AND-ed, so no need to
@@ -739,30 +699,6 @@ public class CruxQuery {
                             }
                         }
                     }
-                    /*if (MatchCriteria.ALL.equals(outerCriteria) && conditionAggregator.size() > 1) {
-                        // If the outer criteria is ALL, and there is more than one property variation to check, then we will
-                        // need to OR the combined set of conditions, as only one of the property variations needs to
-                        // match to meet that criteria. (Note: this is costly, but unavoidable so long as there are no
-                        // type limiters specified by the caller)
-                        List<Object> or = new ArrayList<>();
-                        or.add(OR_OPERATOR);
-                        for (List<IPersistentCollection> subList : conditionAggregator) {
-                            List<Object> andList = new ArrayList<>();
-                            andList.add(AND_OPERATOR);
-                            andList.addAll(subList);
-                            or.add(PersistentList.create(andList));
-                        }
-                        //orJoin.addAll(conditionAggregator);
-                        allPropertyConditions.add(PersistentList.create(or));
-                    } else {
-                        // For a NONE, we actually want to ensure that all of the conditions are AND-ed, so no need to
-                        // wrap.
-                        // For an ANY, there will already be an OR wrapped around the conditions by the
-                        // caller of this method, so no need to wrap them again here.
-                        // When there is only a single property, an ALL is the same as an ANY.
-                        // Therefore, in all remaining cases, we just need to put all the conditions together and return them.
-                        allPropertyConditions.addAll(conditionAggregator);
-                    }*/
                     return allPropertyConditions;
                 }
             }
@@ -812,80 +748,23 @@ public class CruxQuery {
                                                                      boolean luceneRegexes) {
 
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
-        List<IPersistentCollection> predicateConditions = new ArrayList<>();
-
-        // TODO: cleanup / simplify this method
+        List<IPersistentCollection> clauseConditions = new ArrayList<>();
 
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
-            // For equality we can compare directly to the value
+            // For equality we can compare directly to the value and short-circuit any additional processing
             propertyConditions.add(getEqualsConditions(propertyRef, value));
+            return propertyConditions;
         } else if (comparator.equals(PropertyComparisonOperator.NEQ)) {
-            // Similarly for inequality, just by wrapping in a NOT predicate
+            // Similarly for inequality, just by wrapping in a NOT predicate and short-circuit any additional processing
             propertyConditions.add(getNotEqualsConditions(propertyRef, value));
+            return propertyConditions;
         } else {
-            // For any others, we need to translate into predicate form, which requires 2-3 pieces:
-            //  [e :property variable]            - always needed, to define how to map the property's value to a variable
-            IPersistentVector propertyToVariable = PersistentVector.create(DOC_ID, propertyRef, variable);
-            //  [(predicate variable "value")]    - for a non-string predicate
-            //  [(predicate #"regex" s_variable)] - for a regex-based (string) predicate
-            // These 2-3 pieces need to be combined in particular ways depending on the outer criteria, see logic
-            // further below for that...
             Symbol predicate = getPredicateForOperator(comparator);
-            List<Object> predicateComparison = new ArrayList<>();
-            boolean alreadyCovered = false;
-            boolean needsPropertyToVariable = false;
             if (REGEX_OPERATOR.equals(predicate)) {
-                Object compareTo = InstancePropertyValueMapping.getValueForComparison(value);
-                if (compareTo instanceof String) {
-                    //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
-                    Symbol nonNullStringVar = Symbol.intern("sv");
-                    List<Object> forceString = new ArrayList<>();
-                    forceString.add(STR_OPERATOR);
-                    forceString.add(variable);
-                    IPersistentVector enforceNonNullStringValue = PersistentVector.create(PersistentList.create(forceString), nonNullStringVar);
-                    String regexSearchString = (String) compareTo;
-                    if (repositoryHelper.isExactMatchRegex(regexSearchString, false)) {
-                        // If we are looking for an exact match, we will short-circuit out of this predicate-based
-                        // query and just do an equality condition -- should be faster
-                        String unqualifiedLiteralString = repositoryHelper.getUnqualifiedLiteralString(regexSearchString);
-                        propertyConditions.add(getEqualsConditions(propertyRef, unqualifiedLiteralString));
-                        alreadyCovered = true;
-                    } else if (luceneEnabled) {
-                        // If Lucene is enabled, use it's search clauses here rather than reverting straight to a full Java regex
-                        String searchString = getLuceneComparisonString(regexSearchString, repositoryHelper, luceneRegexes);
-                        if (searchString != null) {
-                            // We must combine with a further Java regex match against the actual value of a query result to
-                            // ensure that we cater for things like case sensitivity
-                            /*List<Object> regexConditions = new ArrayList<>();
-                            Pattern regex = Pattern.compile(regexSearchString);
-                            regexConditions.add(REGEX_OPERATOR);
-                            regexConditions.add(regex);
-                            regexConditions.add(MATCHED_VALUE);*/
-                            // Add the term-based Lucene clause:  [(text-search :property "text") [[e v s]]]
-                            predicateConditions.add(getLuceneTermClause(propertyRef, searchString, repositoryHelper.isCaseInsensitiveRegex(regexSearchString)));
-                            // Add the further pure regex against the result's value (to handle case-sensitivity): [(re-matches #"regex" v)]
-                            /*predicateConditions.add(PersistentVector.create(PersistentList.create(regexConditions)));*/
-                        }
-                        // If we cannot run a Lucene-optimised query (searchString is null), then we will fallback to a
-                        // full OR-based text condition comparison (immediately below): which will be VERY slow, but as
-                        // long as it does not exceed the query timeout threshold should at least still return accurate
-                        // results
-                    }
-                    if (!alreadyCovered && predicateConditions.isEmpty()) {
-                        // Otherwise we will retrieve an optimal predicate-based comparison depending on the
-                        // regex requested
-                        //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
-                        predicateConditions.add(enforceNonNullStringValue);
-                        //  [(predicate #"regex" s_variable)] - for a regex-based (string) predicate
-                        predicateComparison = getRegexCondition(regexSearchString, nonNullStringVar, repositoryHelper);
-                        predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-                        needsPropertyToVariable = true;
-                    }
-                } else {
-                    log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
-                }
+                // This method already handles wrapping, if needed, so we can return its results directly
+                return getRegexConditions(propertyRef, value, outerCriteria, variable, repositoryHelper, luceneEnabled, luceneRegexes);
             } else if (IN_OPERATOR.equals(predicate)) {
-                // For the IN comparison, we need an extra condition to setup the list (actually set) to compare against
+                // For the IN comparison, we need an extra condition to setup the set to compare against
                 // [(hash-set 1 2 3) las]    - needed for lists, to ensure the list is a unique set of keys to check against
                 Symbol listAsSet = Symbol.intern("las");
                 List<Object> forceSet = new ArrayList<>();
@@ -900,46 +779,135 @@ public class CruxQuery {
                 set.add(listAsSet);
                 IPersistentVector enforceSet = PersistentVector.create(set);
                 // [(contains? las variable)]
-                predicateConditions.add(enforceSet);
+                clauseConditions.add(enforceSet);
+                List<Object> predicateComparison = new ArrayList<>();
                 predicateComparison.add(predicate);
                 predicateComparison.add(listAsSet);
                 predicateComparison.add(variable);
-                predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-                needsPropertyToVariable = true;
+                clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             } else {
                 // For everything else, we need a (predicate variable value) pattern
                 // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
                 //  [(predicate variable "value")] - for a non-string predicate
+                List<Object> predicateComparison = new ArrayList<>();
                 predicateComparison.add(predicate);
                 predicateComparison.add(variable);
                 predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
-                predicateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-                needsPropertyToVariable = true;
+                clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             }
-            if (!alreadyCovered) {
-                // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (will be OR-wrapped))
-                if (MatchCriteria.ANY.equals(outerCriteria) && (needsPropertyToVariable || predicateConditions.size() > 1)) {
-                    // Since the variables involved across multiple conditions can be different, and an OR predicate
-                    // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
-                    // two conditions together with an AND predicate (if there is more than one condition)
-                    List<Object> andWrapper = new ArrayList<>();
-                    andWrapper.add(AND_OPERATOR);
-                    if (needsPropertyToVariable) {
-                        andWrapper.add(propertyToVariable);
-                    }
-                    andWrapper.addAll(predicateConditions);
-                    propertyConditions.add(PersistentList.create(andWrapper));
-                } else {
-                    // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
-                    // 'not' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not)
-                    if (needsPropertyToVariable) {
-                        propertyConditions.add(propertyToVariable);
-                    }
-                    propertyConditions.addAll(predicateConditions);
-                }
+
+            // If we have not short-circuited, we need to translate the property's value into a variable
+            //  [e :property variable]            - always needed, to define how to map the property's value to a variable
+            IPersistentVector propertyToVariable = PersistentVector.create(DOC_ID, propertyRef, variable);
+
+            // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (will be OR-wrapped))
+            if (MatchCriteria.ANY.equals(outerCriteria) && (clauseConditions.size() > 1)) {
+                // Since the variables involved across multiple conditions can be different, and an OR predicate
+                // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
+                // two conditions together with an AND predicate (if there is more than one condition)
+                List<Object> andWrapper = new ArrayList<>();
+                andWrapper.add(AND_OPERATOR);
+                andWrapper.add(propertyToVariable);
+                andWrapper.addAll(clauseConditions);
+                propertyConditions.add(PersistentList.create(andWrapper));
+            } else {
+                // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
+                // 'not' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not)
+                propertyConditions.add(propertyToVariable);
+                propertyConditions.addAll(clauseConditions);
             }
         }
+
         return propertyConditions;
+
+    }
+
+    /**
+     * Retrieve the optimal regular expression query conditions for the provided inputs.
+     * @param propertyRef to compare
+     * @param value against which to compare
+     * @param outerCriteria matching criteria inside of which this condition will exist
+     * @param variable to which to compare
+     * @param repositoryHelper through which we can introspect regular expressions
+     * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
+     * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
+     * @return {@code List<IPersistentCollection>} of the conditions
+     */
+    protected List<IPersistentCollection> getRegexConditions(Keyword propertyRef,
+                                                             InstancePropertyValue value,
+                                                             MatchCriteria outerCriteria,
+                                                             Symbol variable,
+                                                             OMRSRepositoryHelper repositoryHelper,
+                                                             boolean luceneEnabled,
+                                                             boolean luceneRegexes) {
+
+        List<IPersistentCollection> propertyConditions = new ArrayList<>();
+        List<IPersistentCollection> clauseConditions = new ArrayList<>();
+
+        Object compareTo = InstancePropertyValueMapping.getValueForComparison(value);
+
+        if (compareTo instanceof String) {
+
+            // "easy" cases -- direct query is possible
+            String regexSearchString = (String) compareTo;
+            if (repositoryHelper.isExactMatchRegex(regexSearchString, false)) {
+                // If we are looking for an exact match, we will short-circuit out of this clause-based
+                // query and just do an equality condition -- should be faster
+                String unqualifiedLiteralString = repositoryHelper.getUnqualifiedLiteralString(regexSearchString);
+                propertyConditions.add(getEqualsConditions(propertyRef, unqualifiedLiteralString));
+                return propertyConditions;
+            } else if (luceneEnabled) {
+                // If Lucene is enabled, use it's search clauses here rather than reverting straight to a full Java regex
+                String searchString = getLuceneComparisonString(regexSearchString, repositoryHelper, luceneRegexes);
+                if (searchString != null) {
+                    // If we are able to do a Lucene query, short-circuit out of this with the direct Lucene query clause:
+                    // [(text-search :property "text") [[e _]]]
+                    propertyConditions.add(getLuceneTermClause(propertyRef, searchString, repositoryHelper.isCaseInsensitiveRegex(regexSearchString)));
+                    return propertyConditions;
+                }
+                // If we cannot run a Lucene-optimised query (searchString is null), then we will fallback to a
+                // full OR-based text condition comparison (immediately below): which could be VERY slow, but as
+                // long as it does not exceed the query timeout threshold should at least still return accurate
+                // results
+            }
+
+            // "fallback" cases -- must do a full regex comparison
+            // Otherwise we will retrieve a clause-based comparison depending on the regex requested
+            //  [e :property variable]            - always needed, to define how to map the property's value to a variable
+            IPersistentVector propertyToVariable = PersistentVector.create(DOC_ID, propertyRef, variable);
+            //  [(str variable) s_variable]       - needed for strings, to ensure the string is non-null (sets value to "" for nil)
+            Symbol nonNullStringVar = Symbol.intern("sv");
+            List<Object> forceString = new ArrayList<>();
+            forceString.add(STR_OPERATOR);
+            forceString.add(variable);
+            IPersistentVector enforceNonNullStringValue = PersistentVector.create(PersistentList.create(forceString), nonNullStringVar);
+            clauseConditions.add(enforceNonNullStringValue);
+            //  [(re-matches #"regex" s_variable)] - for a regex-based (string) predicate
+            List<Object> predicateComparison = getRegexCondition(regexSearchString, nonNullStringVar, repositoryHelper);
+            clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+            // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (will be OR-wrapped))
+            if (MatchCriteria.ANY.equals(outerCriteria)) {
+                // Since the variables involved across multiple conditions can be different, and an OR predicate
+                // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
+                // two conditions together with an AND predicate
+                List<Object> andWrapper = new ArrayList<>();
+                andWrapper.add(AND_OPERATOR);
+                andWrapper.add(propertyToVariable);
+                andWrapper.addAll(clauseConditions);
+                propertyConditions.add(PersistentList.create(andWrapper));
+            } else {
+                // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
+                // 'not' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not)
+                propertyConditions.add(propertyToVariable);
+                propertyConditions.addAll(clauseConditions);
+            }
+
+        } else {
+            log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
+        }
+
+        return propertyConditions;
+
     }
 
     /**
@@ -1070,7 +1038,7 @@ public class CruxQuery {
         for (InstanceStatus limitByStatus : limitResultsByStatus) {
             Integer ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(limitByStatus);
             if (ordinal != null) {
-                statusConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.CURRENT_STATUS, ordinal));
+                statusConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS), ordinal));
             }
         }
         if (!statusConditions.isEmpty()) {
@@ -1107,7 +1075,7 @@ public class CruxQuery {
         if (sequencingProperty != null) {
             // Translate the provided sequencingProperty name into all of its possible appropriate property name
             // references (depends on the type limiting used for the search)
-            qualifiedSortProperties = InstancePropertyValueMapping.getNamesForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames, null);
+            qualifiedSortProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames, null);
         }
         if (sequencingOrder == null) {
             // Default to sorting by GUID, if no sorting is defined (for consistent result ordering, paging, etc)
@@ -1119,22 +1087,22 @@ public class CruxQuery {
         switch (sequencingOrder) {
             case LAST_UPDATE_OLDEST:
                 addFindElement(UPDATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.UPDATE_TIME, UPDATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
                 sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_ASCENDING));
                 break;
             case LAST_UPDATE_RECENT:
                 addFindElement(UPDATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.UPDATE_TIME, UPDATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
                 sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_DESCENDING));
                 break;
             case CREATION_DATE_OLDEST:
                 addFindElement(CREATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.CREATE_TIME, CREATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
                 sequencing.add(PersistentVector.create(CREATE_TIME, SORT_ASCENDING));
                 break;
             case CREATION_DATE_RECENT:
                 addFindElement(CREATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.CREATE_TIME, CREATE_TIME));
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
                 sequencing.add(PersistentVector.create(CREATE_TIME, SORT_DESCENDING));
                 break;
             case PROPERTY_ASCENDING:
@@ -1219,7 +1187,7 @@ public class CruxQuery {
      */
     protected static List<IPersistentCollection> getNoResultsCondition() {
         List<IPersistentCollection> conditions = new ArrayList<>();
-        conditions.add(PersistentVector.create(DOC_ID, InstanceAuditHeaderMapping.TYPE_DEF_GUID, "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
+        conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
         return conditions;
     }
 
