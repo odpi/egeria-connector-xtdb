@@ -1,0 +1,87 @@
+Name:         c5-crux-5545994484-4v82t
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-1.fyre.ibm.com/9.20.193.94
+Start Time:   Tue, 02 Mar 2021 16:01:39 +0000
+Labels:       app.kubernetes.io/component=crux-service
+              app.kubernetes.io/instance=c5
+              app.kubernetes.io/name=ec-cts-crux
+              pod-template-hash=5545994484
+Annotations:  cni.projectcalico.org/podIP: 10.233.72.65/32
+              cni.projectcalico.org/podIPs: 10.233.72.65/32
+Status:       Running
+IP:           10.233.72.65
+IPs:
+  IP:           10.233.72.65
+Controlled By:  ReplicaSet/c5-crux-5545994484
+Init Containers:
+  init-connector:
+    Container ID:  docker://de1473e7d6d734449b765af098ae4e8ca18fc3610eaed41dcff7416b1d501db3
+    Image:         docker.io/odpi/egeria-configure:latest
+    Image ID:      docker-pullable://odpi/egeria-configure@sha256:c41c3c05faae6c04017c0ef6a341497dd94ed55ad27f4cda5d624de5e6af666a
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      cd /opt/egeria/connectors && curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR} && wget ${CRUX_ROCKS_JAR_URL} && wget ${ROCKS_JAR_URL} && wget ${JNR_JAR_URL}
+      
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Tue, 02 Mar 2021 16:01:43 +0000
+      Finished:     Tue, 02 Mar 2021 16:01:46 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      c5-configmap  ConfigMap  Optional: false
+    Environment:    <none>
+    Mounts:
+      /opt/egeria/connectors from egeria-crux-connector-volume (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Containers:
+  proxy:
+    Container ID:   docker://7d8ef26656b73c8e06877d2f0583e2eba7af82adf0b0a3c6de55e249b682c824
+    Image:          docker.io/odpi/egeria:latest
+    Image ID:       docker-pullable://odpi/egeria@sha256:62fd147b74735c380d9af3ff49e5bb4a153eb42b7fb63501441997de7326b20e
+    Port:           9443/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Tue, 02 Mar 2021 16:01:48 +0000
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     4
+      memory:  16Gi
+    Requests:
+      cpu:      2
+      memory:   8Gi
+    Readiness:  tcp-socket :9443 delay=10s timeout=1s period=10s #success=1 #failure=6
+    Environment Variables from:
+      c5-configmap  ConfigMap  Optional: false
+    Environment:
+      LOADER_PATH:       /opt/egeria/connectors
+      MALLOC_ARENA_MAX:  2
+    Mounts:
+      /opt/egeria/connectors from egeria-crux-connector-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  egeria-crux-connector-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
