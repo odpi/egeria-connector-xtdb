@@ -115,12 +115,15 @@
 							Start by downloading the Crux repository connector:
 						</p>
 						<div align="center">
-							<a href="https://search.maven.org/remotecontent?filepath=org/odpi/egeria/egeria-connector-crux/1.0/egeria-connector-crux-1.0-jar-with-dependencies.jar">
+							<a href="https://github.com/odpi/egeria-connector-crux/releases/download/v0.1-alpha/egeria-connector-crux-1.0-SNAPSHOT-21.02-1.15.0-jar-with-dependencies.jar">
+								<img alt="Pre-Release" src="https://img.shields.io/badge/pre--release-v1.0--SNAPSHOT-blue">
+							</a>
+						<!--	<a href="https://search.maven.org/remotecontent?filepath=org/odpi/egeria/egeria-connector-crux/1.0/egeria-connector-crux-1.0-jar-with-dependencies.jar">
 								<img alt="Maven Central" src="https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release">
 							</a>
 							<a href="https://github.com/odpi/egeria-connector-crux/packages/617324" target="gp">
 								<img alt="Development snapshot" src="https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Ftoken%3A82d3aaedcfbb070176d9b30df29ea28768b90691%40maven.pkg.github.com%2Fodpi%2Fegeria-connector-crux%2Forg%2Fodpi%2Fegeria%2Fegeria-connector-crux%2Fmaven-metadata.xml">
-							</a>
+							</a> -->
 						</div>
 						<p style="font-size: x-large; text-align: left;">
 							The single file downloaded is the connector:<br>
@@ -139,10 +142,16 @@
 							web-based UI, so if you really want to use the latest development snapshot you may actually
 							find it easier to build it yourself...
 						</p>
+						<!-- TODO: remove once we no longer have a separate Clojure build requirement -->
+						<p class="fragment" style="font-size: x-large; text-align: left;">
+							Furthermore, the snapshots hosted on GitHub at the moment only include the Java portion of
+							the connector code: there is a Clojure-based Lucene module for Crux itself that is not bundled
+							through the snapshots.
+						</p>
 					</section>
 					<section data-auto-animate data-menu-title="Building">
 						<h4 style="text-align: left;">Building</h4>
-						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1,9-10">
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1,9,17-18">
 $ git clone https://github.com/odpi/egeria-connector-crux.git
 Cloning into 'egeria-connector-crux'...
 remote: Enumerating objects: 531, done.
@@ -151,7 +160,163 @@ remote: Compressing objects: 100% (193/193), done.
 remote: Total 531 (delta 168), reused 446 (delta 101), pack-reused 0
 Receiving objects: 100% (531/531), 162.39 KiB | 1.01 MiB/s, done.
 Resolving deltas: 100% (168/168), done.
-$ cd egeria-connector-crux
+$ git clone https://github.com/juxt/crux.git
+Cloning into 'crux'...
+remote: Enumerating objects: 286, done.
+remote: Counting objects: 100% (286/286), done.
+remote: Compressing objects: 100% (181/181), done.
+remote: Total 50049 (delta 123), reused 193 (delta 81), pack-reused 49763
+Receiving objects: 100% (50049/50049), 19.19 MiB | 19.52 MiB/s, done.
+Resolving deltas: 100% (30440/30440), done.
+$ cd crux
+$ cp ../egeria-connector-crux/src/main/clojure/crux/lucene.clj crux-lucene/src/crux/lucene.clj
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Currently to build the connector, you will first need to clone and build the Crux repository
+							code itself. This is because we use a custom Lucene indexer to support Egeria's text-based
+							queries.
+						</p>
+						<p style="font-size: x-large; text-align: left;">
+							Begin by cloning both repositories, and copying this custom Lucene module from the connector's
+							codebase into the Crux codebase. (The highlighted commands above illustrate.)
+						</p>
+						<p style="font-size: x-large; text-align: left;">
+							(This process will simplify pending <a href="https://github.com/juxt/crux/pull/1431">juxt/crux#1431</a>.)
+						</p>
+					</section>
+					<section data-auto-animate>
+						<h4 style="text-align: left;">Building</h4>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ lein sub install
+Reading project from crux-core
+Compiling 31 source files to .../crux/crux-core/target/classes
+Compiling crux.main
+Created .../crux/crux-core/target/crux-core-dev-SNAPSHOT.jar
+Wrote .../crux/crux-core/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-rdf
+Created .../crux/crux-rdf/target/crux-rdf-dev-SNAPSHOT.jar
+Wrote .../crux/crux-rdf/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-metrics
+Created .../crux/crux-metrics/target/crux-metrics-dev-SNAPSHOT.jar
+Wrote .../crux/crux-metrics/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-rocksdb
+Created .../crux/crux-rocksdb/target/crux-rocksdb-dev-SNAPSHOT.jar
+Wrote .../crux/crux-rocksdb/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-lmdb
+Created .../crux/crux-lmdb/target/crux-lmdb-dev-SNAPSHOT.jar
+Wrote .../crux/crux-lmdb/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-jdbc
+Created .../crux/crux-jdbc/target/crux-jdbc-dev-SNAPSHOT.jar
+Wrote .../crux/crux-jdbc/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-http-client
+Created .../crux/crux-http-client/target/crux-http-client-dev-SNAPSHOT.jar
+Wrote .../crux/crux-http-client/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-http-server
+22:31:03.468 [main] DEBUG org.eclipse.jetty.util.log - Logging to Logger[org.eclipse.jetty.util.log] via org.eclipse.jetty.util.log.Slf4jLog
+22:31:03.475 [main] INFO org.eclipse.jetty.util.log - Logging initialized @4853ms to org.eclipse.jetty.util.log.Slf4jLog
+[Figwheel] Validating figwheel-main.edn
+[Figwheel] figwheel-main.edn is valid \(ツ)/
+[Figwheel] Compiling build dev to "cljs-target/public/cljs-out/dev-main.js"
+[Figwheel] Successfully compiled build dev to "cljs-target/public/cljs-out/dev-main.js" in 31.132 seconds.
+compiling all.scss
+compiled successfully
+compiling table.scss
+compiled successfully
+compiling react-datetime.scss
+compiled successfully
+compiling codemirror.scss
+compiled successfully
+Created .../crux/crux-http-server/target/crux-http-server-dev-SNAPSHOT.jar
+Wrote .../crux/crux-http-server/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-kafka-embedded
+Created .../crux/crux-kafka-embedded/target/crux-kafka-embedded-dev-SNAPSHOT.jar
+Wrote .../crux/crux-kafka-embedded/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-kafka-connect
+Compiling 4 source files to .../crux/crux-kafka-connect/target/classes
+Created .../crux/crux-kafka-connect/target/crux-kafka-connect-dev-SNAPSHOT.jar
+Wrote .../crux/crux-kafka-connect/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-kafka
+Compiling 9 source files to .../crux/crux-kafka/target/classes
+Created .../crux/crux-kafka/target/crux-kafka-dev-SNAPSHOT.jar
+Wrote .../crux/crux-kafka/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-sql
+Compiling 17 source files to .../crux/crux-sql/target/classes
+Created .../crux/crux-sql/target/crux-sql-dev-SNAPSHOT.jar
+Wrote .../crux/crux-sql/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-lucene
+Created .../crux/crux-lucene/target/crux-lucene-dev-SNAPSHOT.jar
+Wrote .../crux/crux-lucene/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-test
+Compiling 13 source files to .../crux/crux-test/target/classes
+Created .../crux/crux-test/target/crux-test-dev-SNAPSHOT.jar
+Wrote .../crux/crux-test/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-s3
+Compiling 1 source files to .../crux/crux-s3/target/classes
+Created .../crux/crux-s3/target/crux-s3-dev-SNAPSHOT.jar
+Wrote .../crux/crux-s3/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-azure-blobs
+Created .../crux/crux-azure-blobs/target/crux-azure-blobs-dev-SNAPSHOT.jar
+Wrote .../crux/crux-azure-blobs/pom.xml
+Installed jar and pom into local repo.
+Reading project from crux-bench
+Created .../crux/crux-bench/target/crux-bench-dev-SNAPSHOT.jar
+Wrote .../crux/crux-bench/pom.xml
+Installed jar and pom into local repo.
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Still within the <code>crux</code> directory, you will now need to build Crux itself.
+							You will need Clojure (at least version 1.10.1) as well as Leiningen (at least
+							version 2.9), and can use the highlighted commands above to build Crux.
+						</p>
+						<p style="font-size: x-large; text-align: left;">
+							This will install the necessary custom Lucene module into your local <code>.m2</code>
+							repository, for the connector Maven build to automatically pickup.
+						</p>
+					</section>
+					<section data-auto-animate>
+						<h4 style="text-align: left;">Building</h4>
+						<pre data-id="code-animation" class="xml" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="8">
+<!-- truncated... -->
+<dependencyManagement>
+    <dependencies>
+		<!-- truncated... -->
+	    <dependency>
+            <groupId>juxt</groupId>
+            <artifactId>crux-lucene</artifactId>
+            <version>${crux-dev.version}</version>
+            <scope>compile</scope>
+        </dependency>
+		<!-- truncated... -->
+	</dependencies>
+</dependencyManagement>
+<!-- truncated... -->
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Before building the connector via Maven, you will need to update the root <code>pom.xml</code>
+							under <code>egeria-connector-crux</code> to point to your locally-built <code>crux-lucene</code>
+							module from the previous step. Change the highlighted line above to point to this local
+							development snapshot build.
+						</p>
+					</section>
+					<section data-auto-animate>
+						<h4 style="text-align: left;">Building</h4>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1-2">
+$ cd ../egeria-connector-crux
 $ mvn clean install
 [INFO] Scanning for projects...
 [INFO]
@@ -229,23 +394,14 @@ $ mvn clean install
 [INFO] ------------------------------------------------------------------------
 						</code></pre>
 						<p style="font-size: x-large; text-align: left;">
-							To build the connector, you will need to have at least Java version 1.8 installed as well
-							as Apache Maven (at least version 3.6). Clone the connector's GitHub repository and then
-							build the connector using the commands highlighted above.
+							You can now build the connector. You will need to have at least Java version 1.8 installed as well
+							as Apache Maven (at least version 3.6). Build the connector using the commands highlighted above.
 						</p>
 					</section>
 					<section data-auto-animate>
 						<h4 style="text-align: left;">Building</h4>
-						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="76">
-$ git clone https://github.com/odpi/egeria-connector-crux.git
-Cloning into 'egeria-connector-crux'...
-remote: Enumerating objects: 531, done.
-remote: Counting objects: 100% (531/531), done.
-remote: Compressing objects: 100% (193/193), done.
-remote: Total 531 (delta 168), reused 446 (delta 101), pack-reused 0
-Receiving objects: 100% (531/531), 162.39 KiB | 1.01 MiB/s, done.
-Resolving deltas: 100% (168/168), done.
-$ cd egeria-connector-crux
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="68">
+$ cd ../egeria-connector-crux
 $ mvn clean install
 [INFO] Scanning for projects...
 [INFO]
@@ -332,14 +488,14 @@ $ mvn clean install
 					<section>
 						<h2 style="text-align: left;">2. Obtain server chassis</h2>
 						<p style="font-size: x-large; text-align: left;">
-							Download Egeria's server chassis:
+							Download Egeria's server chassis (you will need at least release 2.7 or a snapshot build of 2.7):
 						</p>
 						<div align="center">
 							<a href="https://search.maven.org/remotecontent?filepath=org/odpi/egeria/server-chassis-spring/2.6/server-chassis-spring-2.6.jar">
 								<img alt="Maven Central" src="https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release">
 							</a>
-							<a href="https://github.com/odpi/egeria/packages" target="gp">
-								<img alt="Maven metadata URL" src="https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Ftoken%3A82d3aaedcfbb070176d9b30df29ea28768b90691%40maven.pkg.github.com%2Fodpi%2Fegeria%2Forg%2Fodpi%2Fegeria%2Fserver-chassis-spring%2Fmaven-metadata.xml">
+							<a href="https://odpi.jfrog.io/artifactory/egeria-snapshot/org/odpi/egeria/server-chassis-spring/2.7-SNAPSHOT/server-chassis-spring-2.7-SNAPSHOT.jar">
+								<img alt="Maven metadata URL" src="https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Fodpi.jfrog.io%2Fartifactory%2Fegeria-snapshot%2Forg%2Fodpi%2Fegeria%2Fserver-chassis-spring%2Fmaven-metadata.xml">
 							</a>
 						</div>
 						<p style="font-size: x-large; text-align: left;">
@@ -350,7 +506,7 @@ $ mvn clean install
 					<section>
 						<h3 style="text-align: left;">Snapshots</h3>
 						<p style="font-size: x-large; text-align: left;">
-							Our development snapshots are hosted directly within GitHub. You can download them there
+							Our development snapshots will soon be hosted directly within GitHub. You can download them there
 							using Maven itself, or by <a href="https://github.com/odpi/egeria-connector-crux/packages/" target="gp">navigating to the site</a> and looking for the latest version of
 							the <code>jar-with-dependencies.jar</code> file.
 						</p>
@@ -1719,6 +1875,16 @@ Fri Feb 12 20:34:16 GMT 2021 crux Startup OMAG-ADMIN-0004 The crux server has su
 	 					</script></code></pre>
 						<p style="font-size: x-large; text-align: left;">
 							This final line indicates that the server is now running.
+						</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2 style="text-align: left;">Explore</h2>
+						<p style="font-size: x-large; text-align: left;">
+							You should now be able to start interacting with the repository. Without any additional
+							dependencies, this is most easily illustrated using direct REST API interactions with the
+							server chassis's repository services.
 						</p>
 					</section>
 				</section>

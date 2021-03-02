@@ -89,61 +89,57 @@ all default settings were used.)
 
 Method | @2 | @5 | @10
 ---|---|---|---
-addEntity | 330
-addEntityProxy | 457
-addRelationship | 107
-classifyEntity | 95
-declassifyEntity | 162
-deleteEntity | 93
-deleteRelationship | 94
-findEntities | 43
-findEntitiesByProperty | 61
-findEntitiesByPropertyValue | 77
-findRelationships | 60
-findRelationshipsByProperty | 59
-findRelationshipsByPropertyValue | 64
-findTypesByName | 16
-getAllTypes | 280
-getAttributeTypeDefByGUID | 26
-getAttributeTypeDefByName | 27
-getEntityDetail | 17
-getEntityNeighborhood | 44
-getEntitySummary | 18
-getLinkingEntities | 67
-getRelatedEntities | 82
-getRelationship | 19
-getTypeDefByGUID | 15
-getTypeDefByName | --
-isEntityKnown | 18
-isRelationshipKnown | 19
-purgeEntity | 338
-purgeEntityReferenceCopy | 738
-purgeRelationship | 310
-purgeRelationshipReferenceCopy | 87
-reHomeEntity | 166
-reHomeRelationship | 114
-reIdentifyEntity | 1,567
-reIdentifyRelationship | 328
-reTypeEntity | 124
-refreshEntityReferenceCopy | 136
-refreshRelationshipReferenceCopy | 22
-restoreEntity | 78
-restoreRelationship | 81
-saveEntityReferenceCopy | 313
-saveRelationshipReferenceCopy | 99
-undoEntityUpdate | 87
-undoRelationshipUpdate | 90
-updateEntityClassification | 169
-updateEntityProperties | 148
-updateEntityProperties-negative | 19
-updateEntityStatus | 82
-updateEntityStatus-negative | 20
-updateRelationshipProperties | 143
-updateRelationshipProperties-negative | 19
-updateRelationshipStatus | 84
-updateRelationshipStatus-negative | 21
-verifyAttributeTypeDef | 28
-verifyTypeDef | 17
+addEntity | 330 | 205
+addEntityProxy | 457 | 164
+addRelationship | 107 | 122
+classifyEntity | 95 | 94
+declassifyEntity | 162 | 156
+deleteEntity | 93 | 89
+deleteRelationship | 94 | 91
+findEntities | 43 | 47
+findEntitiesByProperty | 61 | 76
+findEntitiesByPropertyValue | 77 | 92
+findRelationships | 60 | 68
+findRelationshipsByProperty | 59 | 60
+findRelationshipsByPropertyValue | 64 | 71
+findTypesByName | 16 | 16
+getAllTypes | 280 | 454
+getAttributeTypeDefByGUID | 26 | 24
+getAttributeTypeDefByName | 27 | 24
+getEntityDetail | 17 | 17
+getEntityNeighborhood | 44 | 46
+getEntitySummary | 18 | 18
+getLinkingEntities | 67 | 84
+getRelatedEntities | 82 | 118
+getRelationship | 19 | 19
+getTypeDefByGUID | 15 | 16
+getTypeDefByName | -- | --
+isEntityKnown | 18 | 18
+isRelationshipKnown | 19 | 18
+purgeEntity | 338 | 344
+purgeEntityReferenceCopy | 738 | 684
+purgeRelationship | 310 | 295
+purgeRelationshipReferenceCopy | 87 | 87
+reHomeEntity | 166 | 161
+reHomeRelationship | 114 | 114
+reIdentifyEntity | 1,567 | 1,439
+reIdentifyRelationship | 328 | 315
+reTypeEntity | 124 | 124
+refreshEntityReferenceCopy | 136 | 135
+refreshRelationshipReferenceCopy | 22 | 23
+restoreEntity | 78 | 74
+restoreRelationship | 81 | 78
+saveEntityReferenceCopy | 313 | 304
+saveRelationshipReferenceCopy | 99 | 98
+undoEntityUpdate | 87 | 81
+undoRelationshipUpdate | 90 | 84
+updateEntityClassification | 169 | 164
+updateEntityProperties | 148 | 139
+updateEntityStatus | 82 | 77
+updateRelationshipProperties | 143 | 135
+updateRelationshipStatus | 84 | 80
+verifyAttributeTypeDef | 28 | 29
+verifyTypeDef | 17 | 18
 
 ### Compared to other plugin repositories (scale factor of 2)
 
