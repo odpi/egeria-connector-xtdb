@@ -62,13 +62,49 @@
 							shortcuts? Proceed downwards once again.
 						</p>
 					</section>
-					<section>
-						<h3 style="text-align: left;">How it works</h3>
+					<section data-menu-title="How it works" data-transition="fade">
+						<h4 style="text-align: left;">How it works</h4>
+						<img src="img/overview1.png">
 						<p style="font-size: x-large; text-align: left;">
-							Here is a brief overview of how the Crux connector works...
-							<br><br>
-							TBC
-							<!-- TODO: point out the dependency on having a Kafka bus somewhere... -->
+							The connector itself is implemented as a plugin repository connector that runs through the
+							Egeria OMAG Platform (server chassis). It does so by being implemented as an Open Metadata
+							Repository Connector and implementing the repository-level methods defined by the Metadata
+							Collection interface.
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">How it works</h4>
+						<img src="img/overview2.png">
+						<p style="font-size: x-large; text-align: left;">
+							Crux itself is started as an embedded process within the connector. It can be configured to use any of the various
+							pluggable persistence layers supported by Crux itself, and communication between the Java code of the connector and
+							Crux itself (which is implemented in Clojure) occurs directly via the Crux Java API (not via REST).
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">How it works</h4>
+						<img src="img/overview2.png">
+						<p style="font-size: x-large; text-align: left;">
+							The Metadata Collection methods simply communicate with Crux via Crux's Java API to read and
+							write information to the underlying Crux node.
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">How it works</h4>
+						<img src="img/overview3.png">
+						<p style="font-size: x-large; text-align: left;">
+							Crux itself handles write transactions and persistence guarantees via these APIs, ensuring that all data is at least
+							recorded into the transaction log and document store prior to any write method returning.
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">How it works</h4>
+						<img src="img/overview3.png">
+						<p style="font-size: x-large; text-align: left;">
+							By default, the repository connector further awaits confirmation that any write has been indexed (and is therefore
+							available for read operations) prior to returning. However, it is also possible to configure the connector in an
+							"ingest-optimized" mode that allows the indexing to occur asynchronously, and can therefore improve the speed of
+							write operations significantly.
 						</p>
 					</section>
 				</section>
@@ -679,7 +715,7 @@ mycohort
 						</p>
 						</div>
 					</section>
-					<section data-menu-title="Configure Crux connector" data-transition="slide-in fade-out">
+					<section data-menu-title="Configure connector" data-transition="slide-in fade-out">
 						<h4 style="text-align: left;">Configure Crux connector</h4>
 						<p style="font-size: x-large; text-align: left;">
 							This final call to the API configures the behavior of the Crux repository itself.
@@ -878,6 +914,38 @@ mode/plugin-repository/connection
 							Note that its dependencies include <code>org.rocksdb:rocksdbjni</code> and
 							<code>com.github.jnr:jnr-ffi</code>. The third dependency given in the previous slide is
 							this Crux persistence module itself (<code>juxt:crux-rocksdb</code>).
+						</p>
+					</section>
+					<section data-menu-title="Other configuration options">
+						<h4 style="text-align: left;">Other configuration options</h4>
+						<p style="font-size: x-large; text-align: left;">
+							There are two other configuration options:
+						</p>
+						<ul style="font-size: x-large; text-align: left;">
+							<li><code>luceneRegexes</code> controls whether the connector will interpret unquoted regexes
+								as Lucene-compatible (true) or not (false): in the latter case ensuring that we fallback
+								to full Java regex checking (which will be significantly slower).</li>
+							<li><code>syncIndex</code> controls whether the connector will wait for the Crux indexes to
+								be updated before returning from write operations (true) or only that they are transactionally
+								persisted (false)</li>
+						</ul>
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="9-10">
+{
+  "class": "Connection",
+  "connectorType": {
+    "class": "ConnectorType",
+    "connectorProviderClassName": "org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"
+  },
+  "configurationProperties": {
+    "cruxConfig": { },
+    "luceneRegexes": true,
+    "syncIndex": true
+  }
+}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							If the options are not provided in the configuration of the connector, they will automatically
+							default to the values given above.
 						</p>
 					</section>
 				</section>
@@ -1654,6 +1722,7 @@ Fri Feb 12 20:34:16 GMT 2021 crux Startup OMAG-ADMIN-0004 The crux server has su
 						</p>
 					</section>
 				</section>
+				<!-- TODO: add example API invocations and responses to walk through how it works -->
 
 			</div>
 		</div>
