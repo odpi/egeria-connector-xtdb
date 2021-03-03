@@ -1884,11 +1884,458 @@ Fri Feb 12 20:34:16 GMT 2021 crux Startup OMAG-ADMIN-0004 The crux server has su
 						<p style="font-size: x-large; text-align: left;">
 							You should now be able to start interacting with the repository. Without any additional
 							dependencies, this is most easily illustrated using direct REST API interactions with the
-							server chassis's repository services.
+							server chassis's repository services. We suggest the following steps:
+						</p>
+						<ol style="font-size: x-large; text-align: left;">
+							<li>Create a new entity (e.g. a <code>GlossaryTerm</code>)</li>
+							<li>Update that entity, creating a new version (and some history)</li>
+							<li>Retrieve that entity:
+								<ol style="font-size: x-large; text-align: left; list-style: lower-alpha">
+									<li>its current version</li>
+									<li>its initial version</li>
+									<li>prior to its creation (demonstrating that it does not exist)</li>
+								</ol>
+							</li>
+						</ol>
+					</section>
+					<section data-menu-title="1. Create new entity" data-transition="fade">
+						<h4 style="text-align: left;">1. Create new entity</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Create a new entity by posting a payload like the following:
+						</p>
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers>
+{
+  "class": "EntityCreateRequest",
+  "entityTypeGUID": "0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a",
+  "initialProperties": {
+    "class": "InstanceProperties",
+    "instanceProperties": {
+      "qualifiedName": {
+        "class": "PrimitivePropertyValue",
+        "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+        "primitiveValue": "Test Term 1"
+      }
+    }
+  }
+}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							To this API endpoint:<br><code>/servers/crux/open-metadata/repository-services/users/admin/instances/entity</code>
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"EntityCreateRequest","entityTypeGUID":"0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a","initialProperties":{"class":"InstanceProperties","instanceProperties":{"qualifiedName":{"class":"PrimitivePropertyValue","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"}}}}' "https://localhost:9443/servers/crux/open-metadata/repository-services/users/admin/instances/entity"
+{"class":"EntityDetailResponse","relatedHTTPCode":200,"entity":{"class":"EntityDetail","headerVersion":1,"type":{"class":"InstanceType","typeDefCategory":"ENTITY_DEF","typeDefGUID":"0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a","typeDefName":"GlossaryTerm","typeDefVersion":1,"typeDefDescription":"A semantic description of something, such as a concept, object, asset, technology, role or group.","typeDefSuperTypes":[{"headerVersion":1,"guid":"a32316b8-dc8c-48c5-b12b-71c1b2a080bf","name":"Referenceable","status":"ACTIVE_TYPEDEF"},{"headerVersion":1,"guid":"4e7761e8-3969-4627-8f40-bfe3cde85a1d","name":"OpenMetadataRoot","status":"ACTIVE_TYPEDEF"}],"validInstanceProperties":["qualifiedName","additionalProperties","displayName","summary","description","examples","abbreviation","usage"]},"instanceProvenanceType":"LOCAL_COHORT","metadataCollectionId":"3c38c245-bc50-4796-b195-4d9f1d8c5d22","metadataCollectionName":"crux","createdBy":"admin","createTime":"2021-03-03T10:19:35.138+00:00","version":1,"guid":"050d91e7-8b2f-465e-83ef-7355a5047cc6","properties":{"class":"InstanceProperties","instanceProperties":{"qualifiedName":{"class":"PrimitivePropertyValue","instancePropertyCategory":"PRIMITIVE","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"}},"propertyNames":["qualifiedName"],"propertyCount":1},"status":"ACTIVE"}}
+						</code></pre>
+					</section>
+					<section  data-transition="fade">
+						<h4 style="text-align: left;">1. Create new entity</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Note the GUID and creation time from the response:
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="43,45">
+{
+  "class": "EntityDetailResponse",
+  "relatedHTTPCode": 200,
+  "entity": {
+    "class": "EntityDetail",
+    "headerVersion": 1,
+    "type": {
+      "class": "InstanceType",
+      "typeDefCategory": "ENTITY_DEF",
+      "typeDefGUID": "0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a",
+      "typeDefName": "GlossaryTerm",
+      "typeDefVersion": 1,
+      "typeDefDescription": "A semantic description of something, such as a concept, object, asset, technology, role or group.",
+      "typeDefSuperTypes": [
+        {
+          "headerVersion": 1,
+          "guid": "a32316b8-dc8c-48c5-b12b-71c1b2a080bf",
+          "name": "Referenceable",
+          "status": "ACTIVE_TYPEDEF"
+        },
+        {
+          "headerVersion": 1,
+          "guid": "4e7761e8-3969-4627-8f40-bfe3cde85a1d",
+          "name": "OpenMetadataRoot",
+          "status": "ACTIVE_TYPEDEF"
+        }
+      ],
+      "validInstanceProperties": [
+        "qualifiedName",
+        "additionalProperties",
+        "displayName",
+        "summary",
+        "description",
+        "examples",
+        "abbreviation",
+        "usage"
+      ]
+    },
+    "instanceProvenanceType": "LOCAL_COHORT",
+    "metadataCollectionId": "3c38c245-bc50-4796-b195-4d9f1d8c5d22",
+    "metadataCollectionName": "crux",
+    "createdBy": "admin",
+    "createTime": "2021-03-03T10:19:35.138+00:00",
+    "version": 1,
+    "guid": "050d91e7-8b2f-465e-83ef-7355a5047cc6",
+    "properties": {
+      "class": "InstanceProperties",
+      "instanceProperties": {
+        "qualifiedName": {
+          "class": "PrimitivePropertyValue",
+          "instancePropertyCategory": "PRIMITIVE",
+          "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+          "primitiveValue": "Test Term 1"
+        }
+      },
+      "propertyNames": [
+        "qualifiedName"
+      ],
+      "propertyCount": 1
+    },
+    "status": "ACTIVE"
+  }
+}
+						</code></pre>
+					</section>
+					<section data-menu-title="2. Update the entity" data-transition="fade">
+						<h4 style="text-align: left;">2. Update the entity</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Now update the entity by posting a payload like the following:
+						</p>
+						<pre data-id="code-animation" class="json" style="font-size: small;"><code class="hljs" data-trim data-line-numbers>
+{
+  "class": "InstancePropertiesRequest",
+  "instanceProperties": {
+    "class": "InstanceProperties",
+    "instanceProperties": {
+      "qualifiedName": {
+        "class": "PrimitivePropertyValue",
+        "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+        "primitiveValue": "Test Term 1"
+      },
+      "displayName": {
+        "class": "PrimitivePropertyValue",
+        "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+        "primitiveValue": "Test Term 1"
+      }
+    }
+  }
+}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							To this API endpoint:<br><code>/servers/crux/open-metadata/repository-services/users/admin/instances/entity/{{guid}}/properties</code>
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"InstancePropertiesRequest","instanceProperties":{"class":"InstanceProperties","instanceProperties":{"qualifiedName":{"class":"PrimitivePropertyValue","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"},"displayName":{"class":"PrimitivePropertyValue","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"}}}}' "https://localhost:9443/servers/crux/open-metadata/repository-services/users/admin/instances/entity/050d91e7-8b2f-465e-83ef-7355a5047cc6/properties"
+{"class":"EntityDetailResponse","relatedHTTPCode":200,"entity":{"class":"EntityDetail","headerVersion":1,"type":{"class":"InstanceType","typeDefCategory":"ENTITY_DEF","typeDefGUID":"0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a","typeDefName":"GlossaryTerm","typeDefVersion":1,"typeDefDescription":"A semantic description of something, such as a concept, object, asset, technology, role or group.","typeDefSuperTypes":[{"headerVersion":1,"guid":"a32316b8-dc8c-48c5-b12b-71c1b2a080bf","name":"Referenceable","status":"ACTIVE_TYPEDEF"},{"headerVersion":1,"guid":"4e7761e8-3969-4627-8f40-bfe3cde85a1d","name":"OpenMetadataRoot","status":"ACTIVE_TYPEDEF"}],"validInstanceProperties":["qualifiedName","additionalProperties","displayName","summary","description","examples","abbreviation","usage"]},"instanceProvenanceType":"LOCAL_COHORT","metadataCollectionId":"3c38c245-bc50-4796-b195-4d9f1d8c5d22","metadataCollectionName":"crux","createdBy":"admin","createTime":"2021-03-03T10:19:35.138+00:00","version":1,"guid":"050d91e7-8b2f-465e-83ef-7355a5047cc6","properties":{"class":"InstanceProperties","instanceProperties":{"qualifiedName":{"class":"PrimitivePropertyValue","instancePropertyCategory":"PRIMITIVE","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"}},"propertyNames":["qualifiedName"],"propertyCount":1},"status":"ACTIVE"}}
+						</code></pre>
+						<p style="font-size: medium; text-align: left;">
+							(Remember to replace the GUID of the instance in the URL if copy / pasting.)
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">2. Update the entity</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Note the update time from the response, and that we are now at version 2 of the entity:
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="48-49">
+{
+  "class": "EntityDetailResponse",
+  "relatedHTTPCode": 200,
+  "entity": {
+    "class": "EntityDetail",
+    "headerVersion": 1,
+    "type": {
+      "class": "InstanceType",
+      "typeDefCategory": "ENTITY_DEF",
+      "typeDefGUID": "0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a",
+      "typeDefName": "GlossaryTerm",
+      "typeDefVersion": 1,
+      "typeDefDescription": "A semantic description of something, such as a concept, object, asset, technology, role or group.",
+      "typeDefSuperTypes": [
+        {
+          "headerVersion": 1,
+          "guid": "a32316b8-dc8c-48c5-b12b-71c1b2a080bf",
+          "name": "Referenceable",
+          "status": "ACTIVE_TYPEDEF"
+        },
+        {
+          "headerVersion": 1,
+          "guid": "4e7761e8-3969-4627-8f40-bfe3cde85a1d",
+          "name": "OpenMetadataRoot",
+          "status": "ACTIVE_TYPEDEF"
+        }
+      ],
+      "validInstanceProperties": [
+        "qualifiedName",
+        "additionalProperties",
+        "displayName",
+        "summary",
+        "description",
+        "examples",
+        "abbreviation",
+        "usage"
+      ]
+    },
+    "instanceProvenanceType": "LOCAL_COHORT",
+    "metadataCollectionId": "3c38c245-bc50-4796-b195-4d9f1d8c5d22",
+    "metadataCollectionName": "crux",
+    "createdBy": "admin",
+    "updatedBy": "admin",
+    "maintainedBy": [
+      "admin"
+    ],
+    "createTime": "2021-03-03T10:19:35.138+00:00",
+    "updateTime": "2021-03-03T10:37:36.044+00:00",
+    "version": 2,
+    "guid": "050d91e7-8b2f-465e-83ef-7355a5047cc6",
+    "properties": {
+      "class": "InstanceProperties",
+      "instanceProperties": {
+        "qualifiedName": {
+          "class": "PrimitivePropertyValue",
+          "instancePropertyCategory": "PRIMITIVE",
+          "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+          "primitiveValue": "Test Term 1"
+        },
+        "displayName": {
+          "class": "PrimitivePropertyValue",
+          "instancePropertyCategory": "PRIMITIVE",
+          "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+          "primitiveValue": "Test Term 1"
+        }
+      },
+      "propertyNames": [
+        "qualifiedName",
+        "displayName"
+      ],
+      "propertyCount": 2
+    },
+    "status": "ACTIVE"
+  }
+}
+						</code></pre>
+					</section>
+					<section data-menu-title="3a. Retrieve the current version" data-transition="fade">
+						<h4 style="text-align: left;">3a. Retrieve the current version</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Now retrieve the current version of the entity (remember to replace the GUID in the URL):
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ curl -k "https://localhost:9443/servers/crux/open-metadata/repository-services/users/admin/instances/entity/050d91e7-8b2f-465e-83ef-7355a5047cc6"
+{"class":"EntityDetailResponse","relatedHTTPCode":200,"entity":{"class":"EntityDetail","headerVersion":1,"type":{"class":"InstanceType","typeDefCategory":"ENTITY_DEF","typeDefGUID":"0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a","typeDefName":"GlossaryTerm","typeDefVersion":1,"typeDefDescription":"A semantic description of something, such as a concept, object, asset, technology, role or group.","typeDefSuperTypes":[{"headerVersion":1,"guid":"a32316b8-dc8c-48c5-b12b-71c1b2a080bf","name":"Referenceable","status":"ACTIVE_TYPEDEF"},{"headerVersion":1,"guid":"4e7761e8-3969-4627-8f40-bfe3cde85a1d","name":"OpenMetadataRoot","status":"ACTIVE_TYPEDEF"}],"validInstanceProperties":["qualifiedName","additionalProperties","displayName","summary","description","examples","abbreviation","usage"]},"instanceProvenanceType":"LOCAL_COHORT","metadataCollectionId":"3c38c245-bc50-4796-b195-4d9f1d8c5d22","metadataCollectionName":"crux","createdBy":"admin","updatedBy":"admin","maintainedBy":["admin"],"createTime":"2021-03-03T10:19:35.138+00:00","updateTime":"2021-03-03T10:37:36.044+00:00","version":2,"guid":"050d91e7-8b2f-465e-83ef-7355a5047cc6","properties":{"class":"InstanceProperties","instanceProperties":{"displayName":{"class":"PrimitivePropertyValue","instancePropertyCategory":"PRIMITIVE","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"},"qualifiedName":{"class":"PrimitivePropertyValue","instancePropertyCategory":"PRIMITIVE","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"}},"propertyNames":["displayName","qualifiedName"],"propertyCount":2},"status":"ACTIVE"}}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Note that we retrieve version 2, with the <code>displayName</code> defined:
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="49,54-59">
+{
+  "class": "EntityDetailResponse",
+  "relatedHTTPCode": 200,
+  "entity": {
+    "class": "EntityDetail",
+    "headerVersion": 1,
+    "type": {
+      "class": "InstanceType",
+      "typeDefCategory": "ENTITY_DEF",
+      "typeDefGUID": "0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a",
+      "typeDefName": "GlossaryTerm",
+      "typeDefVersion": 1,
+      "typeDefDescription": "A semantic description of something, such as a concept, object, asset, technology, role or group.",
+      "typeDefSuperTypes": [
+        {
+          "headerVersion": 1,
+          "guid": "a32316b8-dc8c-48c5-b12b-71c1b2a080bf",
+          "name": "Referenceable",
+          "status": "ACTIVE_TYPEDEF"
+        },
+        {
+          "headerVersion": 1,
+          "guid": "4e7761e8-3969-4627-8f40-bfe3cde85a1d",
+          "name": "OpenMetadataRoot",
+          "status": "ACTIVE_TYPEDEF"
+        }
+      ],
+      "validInstanceProperties": [
+        "qualifiedName",
+        "additionalProperties",
+        "displayName",
+        "summary",
+        "description",
+        "examples",
+        "abbreviation",
+        "usage"
+      ]
+    },
+    "instanceProvenanceType": "LOCAL_COHORT",
+    "metadataCollectionId": "3c38c245-bc50-4796-b195-4d9f1d8c5d22",
+    "metadataCollectionName": "crux",
+    "createdBy": "admin",
+    "updatedBy": "admin",
+    "maintainedBy": [
+      "admin"
+    ],
+    "createTime": "2021-03-03T10:19:35.138+00:00",
+    "updateTime": "2021-03-03T10:37:36.044+00:00",
+    "version": 2,
+    "guid": "050d91e7-8b2f-465e-83ef-7355a5047cc6",
+    "properties": {
+      "class": "InstanceProperties",
+      "instanceProperties": {
+        "displayName": {
+          "class": "PrimitivePropertyValue",
+          "instancePropertyCategory": "PRIMITIVE",
+          "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+          "primitiveValue": "Test Term 1"
+        },
+        "qualifiedName": {
+          "class": "PrimitivePropertyValue",
+          "instancePropertyCategory": "PRIMITIVE",
+          "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+          "primitiveValue": "Test Term 1"
+        }
+      },
+      "propertyNames": [
+        "displayName",
+        "qualifiedName"
+      ],
+      "propertyCount": 2
+    },
+    "status": "ACTIVE"
+  }
+}
+						</code></pre>
+					</section>
+					<section data-menu-title="3b. Retrieve the initial version" data-transition="fade">
+						<h4 style="text-align: left;">3b. Retrieve the initial version</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Now let us retrieve a historical version, using a time between the creation and the update
+							(remember to replace the GUID in the URL, and the timestamp in the body):
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"HistoryRequest","asOfTime":"2021-03-03T10:25:00.000+00:00"}' "https://localhost:9443/servers/crux/open-metadata/repository-services/users/admin/instances/entity/050d91e7-8b2f-465e-83ef-7355a5047cc6/history"
+{"class":"EntityDetailResponse","relatedHTTPCode":200,"entity":{"class":"EntityDetail","headerVersion":1,"type":{"class":"InstanceType","typeDefCategory":"ENTITY_DEF","typeDefGUID":"0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a","typeDefName":"GlossaryTerm","typeDefVersion":1,"typeDefDescription":"A semantic description of something, such as a concept, object, asset, technology, role or group.","typeDefSuperTypes":[{"headerVersion":1,"guid":"a32316b8-dc8c-48c5-b12b-71c1b2a080bf","name":"Referenceable","status":"ACTIVE_TYPEDEF"},{"headerVersion":1,"guid":"4e7761e8-3969-4627-8f40-bfe3cde85a1d","name":"OpenMetadataRoot","status":"ACTIVE_TYPEDEF"}],"validInstanceProperties":["qualifiedName","additionalProperties","displayName","summary","description","examples","abbreviation","usage"]},"instanceProvenanceType":"LOCAL_COHORT","metadataCollectionId":"3c38c245-bc50-4796-b195-4d9f1d8c5d22","metadataCollectionName":"crux","createdBy":"admin","createTime":"2021-03-03T10:19:35.138+00:00","version":1,"guid":"050d91e7-8b2f-465e-83ef-7355a5047cc6","properties":{"class":"InstanceProperties","instanceProperties":{"qualifiedName":{"class":"PrimitivePropertyValue","instancePropertyCategory":"PRIMITIVE","primitiveDefCategory":"OM_PRIMITIVE_TYPE_STRING","primitiveValue":"Test Term 1"}},"propertyNames":["qualifiedName"],"propertyCount":1},"status":"ACTIVE"}}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Now we retrieve version 1, without the <code>displayName</code>, since that was the version
+							that existed at the specified time:
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="44,56-58">
+{
+  "class": "EntityDetailResponse",
+  "relatedHTTPCode": 200,
+  "entity": {
+    "class": "EntityDetail",
+    "headerVersion": 1,
+    "type": {
+      "class": "InstanceType",
+      "typeDefCategory": "ENTITY_DEF",
+      "typeDefGUID": "0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a",
+      "typeDefName": "GlossaryTerm",
+      "typeDefVersion": 1,
+      "typeDefDescription": "A semantic description of something, such as a concept, object, asset, technology, role or group.",
+      "typeDefSuperTypes": [
+        {
+          "headerVersion": 1,
+          "guid": "a32316b8-dc8c-48c5-b12b-71c1b2a080bf",
+          "name": "Referenceable",
+          "status": "ACTIVE_TYPEDEF"
+        },
+        {
+          "headerVersion": 1,
+          "guid": "4e7761e8-3969-4627-8f40-bfe3cde85a1d",
+          "name": "OpenMetadataRoot",
+          "status": "ACTIVE_TYPEDEF"
+        }
+      ],
+      "validInstanceProperties": [
+        "qualifiedName",
+        "additionalProperties",
+        "displayName",
+        "summary",
+        "description",
+        "examples",
+        "abbreviation",
+        "usage"
+      ]
+    },
+    "instanceProvenanceType": "LOCAL_COHORT",
+    "metadataCollectionId": "3c38c245-bc50-4796-b195-4d9f1d8c5d22",
+    "metadataCollectionName": "crux",
+    "createdBy": "admin",
+    "createTime": "2021-03-03T10:19:35.138+00:00",
+    "version": 1,
+    "guid": "050d91e7-8b2f-465e-83ef-7355a5047cc6",
+    "properties": {
+      "class": "InstanceProperties",
+      "instanceProperties": {
+        "qualifiedName": {
+          "class": "PrimitivePropertyValue",
+          "instancePropertyCategory": "PRIMITIVE",
+          "primitiveDefCategory": "OM_PRIMITIVE_TYPE_STRING",
+          "primitiveValue": "Test Term 1"
+        }
+      },
+      "propertyNames": [
+        "qualifiedName"
+      ],
+      "propertyCount": 1
+    },
+    "status": "ACTIVE"
+  }
+}
+						</code></pre>
+					</section>
+					<section data-menu-title="3c. Retrieve pre-history" data-transition="fade">
+						<h4 style="text-align: left;">3c. Retrieve pre-history</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Now let us try to retrieve a version of the entity before it even existed
+							(remember to replace the GUID in the URL, and the timestamp in the body):
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ curl -k -X POST -H "Content-Type: application/json" --data '{"class":"HistoryRequest","asOfTime":"2021-03-03T10:18:00.000+00:00"}' "https://localhost:9443/servers/crux/open-metadata/repository-services/users/admin/instances/entity/050d91e7-8b2f-465e-83ef-7355a5047cc6/history"
+{"class":"EntityDetailResponse","relatedHTTPCode":404,"actionDescription":"getEntityDetail","exceptionClassName":"org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException","exceptionErrorMessage":"OMRS-REPOSITORY-404-002 The entity identified with guid 050d91e7-8b2f-465e-83ef-7355a5047cc6 passed on the getEntityDetail call is not known to the open metadata repository crux","exceptionErrorMessageId":"OMRS-REPOSITORY-404-002","exceptionErrorMessageParameters":["050d91e7-8b2f-465e-83ef-7355a5047cc6","getEntityDetail","crux"],"exceptionSystemAction":"The system is unable to retrieve the properties for the requested entity because the supplied guid is not recognized.","exceptionUserAction":"The guid is supplied by the caller to the server.  It may have a logic problem that has corrupted the guid, or the entity has been deleted since the guid was retrieved."}
+						</code></pre>
+						<p style="font-size: x-large; text-align: left;">
+							Now we see that the entity cannot be found, because at this point in time the entity did not
+							yet exist:
+						</p>
+						<pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="3,5">
+{
+  "class": "EntityDetailResponse",
+  "relatedHTTPCode": 404,
+  "actionDescription": "getEntityDetail",
+  "exceptionClassName": "org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException",
+  "exceptionErrorMessage": "OMRS-REPOSITORY-404-002 The entity identified with guid 050d91e7-8b2f-465e-83ef-7355a5047cc6 passed on the getEntityDetail call is not known to the open metadata repository crux",
+  "exceptionErrorMessageId": "OMRS-REPOSITORY-404-002",
+  "exceptionErrorMessageParameters": [
+    "050d91e7-8b2f-465e-83ef-7355a5047cc6",
+    "getEntityDetail",
+    "crux"
+  ],
+  "exceptionSystemAction": "The system is unable to retrieve the properties for the requested entity because the supplied guid is not recognized.",
+  "exceptionUserAction": "The guid is supplied by the caller to the server.  It may have a logic problem that has corrupted the guid, or the entity has been deleted since the guid was retrieved."
+}
+						</code></pre>
+					</section>
+					<section>
+						<h3 style="text-align: left;">Conclusion</h3>
+						<p style="font-size: x-large; text-align: left;">
+							In conclusion, with the Crux plugin repository we now have the ability to both store and
+							retrieve historical metadata. We have illustrated the simple case of retrieval by ID, but
+							the same works for all metadata access: searching, retrieving relationships through the
+							graph queries, etc.
+						</p>
+						<p class="fragment fade-in" style="font-size: x-large; text-align: left;">
+							This is all easily accomplished through Crux's native support for temporal queries: the
+							underlying API to the Crux storage layer is as simple as passing a date (for a view of that
+							point-in-time) or not passing a date (for the current view). The "view" itself applies
+							against the entire database: so <em>everything</em> we retrieve from that point-in-time is
+							referentially-intact per that point-in-time.
 						</p>
 					</section>
 				</section>
-				<!-- TODO: add example API invocations and responses to walk through how it works -->
 
 			</div>
 		</div>
