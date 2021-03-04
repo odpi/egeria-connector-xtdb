@@ -68,7 +68,7 @@
         <crux-alpha.version>21.02-1.15.0-alpha</crux-alpha.version>
         <crux-dev.version>dev-SNAPSHOT</crux-dev.version>
         <clojure.version>1.10.2</clojure.version>
-        <jackson.version>2.12.1</jackson.version>
+        <jackson.version>2.12.2</jackson.version>
         <lucene.version>8.6.1</lucene.version>
         <slf4j.version>1.7.30</slf4j.version>
         <!-- Platform encoding  -->
