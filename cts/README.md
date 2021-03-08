@@ -96,59 +96,59 @@ all default settings were used.)
 
 ### Crux, as volume increases
 
-Method | @2 | @5 | @10 | @20 | @40* | @80 | @160
+Method | @2 | @5 | @10 | @20 | @40* | @80* | @160
 ---|---|---|---|---|---|---|---
-addEntity | 330 | 205 | 142 | 326 | 308
-addEntityProxy | 457 | 164 | 132 | 463 | 444
-addRelationship | 107 | 122 | 127 | 126 | 128
-classifyEntity | 95 | 94 | 96 | 94 | 94
-declassifyEntity | 162 | 156 | 156 | 158 | 162
-deleteEntity | 93 | 89 | 91 | 90 | 91
-deleteRelationship | 94 | 91 | 94 | 92 | 92
-findEntities | 43 | 47 | 53 | 54 | 58
-findEntitiesByProperty | 61 | 76 | 89 | 98 | *115*
-findEntitiesByPropertyValue | 77 | 92 | 109 | 114 | 128
-findRelationships | 60 | 68 | 84 | 105 | 143
-findRelationshipsByProperty | 59 | 60 | 60 | 72 | *95*
-findRelationshipsByPropertyValue | 64 | 71 | 73 | 84 | 109
-findTypesByName | 16 | 16 | 17 | 16 | 14
-getAllTypes | 280 | 454 | 932 | 360 | 681
-getAttributeTypeDefByGUID | 26 | 24 | 27 | 22 | 22
-getAttributeTypeDefByName | 27 | 24 | 29 | 23 | 23
-getEntityDetail | 17 | 17 | 17 | 17 | 17
-getEntityNeighborhood | 44 | 46 | 55 | 52 | 69
-getEntitySummary | 18 | 18 | 18 | 17 | 17
-getLinkingEntities | 67 | 84 | 87 | 98 | 210
-getRelatedEntities | 82 | 118 | 110 | 120 | 246
-getRelationship | 19 | 19 | 19 | 19 | 19
-getTypeDefByGUID | 15 | 16 | 16 | 15 | 13
-getTypeDefByName | -- | -- | -- | -- | --
-isEntityKnown | 18 | 18 | 18 | 18 | 18
-isRelationshipKnown | 19 | 18 | 18 | 17 | 18
-purgeEntity | 338 | 344 | 357 | 346 | 304
-purgeEntityReferenceCopy | 738 | 684 | 686 | 683 | 642
-purgeRelationship | 310 | 295 | 304 | 300 | 293
-purgeRelationshipReferenceCopy | 87 | 87 | 88 | 88 | 88
-reHomeEntity | 166 | 161 | 166 | 163 | 167
-reHomeRelationship | 114 | 114 | 119 | 113 | 115
-reIdentifyEntity | 1,567 | 1,439 | 1,292 | 1,540 | 1,444
-reIdentifyRelationship | 328 | 315 | 317 | 340 | 333
-reTypeEntity | 124 | 124 | 122 | 122 | 134
-refreshEntityReferenceCopy | 136 | 135 | 132 | 132 | 125
-refreshRelationshipReferenceCopy | 22 | 23 | 22 | 22 | 23
-restoreEntity | 78 | 74 | 76 | 74 | 74
-restoreRelationship | 81 | 78 | 78 | 77 | 79
-saveEntityReferenceCopy | 313 | 304 | 286 | 305 | 292
-saveRelationshipReferenceCopy | 99 | 98 | 102 | 97 | 99
-undoEntityUpdate | 87 | 81 | 84 | 83 | 86
-undoRelationshipUpdate | 90 | 84 | 85 | 84 | 89
-updateEntityClassification | 169 | 164 | 167 | 168 | 170
-updateEntityProperties | 148 | 139 | 143 | 142 | 148
-updateEntityStatus | 82 | 77 | 80 | 79 | 80
-updateRelationshipProperties | 143 | 135 | 136 | 138 | 145
-updateRelationshipStatus | 84 | 80 | 82 | 80 | 84
-verifyAttributeTypeDef | 28 | 29 | 31 | 27 | 27
-verifyTypeDef | 17 | 18 | 18 | 17 | 16
+addEntity | 330 | 205 | 142 | 326 | 308 | 329
+addEntityProxy | 457 | 164 | 132 | 463 | 444 | 462
+addRelationship | 107 | 122 | 127 | 126 | 128 | 130
+classifyEntity | 95 | 94 | 96 | 94 | 94 | 94
+declassifyEntity | 162 | 156 | 156 | 158 | 162 | 155
+deleteEntity | 93 | 89 | 91 | 90 | 91 | 94
+deleteRelationship | 94 | 91 | 94 | 92 | 92 | 92
+findEntities | 43 | 47 | 53 | 54 | 58 | 52
+findEntitiesByProperty | 61 | 76 | 89 | 98 | *115* | *120*
+findEntitiesByPropertyValue | 77 | 92 | 109 | 114 | 128 | 137
+findRelationships | 60 | 68 | 84 | 105 | 143 | 91
+findRelationshipsByProperty | 59 | 60 | 60 | 72 | *95* | *114*
+findRelationshipsByPropertyValue | 64 | 71 | 73 | 84 | 109 | 141
+findTypesByName | 16 | 16 | 17 | 16 | 14 | 17
+getAllTypes | 280 | 454 | 932 | 360 | 681 | 875
+getAttributeTypeDefByGUID | 26 | 24 | 27 | 22 | 22 | 28
+getAttributeTypeDefByName | 27 | 24 | 29 | 23 | 23 | 30
+getEntityDetail | 17 | 17 | 17 | 17 | 17 | 18
+getEntityNeighborhood | 44 | 46 | 55 | 52 | 69 | 116
+getEntitySummary | 18 | 18 | 18 | 17 | 17 | 18
+getLinkingEntities | 67 | 84 | 87 | 98 | 210 | 346
+getRelatedEntities | 82 | 118 | 110 | 120 | 246 | 403
+getRelationship | 19 | 19 | 19 | 19 | 19 | 20
+getTypeDefByGUID | 15 | 16 | 16 | 15 | 13 | 16
+getTypeDefByName | -- | -- | -- | -- | -- | --
+isEntityKnown | 18 | 18 | 18 | 18 | 18 | 19
+isRelationshipKnown | 19 | 18 | 18 | 17 | 18 | 18
+purgeEntity | 338 | 344 | 357 | 346 | 304 | 368
+purgeEntityReferenceCopy | 738 | 684 | 686 | 683 | 642 | 706
+purgeRelationship | 310 | 295 | 304 | 300 | 293 | 301
+purgeRelationshipReferenceCopy | 87 | 87 | 88 | 88 | 88 | 89
+reHomeEntity | 166 | 161 | 166 | 163 | 167 | 159
+reHomeRelationship | 114 | 114 | 119 | 113 | 115 | 121
+reIdentifyEntity | 1,567 | 1,439 | 1,292 | 1,540 | 1,444 | 1,563
+reIdentifyRelationship | 328 | 315 | 317 | 340 | 333 | 348
+reTypeEntity | 124 | 124 | 122 | 122 | 134 | 137
+refreshEntityReferenceCopy | 136 | 135 | 132 | 132 | 125 | 136
+refreshRelationshipReferenceCopy | 22 | 23 | 22 | 22 | 23 | 23
+restoreEntity | 78 | 74 | 76 | 74 | 74 | 77
+restoreRelationship | 81 | 78 | 78 | 77 | 79 | 78
+saveEntityReferenceCopy | 313 | 304 | 286 | 305 | 292 | 300
+saveRelationshipReferenceCopy | 99 | 98 | 102 | 97 | 99 | 127
+undoEntityUpdate | 87 | 81 | 84 | 83 | 86 | 85
+undoRelationshipUpdate | 90 | 84 | 85 | 84 | 89 | 86
+updateEntityClassification | 169 | 164 | 167 | 168 | 170 | 162
+updateEntityProperties | 148 | 139 | 143 | 142 | 148 | 142
+updateEntityStatus | 82 | 77 | 80 | 79 | 80 | 81
+updateRelationshipProperties | 143 | 135 | 136 | 138 | 145 | 138
+updateRelationshipStatus | 84 | 80 | 82 | 80 | 84 |82
+verifyAttributeTypeDef | 28 | 29 | 31 | 27 | 27 | 32
+verifyTypeDef | 17 | 18 | 18 | 17 | 16 | 19
 
 #### Notes
 
