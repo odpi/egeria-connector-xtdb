@@ -157,7 +157,10 @@ verifyTypeDef | 17 | 18 | 18 | 17 | 16
   condition (searching across all types). In these circumstances, a broad OR-based query is used to
   ensure that a given property (that could exist in dozens or even 30+ different types) are all captured. Even without
   regular expressions, these queries are therefore very expensive to run. These timed out elapsed times were not
-  included in the median calculation, and would most likely be resolved by the changes suggested in: https://github.com/odpi/egeria/issues/4724
+  included in the median calculation, and would most likely be resolved by the changes suggested in either (or both)
+  of these issues:
+  - https://github.com/odpi/egeria/issues/4724
+  - https://github.com/odpi/egeria-connector-crux/issues/60
 
 ### Compared to other plugin repositories (scale factor of 2)
 
