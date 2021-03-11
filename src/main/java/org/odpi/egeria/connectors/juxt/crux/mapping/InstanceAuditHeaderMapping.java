@@ -91,8 +91,12 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
      * @param builder for the Crux document
      * @param iah Egeria representation from which to map
      * @param namespace by which to qualify the properties
+     * @return the latest change date in the header (updateTime or if empty createTime)
      */
-    protected void buildDoc(CruxDocument.Builder builder, InstanceAuditHeader iah, String namespace) {
+    protected Date buildDoc(CruxDocument.Builder builder, InstanceAuditHeader iah, String namespace) {
+
+        Date updateTime = iah.getUpdateTime();
+        Date createTime = iah.getCreateTime();
 
         builder.put(getKeyword(namespace, N_HEADER_VERSION), iah.getHeaderVersion());
         builder.put(getKeyword(namespace, N_METADATA_COLLECTION_ID), iah.getMetadataCollectionId());
@@ -102,8 +106,8 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         builder.put(getKeyword(namespace, N_CREATED_BY), iah.getCreatedBy());
         builder.put(getKeyword(namespace, N_UPDATED_BY), iah.getUpdatedBy());
         builder.put(getKeyword(namespace, N_MAINTAINED_BY), iah.getMaintainedBy());
-        builder.put(getKeyword(namespace, N_CREATE_TIME), iah.getCreateTime());
-        builder.put(getKeyword(namespace, N_UPDATE_TIME), iah.getUpdateTime());
+        builder.put(getKeyword(namespace, N_CREATE_TIME), createTime);
+        builder.put(getKeyword(namespace, N_UPDATE_TIME), updateTime);
         builder.put(getKeyword(namespace, N_VERSION), iah.getVersion());
 
         // Note that for the type, we will break things out a bit to optimise search:
@@ -126,6 +130,8 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         builder.put(getKeyword(namespace, N_CURRENT_STATUS), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()));
         builder.put(getKeyword(namespace, N_STATUS_ON_DELETE), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatusOnDelete()));
         builder.put(getKeyword(namespace, N_MAPPING_PROPERTIES), getEmbeddedSerializedForm(iah.getMappingProperties()));
+
+        return updateTime == null ? createTime : updateTime;
 
     }
 

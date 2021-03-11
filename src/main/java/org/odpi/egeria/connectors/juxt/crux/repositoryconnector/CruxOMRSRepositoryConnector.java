@@ -11,6 +11,7 @@ import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
 import org.odpi.egeria.connectors.juxt.crux.model.search.CruxGraphQuery;
 import org.odpi.egeria.connectors.juxt.crux.model.search.CruxQuery;
+import org.odpi.egeria.connectors.juxt.crux.model.search.TextConditionBuilder;
 import org.odpi.openmetadata.frameworks.connectors.ffdc.ConnectorCheckedException;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
@@ -352,6 +353,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty see CruxOMRSMetadataCollection#findEntities
      * @param sequencingOrder see CruxOMRSMetadataCollection#findEntities
      * @param pageSize see CruxOMRSMetadataCollection#findEntities
+     * @param userId of the user running the query
      * @return {@code List<EntityDetail>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -366,7 +368,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                            Date asOfTime,
                                            String sequencingProperty,
                                            SequencingOrder sequencingOrder,
-                                           int pageSize) throws TypeErrorException, RepositoryTimeoutException {
+                                           int pageSize,
+                                           String userId) throws TypeErrorException, RepositoryTimeoutException {
         final String methodName = "findEntities";
         try {
             Collection<List<?>> cruxResults = searchCrux(
@@ -381,7 +384,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     sequencingProperty,
                     sequencingOrder,
                     pageSize,
-                    EntityDetailMapping.ENTITY_PROPERTIES_NS
+                    EntityDetailMapping.ENTITY_PROPERTIES_NS,
+                    userId
             );
             log.debug("Found results: {}", cruxResults);
             return translateEntityResults(cruxResults, asOfTime);
@@ -402,6 +406,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
      * @param sequencingOrder see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
      * @param pageSize see CruxOMRSMetadataCollection#findEntitiesByPropertyValue
+     * @param userId of the user running the query
      * @return {@code List<EntityDetail>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -415,7 +420,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                  Date asOfTime,
                                                  String sequencingProperty,
                                                  SequencingOrder sequencingOrder,
-                                                 int pageSize) throws TypeErrorException, RepositoryTimeoutException {
+                                                 int pageSize,
+                                                 String userId) throws TypeErrorException, RepositoryTimeoutException {
         final String methodName = "findEntitiesByText";
         try {
             Collection<List<?>> cruxResults = searchCruxText(
@@ -429,7 +435,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     sequencingProperty,
                     sequencingOrder,
                     pageSize,
-                    EntityDetailMapping.ENTITY_PROPERTIES_NS
+                    EntityDetailMapping.ENTITY_PROPERTIES_NS,
+                    userId
             );
             log.debug("Found results: {}", cruxResults);
             return translateEntityResults(cruxResults, asOfTime);
@@ -478,6 +485,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
+     * @param userId of the user running the query
      * @return {@code List<Relationship>} list of the matching relationships
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws RepositoryErrorException if any issue closing open Crux resources
@@ -490,7 +498,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                          Date asOfTime,
                                                          String sequencingProperty,
                                                          SequencingOrder sequencingOrder,
-                                                         int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+                                                         int pageSize,
+                                                         String userId) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
 
         final String methodName = "findRelationshipsForEntity";
         List<Relationship> results;
@@ -506,7 +515,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     limitResultsByStatus,
                     sequencingProperty,
                     sequencingOrder,
-                    pageSize);
+                    pageSize,
+                    userId);
 
             log.debug("Found results: {}", cruxResults);
             results = resultsToList(db, cruxResults);
@@ -951,6 +961,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty see CruxOMRSMetadataCollection#findRelationships
      * @param sequencingOrder see CruxOMRSMetadataCollection#findRelationships
      * @param pageSize see CruxOMRSMetadataCollection#findRelationships
+     * @param userId of the user running the query
      * @return {@code List<Relationship>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws RepositoryErrorException if any issue closing an open Crux resource
@@ -965,7 +976,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                 Date asOfTime,
                                                 String sequencingProperty,
                                                 SequencingOrder sequencingOrder,
-                                                int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+                                                int pageSize,
+                                                String userId) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
 
         final String methodName = "findRelationships";
         List<Relationship> results;
@@ -985,7 +997,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     sequencingProperty,
                     sequencingOrder,
                     pageSize,
-                    RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
+                    RelationshipMapping.RELATIONSHIP_PROPERTIES_NS,
+                    userId
             );
 
             log.debug("Found results: {}", cruxResults);
@@ -1013,6 +1026,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
      * @param sequencingOrder see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
      * @param pageSize see CruxOMRSMetadataCollection#findRelationshipsByPropertyValue
+     * @param userId of the user running the query
      * @return {@code List<Relationship>}
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws RepositoryErrorException if any issue closing an open Crux resource
@@ -1026,7 +1040,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                       Date asOfTime,
                                                       String sequencingProperty,
                                                       SequencingOrder sequencingOrder,
-                                                      int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+                                                      int pageSize,
+                                                      String userId) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
 
         final String methodName = "findRelationshipsByText";
         List<Relationship> results;
@@ -1045,7 +1060,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     sequencingProperty,
                     sequencingOrder,
                     pageSize,
-                    RelationshipMapping.RELATIONSHIP_PROPERTIES_NS
+                    RelationshipMapping.RELATIONSHIP_PROPERTIES_NS,
+                    userId
             );
 
             log.debug("Found results: {}", cruxResults);
@@ -1068,8 +1084,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param db already opened point-in-time view of the database
      * @param cruxResults list of document IDs, eg. from a search
      * @return {@code List<Relationship>}
-     * @see #searchCrux(ICruxDatasource, TypeDefCategory, String, List, SearchProperties, int, List, SearchClassifications, String, SequencingOrder, int, String)
-     * @see #findEntityRelationships(ICruxDatasource, String, String, int, List, String, SequencingOrder, int)
+     * @see #searchCrux(ICruxDatasource, TypeDefCategory, String, List, SearchProperties, int, List, SearchClassifications, String, SequencingOrder, int, String, String)
+     * @see #findEntityRelationships(ICruxDatasource, String, String, int, List, String, SequencingOrder, int, String)
      */
     private List<Relationship> resultsToList(ICruxDatasource db, Collection<List<?>> cruxResults) {
         List<Relationship> results = null;
@@ -1700,6 +1716,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
+     * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -1715,7 +1732,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String sequencingProperty,
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
-                                          String namespace) throws TypeErrorException, TimeoutException {
+                                          String namespace,
+                                          String userId) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery();
         updateQuery(query,
                 category,
@@ -1726,7 +1744,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 matchClassifications,
                 sequencingProperty,
                 sequencingOrder,
-                namespace);
+                namespace,
+                userId);
         log.debug("Querying with: {}", query.getQuery());
         Collection<List<?>> results = cruxAPI.db(asOfTime).query(query.getQuery());
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
@@ -1748,6 +1767,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
+     * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -1763,7 +1783,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           String sequencingProperty,
                                           SequencingOrder sequencingOrder,
                                           int pageSize,
-                                          String namespace) throws TypeErrorException, TimeoutException {
+                                          String namespace,
+                                          String userId) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery();
         updateQuery(query,
                 category,
@@ -1774,7 +1795,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 matchClassifications,
                 sequencingProperty,
                 sequencingOrder,
-                namespace);
+                namespace,
+                userId);
         log.debug("Querying with: {}", query.getQuery());
         Collection<List<?>> results = db.query(query.getQuery());
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
@@ -1795,6 +1817,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
+     * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -1809,7 +1832,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                               String sequencingProperty,
                                               SequencingOrder sequencingOrder,
                                               int pageSize,
-                                              String namespace) throws TypeErrorException, TimeoutException {
+                                              String namespace,
+                                              String userId) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery();
         updateTextQuery(query,
                 category,
@@ -1819,7 +1843,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 matchClassifications,
                 sequencingProperty,
                 sequencingOrder,
-                namespace);
+                namespace,
+                userId);
         log.debug("Querying with: {}", query.getQuery());
         Collection<List<?>> results = cruxAPI.db(asOfTime).query(query.getQuery());
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
@@ -1840,6 +1865,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
      * @param namespace by which to qualify the matchProperties
+     * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -1854,7 +1880,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                               String sequencingProperty,
                                               SequencingOrder sequencingOrder,
                                               int pageSize,
-                                              String namespace) throws TypeErrorException, TimeoutException {
+                                              String namespace,
+                                              String userId) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery();
         updateTextQuery(query,
                 category,
@@ -1864,7 +1891,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 matchClassifications,
                 sequencingProperty,
                 sequencingOrder,
-                namespace);
+                namespace,
+                userId);
         log.debug("Querying with: {}", query.getQuery());
         Collection<List<?>> results = db.query(query.getQuery());
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
@@ -1881,6 +1909,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param pageSize maximum number of results per page
+     * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -1892,7 +1921,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                        List<InstanceStatus> limitResultsByStatus,
                                                        String sequencingProperty,
                                                        SequencingOrder sequencingOrder,
-                                                       int pageSize) throws TypeErrorException, TimeoutException {
+                                                       int pageSize,
+                                                       String userId) throws TypeErrorException, TimeoutException {
         CruxQuery query = new CruxQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         updateQuery(query,
@@ -1904,7 +1934,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 null,
                 sequencingProperty,
                 sequencingOrder,
-                null);
+                null,
+                userId);
         log.debug("Querying with: {}", query.getQuery());
         Collection<List<?>> results = db.query(query.getQuery());
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
@@ -1948,6 +1979,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param namespace by which to qualify the matchProperties
+     * @param userId of the user running the query
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     private void updateQuery(CruxQuery query,
@@ -1959,10 +1991,11 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                              SearchClassifications matchClassifications,
                              String sequencingProperty,
                              SequencingOrder sequencingOrder,
-                             String namespace) throws TypeErrorException {
+                             String namespace,
+                             String userId) throws TypeErrorException {
         // Note that we will put the property search criteria first to optimise the search, which can more than double
         // the speed for very broad scenarios (where no type limiter is specified, or only Referenceable)
-        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, subtypeGuids, namespace);
+        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, typeGuid, subtypeGuids, namespace);
         query.addPropertyConditions(matchProperties, namespace, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
         query.addTypeCondition(typeGuid, subtypeGuids);
         query.addTypeDefCategoryCondition(category);
@@ -1982,6 +2015,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param sequencingProperty by which to order the results (required if sequencingOrder involves a property)
      * @param sequencingOrder by which to order results (optional, will default to GUID)
      * @param namespace by which to qualify the sequencing property (if any)
+     * @param userId of the user running the query
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
     private void updateTextQuery(CruxQuery query,
@@ -1992,14 +2026,15 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                  SearchClassifications matchClassifications,
                                  String sequencingProperty,
                                  SequencingOrder sequencingOrder,
-                                 String namespace) throws TypeErrorException {
+                                 String namespace,
+                                 String userId) throws TypeErrorException {
         // Note that we will put the search string criteria first to optimise the search, which can more than double
         // the speed for very broad scenarios (where no type limiter is specified, or only Referenceable)
-        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(typeGuid, null, namespace);
+        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, typeGuid, null, namespace);
         if (luceneConfigured) {
-            query.addWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, luceneRegexes);
+            query.addConditions(TextConditionBuilder.buildWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, luceneRegexes));
         } else {
-            query.addWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, false, luceneRegexes);
+            query.addConditions(TextConditionBuilder.buildWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, false, luceneRegexes));
         }
         query.addTypeCondition(typeGuid, null);
         query.addTypeDefCategoryCondition(category);
@@ -2010,13 +2045,15 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
     /**
      * Retrieve the complete list of type names that have been requested by the search.
+     * @param userId of the user running the query
      * @param typeGuid provided to the search, to limit by type
      * @param subtypeGuids provided to the search, to limit to a set of subtypes
      * @param namespace by which properties will be qualified (allowing us to see whether the types should be for entities or relationships)
      * @return {@code Set<String>} of the names of all types and subtypes to include in the search
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
-    private Set<String> getCompleteSetOfTypeNamesForSearch(String typeGuid,
+    private Set<String> getCompleteSetOfTypeNamesForSearch(String userId,
+                                                           String typeGuid,
                                                            List<String> subtypeGuids,
                                                            String namespace) throws TypeErrorException {
         final String methodName = "getCompleteListOfTypeNamesForSearch";
@@ -2038,7 +2075,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 if (RelationshipMapping.RELATIONSHIP_PROPERTIES_NS.equals(namespace)) {
                     // We need all relationship types
                     try {
-                        List<TypeDef> typeDefinitions = metadataCollection.findTypeDefsByCategory(null, TypeDefCategory.RELATIONSHIP_DEF);
+                        List<TypeDef> typeDefinitions = metadataCollection.findTypeDefsByCategory(userId, TypeDefCategory.RELATIONSHIP_DEF);
                         if (typeDefinitions != null) {
                             for (TypeDef typeDef : typeDefinitions) {
                                 String typeDefName = typeDef.getName();
@@ -2133,10 +2170,21 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // Explicitly set the transaction time to match what is in the instance itself,
         // preferring update time if it is available and otherwise falling back to create time
         // (and if that is not available, falling back to allowing Crux to manage it itself)
-        Date txnTime;
+        Date txnTime = null;
+        // Since classifications do not update the entity updateTime itself, we need to also
+        // scan the entity's last classification change, to potentially apply a validity against
+        // the entire entity document (including all of its classifications) based on these classification changes
+        Object latestClassificationChange = cruxDoc.get(ClassificationMapping.N_LAST_CLASSIFICATION_CHANGE);
+        if (latestClassificationChange instanceof Date) {
+            txnTime = ((Date) latestClassificationChange);
+        }
         Object timeFromDoc = cruxDoc.get(InstanceAuditHeaderMapping.UPDATE_TIME);
         if (timeFromDoc instanceof Date) {
-            txnTime = ((Date) timeFromDoc);
+            Date updateTime = ((Date) timeFromDoc);
+            // If both the classification update and an entity property update exist, take the latest one for validity
+            if (txnTime == null || txnTime.before(updateTime)) {
+                txnTime = updateTime;
+            }
         } else {
             timeFromDoc = cruxDoc.get(InstanceAuditHeaderMapping.CREATE_TIME);
             if (timeFromDoc instanceof Date) {

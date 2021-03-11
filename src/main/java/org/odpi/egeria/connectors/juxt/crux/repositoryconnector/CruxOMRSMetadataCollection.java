@@ -193,7 +193,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
         return entityRelationships == null || entityRelationships.isEmpty() ? null : entityRelationships;
 
@@ -274,7 +275,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -362,7 +364,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -474,7 +477,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -545,7 +549,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 

@@ -292,6 +292,15 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
     }
 
     /**
+     * Retrieve a partially-qualified property name that can be used to compare a Lucene match using ends-with.
+     * @param propertyName of the property to reference
+     * @return String match-able ending to the property (without any type qualification)
+     */
+    public static String getEndsWithPropertyNameForMatching(String propertyName) {
+        return "." + propertyName + ".value";
+    }
+
+    /**
      * Retrieve a fully-qualified property name that can be used for value comparison purposes (ie. searching).
      * @param namespace under which to qualify the property
      * @param typeName by which to qualify the property (ie. ensure it is type-specific)
@@ -299,7 +308,7 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * @return Keyword reference to the property (fully-qualified)
      */
     private static String getFullyQualifiedPropertyNameForValue(String namespace, String typeName, String propertyName) {
-        return getKeyword(namespace, typeName + "." + propertyName + ".value");
+        return getKeyword(namespace, typeName + getEndsWithPropertyNameForMatching(propertyName));
     }
 
     /**
