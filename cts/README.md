@@ -58,10 +58,10 @@ Relationship advanced search | CONFORMANT_FULL_SUPPORT
 
 ## Notes
 
-- The entity search tests may currently fail particular long-running query pattern: for example, an ends-with or contains
-  regex search against all instances. Even search indexes (Lucene, Elastic, etc) strongly discourage searching by such
-  patterns, so simply be aware that wherever possible you should continue to limit your searches based on types of
-  interest and generally avoid sweeping queries along the lines of "everything that contains the letter 'a'".
+- The entity search tests may currently fail particular long-running query pattern: typically where a query by value or
+  attribute is done without providing any restriction on the type of instances against which the query should run. This
+  currently results in a broad OR-based query to cover all the potential type and property combinations that would be
+  valid, and ends up being very costly as a result.
 
 ## Performance notes
 
@@ -75,11 +75,20 @@ does throughout its tests.
 Following are base statistics on the various repository methods: all times in milliseconds.
 
 Every time the CTS calls a particular repository method its elapsed time is captured. We do this 3 times for each scale
-level, and take the _median_ of all results for that method across all 3 executions. This should limit any potential skew
-of the "typical" result by significant outliers (at least at the larger scale factors). The tests themselves are entirely
-automated via a Kubernetes cluster, ensuring that all components of the test (Egeria server chassis, connector, repository
-persistence and event bus) are all co-located on the same node of the Kubernetes cluster. (This should limit any
-potential performance impacts from hardware / network / virtualization on a given machine at a given time.)
+level (up to @20, beyond that just a single test), and take the _median_ of all results for that method across all executions.
+This should limit any potential skew of the "typical" result by significant outliers (less of a concern with the larger
+scale factors due to the additional volume of method calls overall).
+
+These "scale factors" dictate the volume at which the CTS runs, and roughly translate as:
+- 1/2 the total number of instances of a given type that will be created for testing
+- Making the total number of instances created ~2x the scale factor * the number of types (~700), so for example @20 would
+  be roughly 28 000 instances of metadata
+- The size of each page of results that is requested by each of the search tests
+
+The tests themselves are entirely automated via a Kubernetes cluster, ensuring that all components of the test (Egeria
+server chassis, connector, repository persistence and event bus) are all co-located on the same node of the Kubernetes
+cluster. (This should limit any potential performance impacts from hardware / network / virtualization on a given
+machine at a given time.)
 
 In each test, Crux is configured with RocksDB for all persistence and Lucene for text indexing, and no
 other configuration changes from the default are made. (For the JanusGraph and In-memory repository comparisons,
@@ -87,59 +96,71 @@ all default settings were used.)
 
 ### Crux, as volume increases
 
-Method | @2 | @5 | @10
----|---|---|---
-addEntity | 330 | 205 | 142
-addEntityProxy | 457 | 164 | 132
-addRelationship | 107 | 122 | 127
-classifyEntity | 95 | 94 | 96
-declassifyEntity | 162 | 156 | 156
-deleteEntity | 93 | 89 | 91
-deleteRelationship | 94 | 91 | 94
-findEntities | 43 | 47 | 53
-findEntitiesByProperty | 61 | 76 | 89
-findEntitiesByPropertyValue | 77 | 92 | 109
-findRelationships | 60 | 68 | 84
-findRelationshipsByProperty | 59 | 60 | 60
-findRelationshipsByPropertyValue | 64 | 71 | 73
-findTypesByName | 16 | 16 | 17
-getAllTypes | 280 | 454 | 932
-getAttributeTypeDefByGUID | 26 | 24 | 27
-getAttributeTypeDefByName | 27 | 24 | 29
-getEntityDetail | 17 | 17 | 17
-getEntityNeighborhood | 44 | 46 | 55
-getEntitySummary | 18 | 18 | 18
-getLinkingEntities | 67 | 84 | 87
-getRelatedEntities | 82 | 118 | 110
-getRelationship | 19 | 19 | 19
-getTypeDefByGUID | 15 | 16 | 16
-getTypeDefByName | -- | -- | --
-isEntityKnown | 18 | 18 | 18
-isRelationshipKnown | 19 | 18 | 18
-purgeEntity | 338 | 344 | 357
-purgeEntityReferenceCopy | 738 | 684 | 686
-purgeRelationship | 310 | 295 | 304
-purgeRelationshipReferenceCopy | 87 | 87 | 88
-reHomeEntity | 166 | 161 | 166
-reHomeRelationship | 114 | 114 | 119
-reIdentifyEntity | 1,567 | 1,439 | 1,292
-reIdentifyRelationship | 328 | 315 | 317
-reTypeEntity | 124 | 124 | 122
-refreshEntityReferenceCopy | 136 | 135 | 132
-refreshRelationshipReferenceCopy | 22 | 23 | 22
-restoreEntity | 78 | 74 | 76
-restoreRelationship | 81 | 78 | 78
-saveEntityReferenceCopy | 313 | 304 | 286
-saveRelationshipReferenceCopy | 99 | 98 | 102
-undoEntityUpdate | 87 | 81 | 84
-undoRelationshipUpdate | 90 | 84 | 85
-updateEntityClassification | 169 | 164 | 167
-updateEntityProperties | 148 | 139 | 143
-updateEntityStatus | 82 | 77 | 80
-updateRelationshipProperties | 143 | 135 | 136
-updateRelationshipStatus | 84 | 80 | 82
-verifyAttributeTypeDef | 28 | 29 | 31
-verifyTypeDef | 17 | 18 | 18
+Method | @2 | @5 | @10 | @20 | @40* | @80* | @160
+---|---|---|---|---|---|---|---
+addEntity | 330 | 205 | 142 | 326 | 308 | 329
+addEntityProxy | 457 | 164 | 132 | 463 | 444 | 462
+addRelationship | 107 | 122 | 127 | 126 | 128 | 130
+classifyEntity | 95 | 94 | 96 | 94 | 94 | 94
+declassifyEntity | 162 | 156 | 156 | 158 | 162 | 155
+deleteEntity | 93 | 89 | 91 | 90 | 91 | 94
+deleteRelationship | 94 | 91 | 94 | 92 | 92 | 92
+findEntities | 43 | 47 | 53 | 54 | 58 | 52
+findEntitiesByProperty | 61 | 76 | 89 | 98 | *115* | *120*
+findEntitiesByPropertyValue | 77 | 92 | 109 | 114 | 128 | 137
+findRelationships | 60 | 68 | 84 | 105 | 143 | 91
+findRelationshipsByProperty | 59 | 60 | 60 | 72 | *95* | *114*
+findRelationshipsByPropertyValue | 64 | 71 | 73 | 84 | 109 | 141
+findTypesByName | 16 | 16 | 17 | 16 | 14 | 17
+getAllTypes | 280 | 454 | 932 | 360 | 681 | 875
+getAttributeTypeDefByGUID | 26 | 24 | 27 | 22 | 22 | 28
+getAttributeTypeDefByName | 27 | 24 | 29 | 23 | 23 | 30
+getEntityDetail | 17 | 17 | 17 | 17 | 17 | 18
+getEntityNeighborhood | 44 | 46 | 55 | 52 | 69 | 116
+getEntitySummary | 18 | 18 | 18 | 17 | 17 | 18
+getLinkingEntities | 67 | 84 | 87 | 98 | 210 | 346
+getRelatedEntities | 82 | 118 | 110 | 120 | 246 | 403
+getRelationship | 19 | 19 | 19 | 19 | 19 | 20
+getTypeDefByGUID | 15 | 16 | 16 | 15 | 13 | 16
+getTypeDefByName | -- | -- | -- | -- | -- | --
+isEntityKnown | 18 | 18 | 18 | 18 | 18 | 19
+isRelationshipKnown | 19 | 18 | 18 | 17 | 18 | 18
+purgeEntity | 338 | 344 | 357 | 346 | 304 | 368
+purgeEntityReferenceCopy | 738 | 684 | 686 | 683 | 642 | 706
+purgeRelationship | 310 | 295 | 304 | 300 | 293 | 301
+purgeRelationshipReferenceCopy | 87 | 87 | 88 | 88 | 88 | 89
+reHomeEntity | 166 | 161 | 166 | 163 | 167 | 159
+reHomeRelationship | 114 | 114 | 119 | 113 | 115 | 121
+reIdentifyEntity | 1,567 | 1,439 | 1,292 | 1,540 | 1,444 | 1,563
+reIdentifyRelationship | 328 | 315 | 317 | 340 | 333 | 348
+reTypeEntity | 124 | 124 | 122 | 122 | 134 | 137
+refreshEntityReferenceCopy | 136 | 135 | 132 | 132 | 125 | 136
+refreshRelationshipReferenceCopy | 22 | 23 | 22 | 22 | 23 | 23
+restoreEntity | 78 | 74 | 76 | 74 | 74 | 77
+restoreRelationship | 81 | 78 | 78 | 77 | 79 | 78
+saveEntityReferenceCopy | 313 | 304 | 286 | 305 | 292 | 300
+saveRelationshipReferenceCopy | 99 | 98 | 102 | 97 | 99 | 127
+undoEntityUpdate | 87 | 81 | 84 | 83 | 86 | 85
+undoRelationshipUpdate | 90 | 84 | 85 | 84 | 89 | 86
+updateEntityClassification | 169 | 164 | 167 | 168 | 170 | 162
+updateEntityProperties | 148 | 139 | 143 | 142 | 148 | 142
+updateEntityStatus | 82 | 77 | 80 | 79 | 80 | 81
+updateRelationshipProperties | 143 | 135 | 136 | 138 | 145 | 138
+updateRelationshipStatus | 84 | 80 | 82 | 80 | 84 |82
+verifyAttributeTypeDef | 28 | 29 | 31 | 27 | 27 | 32
+verifyTypeDef | 17 | 18 | 18 | 17 | 16 | 19
+
+#### Notes
+
+- At scale factor 40 and beyond, there began to be consistent query timeouts for the
+  `find[Entities|Relationships]ByProperty` methods when they query did not contain any type
+  condition (searching across all types). In these circumstances, a broad OR-based query is used to
+  ensure that a given property (that could exist in dozens or even 30+ different types) are all captured. Even without
+  regular expressions, these queries are therefore very expensive to run. These timed out elapsed times were not
+  included in the median calculation, and would most likely be resolved by the changes suggested in either (or both)
+  of these issues:
+  - https://github.com/odpi/egeria/issues/4724
+  - https://github.com/odpi/egeria-connector-crux/issues/60
 
 ### Compared to other plugin repositories (scale factor of 2)
 

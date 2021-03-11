@@ -44,6 +44,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     private static final String N_CLASSIFICATION_ORIGIN_GUID = "classificationOriginGUID";
 
     public static final String CLASSIFICATION_PROPERTIES_NS = "classificationProperties";
+    public static final String N_LAST_CLASSIFICATION_CHANGE = "lastClassificationChange";
 
     public static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
@@ -92,18 +93,24 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     public void addToCruxDoc(CruxDocument.Builder builder) {
 
         if (classifications != null) {
+            Date latestChange = null;
             List<String> classificationNames = new ArrayList<>();
             for (Classification classification : classifications) {
                 String classificationName = classification.getName();
                 classificationNames.add(classificationName);
                 String qualifiedNamespace = getNamespaceForClassification(classificationName);
-                super.buildDoc(builder, classification, qualifiedNamespace);
+                Date latestClassification = super.buildDoc(builder, classification, qualifiedNamespace);
+                if (latestChange == null || latestChange.before(latestClassification)) {
+                    latestChange = latestClassification;
+                }
                 builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
                 builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
                 InstancePropertiesMapping.addToDoc(cruxConnector, builder, classification.getType(), classification.getProperties(), qualifiedNamespace + "." + CLASSIFICATION_PROPERTIES_NS);
             }
             // Add the list of classification names, for easing search
             builder.put(getKeyword(namespace), PersistentVector.create(classificationNames));
+            // Add the latest change to any classification for internal tracking of validity
+            builder.put(getKeyword(N_LAST_CLASSIFICATION_CHANGE), latestChange);
         }
 
     }

@@ -50,14 +50,14 @@ public class CruxGraphQuery extends CruxQuery {
         // (or (and [r :entityOneProxy se] [r :entityTwoProxy e])
         //     (and [r :entityOneProxy e] [r: entityTwoProxy se]))
         List<Object> orConditions = new ArrayList<>();
-        orConditions.add(OR_OPERATOR);
+        orConditions.add(ConditionBuilder.OR_OPERATOR);
         List<Object> nestedAnd = new ArrayList<>();
-        nestedAnd.add(AND_OPERATOR);
+        nestedAnd.add(ConditionBuilder.AND_OPERATOR);
         nestedAnd.add(getRelatedToCondition(RelationshipMapping.ENTITY_ONE_PROXY, ROOT_ENTITY));
         nestedAnd.add(getRelatedToCondition(RelationshipMapping.ENTITY_TWO_PROXY, DOC_ID));
         orConditions.add(PersistentList.create(nestedAnd));
         nestedAnd = new ArrayList<>();
-        nestedAnd.add(AND_OPERATOR);
+        nestedAnd.add(ConditionBuilder.AND_OPERATOR);
         nestedAnd.add(getRelatedToCondition(RelationshipMapping.ENTITY_ONE_PROXY, DOC_ID));
         nestedAnd.add(getRelatedToCondition(RelationshipMapping.ENTITY_TWO_PROXY, ROOT_ENTITY));
         orConditions.add(PersistentList.create(nestedAnd));
@@ -98,7 +98,7 @@ public class CruxGraphQuery extends CruxQuery {
             return PersistentVector.create(DOC_ID, classificationsRef, limitByClassifications.get(0));
         } else {
             List<Object> orConditions = new ArrayList<>();
-            orConditions.add(OR_OPERATOR);
+            orConditions.add(ConditionBuilder.OR_OPERATOR);
             for (String classificationName : limitByClassifications) {
                 orConditions.add(PersistentVector.create(DOC_ID, classificationsRef, classificationName));
             }

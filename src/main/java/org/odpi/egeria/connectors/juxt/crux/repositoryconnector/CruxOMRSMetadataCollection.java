@@ -8,6 +8,7 @@ import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.OMRSDynamicTypeMetadataCollectionBase;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
@@ -139,6 +140,28 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
      * {@inheritDoc}
      */
     @Override
+    public List<EntityDetail> getEntityDetailHistory(String userId,
+                                                     String guid,
+                                                     Date fromTime,
+                                                     Date toTime,
+                                                     int startFromElement,
+                                                     int pageSize,
+                                                     HistorySequencingOrder sequencingOrder) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException,
+            EntityProxyOnlyException,
+            FunctionNotSupportedException,
+            UserNotAuthorizedException {
+        final String methodName = "getEntityDetailHistory";
+        super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
+        return cruxRepositoryConnector.getPreviousVersionsOfEntity(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public List<Relationship> getRelationshipsForEntity(String userId,
                                                         String entityGUID,
                                                         String relationshipTypeGUID,
@@ -170,7 +193,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
         return entityRelationships == null || entityRelationships.isEmpty() ? null : entityRelationships;
 
@@ -251,7 +275,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -339,7 +364,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -401,6 +427,27 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
      * {@inheritDoc}
      */
     @Override
+    public List<Relationship> getRelationshipHistory(String userId,
+                                                     String guid,
+                                                     Date fromTime,
+                                                     Date toTime,
+                                                     int startFromElement,
+                                                     int pageSize,
+                                                     HistorySequencingOrder sequencingOrder) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            RelationshipNotKnownException,
+            FunctionNotSupportedException,
+            UserNotAuthorizedException {
+        final String methodName = "getRelationshipHistory";
+        super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
+        return cruxRepositoryConnector.getPreviousVersionsOfRelationship(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public List<Relationship> findRelationships(String userId,
                                                 String relationshipTypeGUID,
                                                 List<String> relationshipSubtypeGUIDs,
@@ -430,7 +477,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -501,7 +549,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 asOfTime,
                 sequencingProperty,
                 sequencingOrder,
-                pageSize);
+                pageSize,
+                userId);
 
     }
 
@@ -1162,7 +1211,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         }
 
         EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, entity, newClassification, methodName);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
 
@@ -1196,7 +1244,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
 
         EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName, entity, classificationName, methodName);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
 
@@ -1241,7 +1288,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 entity,
                 newClassification,
                 methodName);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         return cruxRepositoryConnector.updateEntity(updatedEntity);
 

@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/github/license/odpi/egeria-connector-crux)](LICENSE)
 [![Build](https://github.com/odpi/egeria-connector-crux/workflows/Maven%20Package/badge.svg)](https://github.com/odpi/egeria-connector-crux/actions?query=workflow%3A%22Maven+Package%22)
-[![Snapshot](https://img.shields.io/badge/pre--release-v1.0--SNAPSHOT-blue)](https://github.com/odpi/egeria-connector-crux/releases/download/v0.1-alpha/egeria-connector-crux-1.0-SNAPSHOT-21.02-1.15.0-jar-with-dependencies.jar)
+[![Snapshot](https://img.shields.io/badge/pre--release-v2.8--SNAPSHOT-blue)](https://github.com/odpi/egeria-connector-crux/releases/download/v0.1-alpha/egeria-connector-crux-2.8-SNAPSHOT-jar-with-dependencies.jar)
 [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux)](https://mvnrepository.com/artifact/org.odpi.egeria/egeria-connector-crux)
 
 # Crux Plugin Repository Connector
