@@ -2106,15 +2106,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         if (results == null || results.isEmpty()) {
             return results;
         } else {
-            List<List<?>> pageOfResults = new ArrayList<>();
+            List<List<?>> pageOfResults  = new ArrayList<>();
+            Set<List<?>> skippedResults = new HashSet<>();
             int currentIndex = 0;
             // 0 as a pageSize means ALL pages -- so we should return every result that we found (up to the maximum
             // number of results allowed by the connector)
             pageSize = pageSize > 0 ? pageSize : getMaxPageSize();
             int lastResultIndex = (fromElement + pageSize);
             for (List<?> singleResult : results) {
-                // If we are at / beyond the last index, break out of the loop
                 if (currentIndex >= lastResultIndex) {
+                    // If we are at / beyond the last index, break out of the loop
                     break;
                 } else if (currentIndex >= fromElement && !pageOfResults.contains(singleResult)) {
                     // Otherwise, only add this result if it is at or beyond the starting point (fromElement) and
@@ -2122,7 +2123,15 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     // current index for the number of results we have captured)
                     pageOfResults.add(singleResult);
                     currentIndex++;
+                } else if (!skippedResults.contains(singleResult)) {
+                    // Otherwise, remember that we have skipped this result and increment the current index
+                    // accordingly
+                    skippedResults.add(singleResult);
+                    currentIndex++;
                 }
+                // In any other scenario, it is a result that has already been included or already been skipped,
+                // so we do not need to increment our index or do anything with the result -- just move on to the
+                // next one
             }
             return pageOfResults;
         }
