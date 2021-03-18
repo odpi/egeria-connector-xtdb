@@ -314,13 +314,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         classificationConditions.add(condition);
         searchClassifications.setConditions(classificationConditions);
 
-        // Since matchCriteria passed are embedded with properties, the overall matchCriteria should be to all (?)
+        // Since matchCriteria passed are embedded with properties, the overall matchCriteria should be all (?)
         searchClassifications.setMatchCriteria(MatchCriteria.ALL);
 
         return findEntities(userId,
                 entityTypeGUID,
                 null,
-                searchProperties,
+                null,
                 fromEntityElement,
                 limitResultsByStatus,
                 searchClassifications,
