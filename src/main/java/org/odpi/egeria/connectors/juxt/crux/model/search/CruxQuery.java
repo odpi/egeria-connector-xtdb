@@ -115,6 +115,11 @@ public class CruxQuery {
     public void addTypeDefCategoryCondition(TypeDefCategory category) {
         if (category != null) {
             conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
+            if (category.equals(TypeDefCategory.ENTITY_DEF)) {
+                // If we are searching for an entity, additionally enforce that we retrieve only full entities
+                // (not proxies)
+                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER), false));
+            }
         }
     }
 
