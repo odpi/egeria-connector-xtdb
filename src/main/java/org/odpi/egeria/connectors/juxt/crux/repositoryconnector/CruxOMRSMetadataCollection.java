@@ -1184,7 +1184,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             repositoryValidator.validateClassificationProperties(repositoryName, classificationName, propertiesParameterName, classificationProperties, methodName);
             if (externalSourceGUID == null) {
                 newClassification = repositoryHelper.getNewClassification(repositoryName,
-                        null,
+                        metadataCollectionId,
                         InstanceProvenanceType.LOCAL_COHORT,
                         userId,
                         classificationName,
@@ -2001,7 +2001,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                     updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
                     cruxRepositoryConnector.updateEntity(updatedEntity);
                 } else {
-                    cruxRepositoryConnector.saveReferenceCopy(entity);
+                    cruxRepositoryConnector.saveReferenceCopy(updatedEntity);
                 }
             } catch (EntityNotKnownException e) {
                 // Ignore since the entity has been removed since the classification was added
