@@ -1457,7 +1457,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         final String methodName = "getPreviousVersionsOfRelationship";
         List<Relationship> results = new ArrayList<>();
-        String docRef = EntitySummaryMapping.getReference(guid);
+        String docRef = RelationshipMapping.getReference(guid);
 
         // Open the database view at the latest point against which we are interested
         try (ICruxDatasource db = to == null ? cruxAPI.openDB() : cruxAPI.openDB(to)) {
@@ -2156,7 +2156,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return TransactionInstant transaction details
      */
     public TransactionInstant runTx(Transaction statements) {
-        log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements);
+        if (log.isDebugEnabled()) {
+            log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements.toVector());
+        }
         TransactionInstant tx = cruxAPI.submitTx(statements);
         // Null for the timeout here means use the default (which is therefore configurable directly by the Crux
         // configurationProperties of the connector)
