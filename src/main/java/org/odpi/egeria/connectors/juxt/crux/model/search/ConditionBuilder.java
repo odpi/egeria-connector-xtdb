@@ -34,6 +34,8 @@ public class ConditionBuilder {
     public static final Symbol AND_OPERATOR = Symbol.intern("and");
     public static final Symbol NOT_OPERATOR = Symbol.intern("not");
     public static final Symbol OR_JOIN = Symbol.intern("or-join");
+    protected static final Symbol EQ_OPERATOR = Symbol.intern("=");
+    protected static final Symbol NEQ_OPERATOR = Symbol.intern("not=");
     protected static final Symbol GT_OPERATOR = Symbol.intern(">");
     protected static final Symbol GTE_OPERATOR = Symbol.intern(">=");
     protected static final Symbol LT_OPERATOR = Symbol.intern("<");
@@ -47,6 +49,8 @@ public class ConditionBuilder {
     protected static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
     private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
         Map<PropertyComparisonOperator, Symbol> map = new HashMap<>();
+        map.put(PropertyComparisonOperator.EQ, EQ_OPERATOR);
+        map.put(PropertyComparisonOperator.NEQ, NEQ_OPERATOR);
         map.put(PropertyComparisonOperator.GT, GT_OPERATOR);
         map.put(PropertyComparisonOperator.GTE, GTE_OPERATOR);
         map.put(PropertyComparisonOperator.LT, LT_OPERATOR);
@@ -198,10 +202,6 @@ public class ConditionBuilder {
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
             // For equality we can compare directly to the value and short-circuit any additional processing
             propertyConditions.add(getEqualsConditions(propertyRef, value));
-            return propertyConditions;
-        } else if (comparator.equals(PropertyComparisonOperator.NEQ)) {
-            // Similarly for inequality, just by wrapping in a NOT predicate and short-circuit any additional processing
-            propertyConditions.add(getNotEqualsConditions(propertyRef, value));
             return propertyConditions;
         } else {
             Symbol predicate = getPredicateForOperator(comparator);
@@ -503,19 +503,6 @@ public class ConditionBuilder {
      */
     private static IPersistentCollection getEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
         return PersistentVector.create(CruxQuery.DOC_ID, propertyRef, InstancePropertyValueMapping.getValueForComparison(value));
-    }
-
-    /**
-     * Retrieve conditions to match where the provided property's value does not equal the provided value.
-     * @param propertyRef whose value should be compared
-     * @param value to compare against
-     * @return IPersistentCollection giving the conditions
-     */
-    private static IPersistentCollection getNotEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
-        List<Object> predicateComparison = new ArrayList<>();
-        predicateComparison.add(NOT_OPERATOR);
-        predicateComparison.add(PersistentVector.create(CruxQuery.DOC_ID, propertyRef, InstancePropertyValueMapping.getValueForComparison(value)));
-        return PersistentList.create(predicateComparison);
     }
 
     /**

@@ -4,7 +4,6 @@ package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import crux.api.CruxDocument;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityDetail;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceHeader;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.slf4j.Logger;
@@ -22,12 +21,14 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
 
     private static final Logger log = LoggerFactory.getLogger(InstanceHeaderMapping.class);
 
-    private static final String INSTANCE_URL = ("instanceURL");
+    private static final String INSTANCE_URL = "instanceURL";
+    private static final String RE_IDENTIFIED_FROM_GUID = "reIdentifiedFromGUID";
 
     private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
         Set<String> set = new HashSet<>();
         set.add(INSTANCE_URL);
+        set.add(RE_IDENTIFIED_FROM_GUID);
         return set;
     }
 
@@ -76,6 +77,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
         CruxDocument.Builder builder = CruxDocument.builder(getGuidReference(instanceHeader));
         super.buildDoc(builder, instanceHeader);
         builder.put(INSTANCE_URL, instanceHeader.getInstanceURL());
+        // TODO builder.put(RE_IDENTIFIED_FROM_GUID, instanceHeader.getReIdentifiedFromGUID());
         return builder;
     }
 
@@ -91,6 +93,8 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
             String value = objValue == null ? null : objValue.toString();
             if (INSTANCE_URL.equals(property)) {
                 instanceHeader.setInstanceURL(value);
+            } else if (RE_IDENTIFIED_FROM_GUID.equals(property)) {
+                // TODO instanceHeader.setReIdentifiedFromGUID(value);
             } else {
                 log.warn("Unmapped InstanceHeader property ({}): {}", property, objValue);
             }
