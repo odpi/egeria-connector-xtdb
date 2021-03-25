@@ -72,12 +72,21 @@ public class CruxQuery {
 
     /**
      * Add a condition to limit the type of the results by their TypeDef GUID.
+     * @param category by which to limit results
      * @param typeGuid by which to limit the results (if null, will be ignored)
      * @param subtypeLimits limit the results to only these subtypes (if provided: ignored if typeGuid is null)
      */
-    public void addTypeCondition(String typeGuid, List<String> subtypeLimits) {
+    public void addTypeCondition(TypeDefCategory category, String typeGuid, List<String> subtypeLimits) {
         if (typeGuid != null) {
             conditions.add(getTypeCondition(DOC_ID, typeGuid, subtypeLimits));
+        } else {
+            // If a type GUID has not even been provided, then fallback to only limiting based on whether we want
+            // instances of entities or relationships (but leave out if we have type GUIDs, as this is otherwise redundant)
+            conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
+        }
+        // And if we are searching for entities, enforce that we retrieve only full entities (not proxies)
+        if (category.equals(TypeDefCategory.ENTITY_DEF)) {
+            conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER), false));
         }
     }
 
@@ -105,22 +114,6 @@ public class CruxQuery {
             orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), typeGuid));
         }
         return PersistentList.create(orConditions);
-    }
-
-    /**
-     * Add a condition to limit the results to those with the provided type definition category (ie. only entities or
-     * only relationships).
-     * @param category by which to limit results
-     */
-    public void addTypeDefCategoryCondition(TypeDefCategory category) {
-        if (category != null) {
-            conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
-            if (category.equals(TypeDefCategory.ENTITY_DEF)) {
-                // If we are searching for an entity, additionally enforce that we retrieve only full entities
-                // (not proxies)
-                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER), false));
-            }
-        }
     }
 
     /**
@@ -248,6 +241,17 @@ public class CruxQuery {
             if (statusCondition != null) {
                 conditions.add(statusCondition);
             }
+        } else {
+            // If no status limit was specified, retrieve only non-DELETED objects
+            Integer deleted = EnumPropertyValueMapping.getOrdinalForInstanceStatus(InstanceStatus.DELETED);
+            Symbol variable = Symbol.intern(InstanceAuditHeaderMapping.CURRENT_STATUS);
+            Keyword propertyRef = Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS);
+            conditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
+            List<Object> predicateComparison = new ArrayList<>();
+            predicateComparison.add(ConditionBuilder.NEQ_OPERATOR);
+            predicateComparison.add(variable);
+            predicateComparison.add(deleted);
+            conditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
         }
     }
 

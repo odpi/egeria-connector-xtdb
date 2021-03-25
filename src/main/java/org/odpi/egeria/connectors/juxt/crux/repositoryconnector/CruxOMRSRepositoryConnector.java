@@ -14,10 +14,14 @@ import org.odpi.egeria.connectors.juxt.crux.model.search.CruxQuery;
 import org.odpi.egeria.connectors.juxt.crux.model.search.TextConditionBuilder;
 import org.odpi.openmetadata.frameworks.connectors.ffdc.ConnectorCheckedException;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.PropertyComparisonOperator;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.PropertyCondition;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchClassifications;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchProperties;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.PrimitiveDefCategory;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryConnector;
@@ -516,6 +520,43 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     sequencingProperty,
                     sequencingOrder,
                     pageSize,
+                    userId);
+
+            log.debug("Found results: {}", cruxResults);
+            results = resultsToList(db, cruxResults);
+
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
+        }
+
+        return results;
+
+    }
+
+    /**
+     * Find all relationships homed in this repository for the provided entity.
+     * @param entity for which to find relationships
+     * @param userId of the user running the query
+     * @return {@code List<Relationship>} list of the homed relationships
+     * @throws RepositoryErrorException if any issue closing open Crux resources
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
+     */
+    public List<Relationship> findHomedRelationshipsForEntity(EntityDetail entity,
+                                                              String userId) throws RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "findHomedRelationshipsForEntity";
+        List<Relationship> results;
+
+        // Since a relationship involves not only the relationship object, but also some details from each proxy,
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = cruxAPI.openDB()) {
+
+            Collection<List<?>> cruxResults = findHomedEntityRelationships(db,
+                    entity,
                     userId);
 
             log.debug("Found results: {}", cruxResults);
@@ -1943,6 +1984,52 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Find the relationships that match the provided parameters.
+     * @param db already opened point-in-time view of the database
+     * @param entity for which to find relationships
+     * @param userId of the user running the query
+     * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
+     */
+    public Collection<List<?>> findHomedEntityRelationships(ICruxDatasource db,
+                                                            EntityDetail entity,
+                                                            String userId) throws TimeoutException {
+        CruxQuery query = new CruxQuery();
+        query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entity.getGUID()));
+        SearchProperties matchProperties = new SearchProperties();
+        List<PropertyCondition> conditions = new ArrayList<>();
+        PrimitivePropertyValue metadataCollectionId = new PrimitivePropertyValue();
+        metadataCollectionId.setPrimitiveDefCategory(PrimitiveDefCategory.OM_PRIMITIVE_TYPE_STRING);
+        metadataCollectionId.setPrimitiveValue(entity.getMetadataCollectionId());
+        PropertyCondition byMetadataCollectionId = new PropertyCondition();
+        byMetadataCollectionId.setProperty("metadataCollectionId");
+        byMetadataCollectionId.setOperator(PropertyComparisonOperator.EQ);
+        byMetadataCollectionId.setValue(metadataCollectionId);
+        conditions.add(byMetadataCollectionId);
+        matchProperties.setConditions(conditions);
+        matchProperties.setMatchCriteria(MatchCriteria.ALL);
+        try {
+            updateQuery(query,
+                    TypeDefCategory.RELATIONSHIP_DEF,
+                    null,
+                    null,
+                    matchProperties,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    userId);
+        } catch (TypeErrorException e) {
+            log.error("Unexpected type error, when no types are being explicitly used.", e);
+        }
+        log.debug("Querying with: {}", query.getQuery());
+        Collection<List<?>> results = db.query(query.getQuery());
+        // Note: we de-duplicate here, against the full set of results from Crux
+        return deduplicate(results);
+    }
+
+    /**
      * Find the immediate neighbors (1-degree separated entities and the relationships between) using the provided criteria.
      * @param db already opened point-in-view of the database
      * @param entityGUID of the entity for which to find immediate relationships
@@ -1997,8 +2084,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // the speed for very broad scenarios (where no type limiter is specified, or only Referenceable)
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, typeGuid, subtypeGuids, namespace);
         query.addPropertyConditions(matchProperties, namespace, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
-        query.addTypeCondition(typeGuid, subtypeGuids);
-        query.addTypeDefCategoryCondition(category);
+        query.addTypeCondition(category, typeGuid, subtypeGuids);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addStatusLimiters(limitResultsByStatus);
@@ -2036,8 +2122,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         } else {
             query.addConditions(TextConditionBuilder.buildWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, false, luceneRegexes));
         }
-        query.addTypeCondition(typeGuid, null);
-        query.addTypeDefCategoryCondition(category);
+        query.addTypeCondition(category, typeGuid, null);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
         query.addStatusLimiters(limitResultsByStatus);
@@ -2134,6 +2219,19 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 // next one
             }
             return pageOfResults;
+        }
+    }
+
+    /**
+     * De-duplicate and return the full set of results from the provided collection of Crux query results.
+     * @param results from a Crux query
+     * @return {@code Collection<List<?>>} of all unique results
+     */
+    private Collection<List<?>> deduplicate(Collection<List<?>> results) {
+        if (results == null || results.isEmpty()) {
+            return results;
+        } else {
+            return new ArrayList<>(new HashSet<>(results));
         }
     }
 

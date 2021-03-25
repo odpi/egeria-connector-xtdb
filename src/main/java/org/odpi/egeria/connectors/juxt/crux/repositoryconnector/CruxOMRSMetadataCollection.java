@@ -954,31 +954,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateInstanceStatusForDelete(repositoryName, entity, methodName);
 
         try {
-            // Note: we should only attempt to remove relationships which are not already deleted, so we will limit
-            // our cascade search to all statuses _except_ DELETED
-            List<InstanceStatus> limitByStatus = new ArrayList<>();
-            limitByStatus.add(InstanceStatus.ACTIVE);
-            limitByStatus.add(InstanceStatus.DRAFT);
-            limitByStatus.add(InstanceStatus.UNKNOWN);
-            limitByStatus.add(InstanceStatus.PREPARED);
-            limitByStatus.add(InstanceStatus.PROPOSED);
-            limitByStatus.add(InstanceStatus.APPROVED);
-            limitByStatus.add(InstanceStatus.REJECTED);
-            limitByStatus.add(InstanceStatus.APPROVED_CONCEPT);
-            limitByStatus.add(InstanceStatus.UNDER_DEVELOPMENT);
-            limitByStatus.add(InstanceStatus.DEVELOPMENT_COMPLETE);
-            limitByStatus.add(InstanceStatus.APPROVED_FOR_DEPLOYMENT);
-            limitByStatus.add(InstanceStatus.STANDBY);
-            limitByStatus.add(InstanceStatus.FAILED);
-            limitByStatus.add(InstanceStatus.DISABLED);
-            limitByStatus.add(InstanceStatus.COMPLETE);
-            limitByStatus.add(InstanceStatus.DEPRECATED);
-            limitByStatus.add(InstanceStatus.OTHER);
+            // TODO: optimise this query since we do not really need the entire relationship to delete it?
             List<Relationship> relationships = this.getRelationshipsForEntity(userId,
                     obsoleteEntityGUID,
                     null,
                     0,
-                    limitByStatus,
+                    null,
                     null,
                     null,
                     null,
@@ -1616,12 +1597,36 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
         repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
 
+        EntityDetail deletedEntity = new EntityDetail(entity);
+        deletedEntity.setStatusOnDelete(entity.getStatus());
+        deletedEntity.setStatus(InstanceStatus.DELETED);
+        deletedEntity = repositoryHelper.incrementVersion(userId, entity, deletedEntity);
+
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setGUID(newEntityGUID);
+        // TODO updatedEntity.setReIdentifiedFromGUID(entityGUID);
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         Transaction.Builder tx = Transaction.builder();
-        cruxRepositoryConnector.addPurgeEntityStatements(tx, entity.getGUID());
+
+        // 1. Retrieve all the homed relationships that refer to the existing GUID as a proxy
+        List<Relationship> relationships = cruxRepositoryConnector.findHomedRelationshipsForEntity(entity, userId);
+
+        // 2. Update each of these relationships' proxy references to the new GUID
+        EntityProxy ep = repositoryHelper.getNewEntityProxy(repositoryName, updatedEntity);
+        for (Relationship relationship : relationships) {
+            if (relationship.getEntityOneProxy().getGUID().equals(entityGUID)) {
+                relationship.setEntityOneProxy(ep);
+            } else if (relationship.getEntityTwoProxy().getGUID().equals(entityGUID)) {
+                relationship.setEntityTwoProxy(ep);
+            }
+            cruxRepositoryConnector.addUpdateRelationshipStatements(tx, relationship);
+        }
+
+        // 3. Delete the original entity GUID
+        cruxRepositoryConnector.addCreateEntityStatements(tx, deletedEntity);
+
+        // 4. Create the new entity GUID as a new entity
         cruxRepositoryConnector.addCreateEntityStatements(tx, updatedEntity);
         cruxRepositoryConnector.runTx(tx.build());
 
@@ -1739,12 +1744,22 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         repositoryValidator.validateRelationshipCanBeUpdated(repositoryName, metadataCollectionId, relationship, methodName);
 
+        Relationship deletedRelationship = new Relationship(relationship);
+        deletedRelationship.setStatusOnDelete(relationship.getStatusOnDelete());
+        deletedRelationship.setStatusOnDelete(InstanceStatus.DELETED);
+        deletedRelationship = repositoryHelper.incrementVersion(userId, relationship, deletedRelationship);
+
         Relationship updatedRelationship = new Relationship(relationship);
         updatedRelationship.setGUID(newRelationshipGUID);
+        // TODO updatedRelationship.setReIdentifiedFromGUID(relationshipGUID);
         updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
 
         Transaction.Builder tx = Transaction.builder();
-        cruxRepositoryConnector.addPurgeRelationshipStatements(tx, relationshipGUID);
+
+        // 1. Delete the original relationship GUID
+        cruxRepositoryConnector.addUpdateRelationshipStatements(tx, deletedRelationship);
+
+        // 2. Create the new relationship GUID as a new relationship
         cruxRepositoryConnector.addCreateRelationshipStatements(tx, updatedRelationship);
         cruxRepositoryConnector.runTx(tx.build());
 
