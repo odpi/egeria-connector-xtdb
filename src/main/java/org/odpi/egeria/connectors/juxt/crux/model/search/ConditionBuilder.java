@@ -559,7 +559,7 @@ public class ConditionBuilder {
         Keyword propertyRef;
         // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
         // InstanceValueProperties but simple native types
-        if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS)) {
+        if (namespace != null && namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS)) {
             // However, if they are instance headers embedded in a classification, they still need the base-level
             // classification namespace qualifier
             propertyRef = Keyword.intern(namespace, propertyName);
