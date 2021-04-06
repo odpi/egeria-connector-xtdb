@@ -91,7 +91,6 @@ public class ConditionBuilder {
                     // Ensure every condition, whether nested or singular, is added to the 'allConditions' list
                     List<IPersistentCollection> cruxConditions = getSinglePropertyCondition(
                             condition,
-                            matchCriteria,
                             namespace,
                             typeNames,
                             repositoryHelper,
@@ -180,7 +179,6 @@ public class ConditionBuilder {
      * @param propertyRef to compare
      * @param comparator comparison to carry out
      * @param value against which to compare
-     * @param outerCriteria matching criteria inside of which this condition will exist
      * @param variable to which to compare
      * @param repositoryHelper through which we can introspect regular expressions
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
@@ -190,7 +188,6 @@ public class ConditionBuilder {
     static List<IPersistentCollection> buildConditionForPropertyRef(Keyword propertyRef,
                                                                     PropertyComparisonOperator comparator,
                                                                     InstancePropertyValue value,
-                                                                    MatchCriteria outerCriteria,
                                                                     Symbol variable,
                                                                     OMRSRepositoryHelper repositoryHelper,
                                                                     boolean luceneEnabled,
@@ -207,7 +204,7 @@ public class ConditionBuilder {
             Symbol predicate = getPredicateForOperator(comparator);
             if (REGEX_OPERATOR.equals(predicate)) {
                 // This method already handles wrapping, if needed, so we can return its results directly
-                return TextConditionBuilder.buildRegexConditions(propertyRef, value, outerCriteria, variable, repositoryHelper, luceneEnabled, luceneRegexes);
+                return TextConditionBuilder.buildRegexConditions(propertyRef, value, variable, repositoryHelper, luceneEnabled, luceneRegexes);
             } else if (IN_OPERATOR.equals(predicate)) {
                 // For the IN comparison, we need an extra condition to setup the set to compare against
                 // [(hash-set 1 2 3) las]    - needed for lists, to ensure the list is a unique set of keys to check against
@@ -245,22 +242,8 @@ public class ConditionBuilder {
             //  [e :property variable]            - always needed, to define how to map the property's value to a variable
             IPersistentVector propertyToVariable = PersistentVector.create(CruxQuery.DOC_ID, propertyRef, variable);
 
-            // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (will be OR-wrapped))
-            if (MatchCriteria.ANY.equals(outerCriteria) && (clauseConditions.size() > 1)) {
-                // Since the variables involved across multiple conditions can be different, and an OR predicate
-                // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
-                // two conditions together with an AND predicate (if there is more than one condition)
-                List<Object> andWrapper = new ArrayList<>();
-                andWrapper.add(AND_OPERATOR);
-                andWrapper.add(propertyToVariable);
-                andWrapper.addAll(clauseConditions);
-                propertyConditions.add(PersistentList.create(andWrapper));
-            } else {
-                // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
-                // 'not' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not)
-                propertyConditions.add(propertyToVariable);
-                propertyConditions.addAll(clauseConditions);
-            }
+            propertyConditions.add(propertyToVariable);
+            propertyConditions.addAll(clauseConditions);
         }
 
         return propertyConditions;
@@ -271,7 +254,6 @@ public class ConditionBuilder {
      * Translate the provided condition, considered on its own, into a Crux query condition. Handles both single
      * property conditions and nested conditions (though the latter simply recurse back to getPropertyConditions)
      * @param singleCondition to translate (should not contain nested condition)
-     * @param outerCriteria the outer match criteria in which this condition is contained
      * @param namespace by which to qualify the properties in the condition
      * @param typeNames of all of the types we are including in the search
      * @param repositoryHelper through which we can lookup type information and properties
@@ -282,7 +264,6 @@ public class ConditionBuilder {
      * @see #buildPropertyConditions(SearchProperties, String, boolean, Set, OMRSRepositoryHelper, String, boolean, boolean)
      */
     private static List<IPersistentCollection> getSinglePropertyCondition(PropertyCondition singleCondition,
-                                                                          MatchCriteria outerCriteria,
                                                                           String namespace,
                                                                           Set<String> typeNames,
                                                                           OMRSRepositoryHelper repositoryHelper,
@@ -316,7 +297,6 @@ public class ConditionBuilder {
                         propertyRef,
                         comparator,
                         value,
-                        outerCriteria,
                         Symbol.intern(simpleName),
                         repositoryHelper,
                         luceneEnabled,
@@ -369,7 +349,6 @@ public class ConditionBuilder {
                                 qualifiedPropertyRef,
                                 comparator,
                                 value,
-                                outerCriteria,
                                 Symbol.intern(simpleName),
                                 repositoryHelper,
                                 luceneEnabled,
@@ -406,7 +385,6 @@ public class ConditionBuilder {
                             simpleName,
                             comparator,
                             value,
-                            outerCriteria,
                             qualifiedSearchProperties,
                             repositoryHelper,
                             luceneEnabled,
@@ -451,7 +429,6 @@ public class ConditionBuilder {
      * @param simpleName of the property (unqualified by type details)
      * @param comparator used to compare the property's value
      * @param value of the property
-     * @param outerCriteria in which this condition will be wrapped
      * @param qualifiedSearchProperties the set of unique type-qualified property names as keywords
      * @param repositoryHelper through which we can lookup type information and properties
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
@@ -461,7 +438,6 @@ public class ConditionBuilder {
     private static List<List<IPersistentCollection>> getFallbackConditions(String simpleName,
                                                                            PropertyComparisonOperator comparator,
                                                                            InstancePropertyValue value,
-                                                                           MatchCriteria outerCriteria,
                                                                            Set<Keyword> qualifiedSearchProperties,
                                                                            OMRSRepositoryHelper repositoryHelper,
                                                                            boolean luceneEnabled,
@@ -477,12 +453,10 @@ public class ConditionBuilder {
         // through and build up a set of conditions for each variation of the property
         Symbol symbolForVariable = Symbol.intern(simpleName);
         for (Keyword qualifiedPropertyRef : qualifiedSearchProperties) {
-            // TODO: this may end up as a double-wrapped AND (?)
             List<IPersistentCollection> conditionsForOneProperty = buildConditionForPropertyRef(
                     qualifiedPropertyRef,
                     comparator,
                     value,
-                    outerCriteria,
                     symbolForVariable,
                     repositoryHelper,
                     luceneEnabled,

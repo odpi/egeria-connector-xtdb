@@ -108,7 +108,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         mapper.writeValue(configFile, cruxConfig);
                         // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
                         // the configurationProperties
-                        luceneConfigured = cruxConfig.containsKey(Constants.CRUX_LUCENE);
+                        luceneConfigured = cruxConfig.containsKey(Constants.EGERIA_LUCENE);
                     }
                 } catch (IOException e) {
                     throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
