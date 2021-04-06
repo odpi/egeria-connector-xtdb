@@ -4,7 +4,7 @@
 ;; Based on original work licensed as follows:
 ;; The MIT License (MIT)
 ;;
-;; Copyright © 2018-2019 JUXT LTD.
+;; Copyright © 2018-2021 JUXT LTD.
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy of
 ;; this software and associated documentation files (the "Software"), to deal in
@@ -23,7 +23,7 @@
 ;; IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(ns crux.lucene
+(ns egeria.crux.lucene
   (:require [clojure.spec.alpha :as s]
             [clojure.tools.logging :as log]
             [crux.bus :as bus]

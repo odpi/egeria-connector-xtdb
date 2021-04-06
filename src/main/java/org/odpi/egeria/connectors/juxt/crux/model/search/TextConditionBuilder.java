@@ -5,7 +5,6 @@ package org.odpi.egeria.connectors.juxt.crux.model.search;
 import clojure.lang.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.odpi.egeria.connectors.juxt.crux.mapping.InstancePropertyValueMapping;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.PropertyComparisonOperator;
@@ -95,33 +94,42 @@ public class TextConditionBuilder {
         }
 
         List<IPersistentCollection> conditions = new ArrayList<>();
-        List<Object> wrapped = new ArrayList<>();
+        List<Object> or = new ArrayList<>();
         // Note that we will only wrap with OR if there is more than a single condition...
         if (stringProperties.size() > 1) {
-            wrapped.add(ConditionBuilder.OR_OPERATOR);
-        }
-        // For each string attribute, add an "or" condition that matches against the provided regex
-        for (Keyword propertyRef : stringProperties) {
-            Symbol var = Symbol.intern("v");
-            List<IPersistentCollection> propertyConditions = ConditionBuilder.buildConditionForPropertyRef(
-                    propertyRef,
-                    PropertyComparisonOperator.LIKE,
-                    string,
-                    MatchCriteria.ANY,
-                    var,
-                    repositoryHelper,
-                    luceneEnabled,
-                    luceneRegexes
-            );
-            if (stringProperties.size() == 1) {
-                // If there is only a single property, add it directly without any wrapping
-                conditions.addAll(propertyConditions);
-            } else {
-                wrapped.addAll(propertyConditions);
+            or.add(ConditionBuilder.OR_OPERATOR);
+            // For each string attribute, add an "or" condition that matches against the provided regex
+            for (Keyword propertyRef : stringProperties) {
+                List<Object> and = new ArrayList<>();
+                and.add(ConditionBuilder.AND_OPERATOR);
+                Symbol var = Symbol.intern("v");
+                List<IPersistentCollection> propertyConditions = ConditionBuilder.buildConditionForPropertyRef(
+                        propertyRef,
+                        PropertyComparisonOperator.LIKE,
+                        string,
+                        var,
+                        repositoryHelper,
+                        luceneEnabled,
+                        luceneRegexes
+                );
+                and.addAll(propertyConditions);
+                or.add(PersistentList.create(and));
             }
-        }
-        if (!wrapped.isEmpty()) {
-            conditions.add(PersistentList.create(wrapped));
+            conditions.add(PersistentList.create(or));
+        } else {
+            for (Keyword propertyRef : stringProperties) {
+                Symbol var = Symbol.intern("v");
+                List<IPersistentCollection> propertyConditions = ConditionBuilder.buildConditionForPropertyRef(
+                        propertyRef,
+                        PropertyComparisonOperator.LIKE,
+                        string,
+                        var,
+                        repositoryHelper,
+                        luceneEnabled,
+                        luceneRegexes
+                );
+                conditions.addAll(propertyConditions);
+            }
         }
 
         return conditions;
@@ -245,7 +253,6 @@ public class TextConditionBuilder {
      * Retrieve the optimal regular expression query conditions for the provided inputs.
      * @param propertyRef to compare
      * @param value against which to compare
-     * @param outerCriteria matching criteria inside of which this condition will exist
      * @param variable to which to compare
      * @param repositoryHelper through which we can introspect regular expressions
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
@@ -254,7 +261,6 @@ public class TextConditionBuilder {
      */
     static List<IPersistentCollection> buildRegexConditions(Keyword propertyRef,
                                                             InstancePropertyValue value,
-                                                            MatchCriteria outerCriteria,
                                                             Symbol variable,
                                                             OMRSRepositoryHelper repositoryHelper,
                                                             boolean luceneEnabled,
@@ -304,22 +310,9 @@ public class TextConditionBuilder {
             //  [(re-matches #"regex" s_variable)] - for a regex-based (string) predicate
             List<Object> predicateComparison = getRegexCondition(regexSearchString, nonNullStringVar, repositoryHelper);
             clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-            // Start by wrapping everything with an 'and' predicate (only needed if outer condition is ANY (will be OR-wrapped))
-            if (MatchCriteria.ANY.equals(outerCriteria)) {
-                // Since the variables involved across multiple conditions can be different, and an OR predicate
-                // requires all of the variables to be the same, if the outer criteria is ANY we need to wrap these
-                // two conditions together with an AND predicate
-                List<Object> andWrapper = new ArrayList<>();
-                andWrapper.add(ConditionBuilder.AND_OPERATOR);
-                andWrapper.add(propertyToVariable);
-                andWrapper.addAll(clauseConditions);
-                propertyConditions.add(PersistentList.create(andWrapper));
-            } else {
-                // Otherwise (NONE and ALL) we do not need any wrapping here (calling method will wrap with a
-                // 'not' for a NONE, but we do not need an inner AND wrapping as it is implicit for a not)
-                propertyConditions.add(propertyToVariable);
-                propertyConditions.addAll(clauseConditions);
-            }
+            // No need to wrap anything here, will be handled by calling method(s)
+            propertyConditions.add(propertyToVariable);
+            propertyConditions.addAll(clauseConditions);
 
         } else {
             log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
