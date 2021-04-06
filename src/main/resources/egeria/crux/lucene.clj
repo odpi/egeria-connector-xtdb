@@ -329,7 +329,7 @@
     (.commit index-writer)
     (validate-lucene-store-up-to-date index-store lucene-store)
     (q/assoc-pred-ctx! query-engine ::lucene-store lucene-store)
-    (bus/listen bus {:crux/event-types #{:crux.tx/committing-tx}
+    (bus/listen bus {:crux/event-types #{:crux.tx/committing-tx :crux.tx/aborting-tx}
                      :crux.bus/executor (reify java.util.concurrent.Executor
                                           (execute [_ f]
                                             (.run f)))}
