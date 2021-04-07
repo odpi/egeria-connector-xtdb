@@ -1746,7 +1746,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         Relationship deletedRelationship = new Relationship(relationship);
         deletedRelationship.setStatusOnDelete(relationship.getStatusOnDelete());
-        deletedRelationship.setStatusOnDelete(InstanceStatus.DELETED);
+        deletedRelationship.setStatus(InstanceStatus.DELETED);
         deletedRelationship = repositoryHelper.incrementVersion(userId, relationship, deletedRelationship);
 
         Relationship updatedRelationship = new Relationship(relationship);
