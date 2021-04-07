@@ -2202,15 +2202,18 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 if (currentIndex >= lastResultIndex) {
                     // If we are at / beyond the last index, break out of the loop
                     break;
-                } else if (currentIndex >= fromElement && !pageOfResults.contains(singleResult)) {
-                    // Otherwise, only add this result if it is at or beyond the starting point (fromElement) and
-                    // our list of results does not already contain this result (in which case, also increment our
-                    // current index for the number of results we have captured)
-                    pageOfResults.add(singleResult);
-                    currentIndex++;
+                } else if (currentIndex >= fromElement) {
+                    if (!pageOfResults.contains(singleResult)) {
+                        // Otherwise, only add this result if it is at or beyond the starting point (fromElement) and
+                        // our list of results does not already contain this result (in which case, also increment our
+                        // current index for the number of results we have captured)
+                        pageOfResults.add(singleResult);
+                        currentIndex++;
+                    }
                 } else if (!skippedResults.contains(singleResult)) {
-                    // Otherwise, remember that we have skipped this result and increment the current index
-                    // accordingly
+                    // Otherwise, remember that we have are skipping this result and increment the current index
+                    // accordingly just this once (necessary to skip only the correct number of results, when the
+                    // fromElement is not 0)
                     skippedResults.add(singleResult);
                     currentIndex++;
                 }
