@@ -65,8 +65,12 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
             case ARRAY:
                 value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison((ArrayPropertyValue) ipv);
                 break;
-            case STRUCT: // TODO...
-            case MAP: // TODO...
+            case MAP:
+                value = MapPropertyValueMapping.getMapPropertyValueForComparison((MapPropertyValue) ipv);
+                break;
+            case STRUCT:
+                value = StructPropertyValueMapping.getStructPropertyValueForComparison((StructPropertyValue) ipv);
+                break;
             case UNKNOWN:
             default:
                 log.warn("Unmapped value type: {}", category);
@@ -150,7 +154,25 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                     );
                     break;
                 case MAP:
+                    MapPropertyValueMapping.addMapPropertyValueToDoc(
+                            cruxConnector,
+                            instanceType,
+                            builder,
+                            propertyName,
+                            namespace,
+                            (MapPropertyValue) value
+                    );
+                    break;
                 case STRUCT:
+                    StructPropertyValueMapping.addStructPropertyValueToDoc(
+                            cruxConnector,
+                            instanceType,
+                            builder,
+                            propertyName,
+                            namespace,
+                            (StructPropertyValue) value
+                    );
+                    break;
                 case UNKNOWN:
                 default:
                     log.warn("No searchable mapping yet implemented for InstancePropertyValue category: {}", category);

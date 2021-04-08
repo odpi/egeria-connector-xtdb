@@ -43,7 +43,7 @@ public class ArrayPropertyValueMapping extends InstancePropertyValueMapping {
     }
 
     /**
-     * Convert the provided primitive property value into a Crux comparable form.
+     * Convert the provided array property value into a Crux comparable form.
      * @param apv Egeria value to translate to Crux-comparable value
      * @return {@code List<Object>} value that Crux can compare
      */
