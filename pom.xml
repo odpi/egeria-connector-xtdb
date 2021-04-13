@@ -67,7 +67,7 @@
         <crux.version>21.04-1.16.0-beta</crux.version>
         <crux-alpha.version>21.04-1.16.0-alpha</crux-alpha.version>
         <clojure.version>1.10.3</clojure.version>
-        <jackson.version>2.12.2</jackson.version>
+        <jackson.version>2.12.3</jackson.version>
         <lucene.version>8.8.1</lucene.version>
         <slf4j.version>1.7.30</slf4j.version>
         <!-- Platform encoding  -->
