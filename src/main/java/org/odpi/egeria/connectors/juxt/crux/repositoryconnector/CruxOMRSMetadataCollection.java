@@ -1604,7 +1604,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setGUID(newEntityGUID);
-        // TODO updatedEntity.setReIdentifiedFromGUID(entityGUID);
+        updatedEntity.setReIdentifiedFromGUID(entityGUID);
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
 
         Transaction.Builder tx = Transaction.builder();
@@ -1751,7 +1751,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         Relationship updatedRelationship = new Relationship(relationship);
         updatedRelationship.setGUID(newRelationshipGUID);
-        // TODO updatedRelationship.setReIdentifiedFromGUID(relationshipGUID);
+        updatedRelationship.setReIdentifiedFromGUID(relationshipGUID);
         updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
 
         Transaction.Builder tx = Transaction.builder();
