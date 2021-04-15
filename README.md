@@ -4,7 +4,7 @@
 <!-- [![Quality](https://sonarcloud.io/api/project_badges/measure?project=egeria-connector-crux&metric=alert_status)](https://sonarcloud.io/dashboard?id=egeria-connector-crux) -->
 <!-- [![Snapshot](https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Ftoken%3A82d3aaedcfbb070176d9b30df29ea28768b90691%40maven.pkg.github.com%2Fodpi%2Fegeria-connector-crux%2Forg%2Fodpi%2Fegeria%2Fegeria-connector-crux%2Fmaven-metadata.xml)](https://github.com/odpi/egeria-connector-crux/packages/617324) -->
 
-[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE)
+[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies)
 [![License](https://img.shields.io/github/license/odpi/egeria-connector-crux)](LICENSE)
 [![Build](https://github.com/odpi/egeria-connector-crux/workflows/Build/badge.svg)](https://github.com/odpi/egeria-connector-crux/actions/workflows/merge.yml?query=workflow%3ABuild)
 [![CodeQL](https://github.com/odpi/egeria-connector-crux/workflows/CodeQL/badge.svg)](https://github.com/odpi/egeria-connector-crux/actions/workflows/codeql-analysis.yml)
