@@ -86,7 +86,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * {@inheritDoc}
      */
     @Override
-    public void start() throws ConnectorCheckedException {
+    public synchronized void start() throws ConnectorCheckedException {
 
         super.start();
         final String methodName = "start";
@@ -161,7 +161,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * {@inheritDoc}
      */
     @Override
-    public void disconnect() throws ConnectorCheckedException {
+    public synchronized void disconnect() throws ConnectorCheckedException {
 
         final String methodName = "disconnect";
         super.disconnect();
