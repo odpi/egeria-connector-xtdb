@@ -157,7 +157,7 @@ public class TextConditionBuilder {
         List<IPersistentCollection> conditions = null;
         // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
         // will be to add the Lucene condition if we can, but if not possible we will fallback to a non-Lucene search
-        if (regexCriteria != null && !regexCriteria.equals("")) {
+        if (regexCriteria != null && regexCriteria.length() > 0) {
             String searchString = getLuceneComparisonString(regexCriteria, repositoryHelper, luceneRegexes);
             if (searchString == null) {
                 // If we cannot run a Lucene-optimised query, then we will fallback to a full OR-based text condition

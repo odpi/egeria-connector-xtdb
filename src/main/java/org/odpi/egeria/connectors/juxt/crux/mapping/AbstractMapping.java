@@ -51,10 +51,10 @@ public abstract class AbstractMapping {
      * @return String representation of the form ':namespace/name'
      */
     public static String getKeyword(String namespace, String name) {
-        if (name == null || name.equals("")) {
+        if (name == null || name.length() == 0) {
             return null;
         }
-        if (namespace == null || namespace.equals("")) {
+        if (namespace == null || namespace.length() == 0) {
             return name;
         } else {
             return namespace + "/" + name;
