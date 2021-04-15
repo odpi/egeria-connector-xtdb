@@ -39,6 +39,7 @@ volumeParameters:
   instancesPerType: 5
   maxSearchResults: 2
   waitBetweenScenarios: 0
+  profilesToSkip: "[]"
 
 rocksdb:
   version: 6.15.2
