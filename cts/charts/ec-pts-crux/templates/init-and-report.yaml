@@ -92,7 +92,7 @@ spec:
                 curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST
                 --header "Content-Type: application/json"
                 ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/conformance-suite-workbenches/repository-workbench/performance
-                --data '{"class":"RepositoryPerformanceWorkbenchConfig","tutRepositoryServerName":"'"${CRUX_SERVER}"'","instancesPerType":{{ .Values.volumeParameters.instancesPerType }},"maxSearchResults":{{ .Values.volumeParameters.maxSearchResults }},"waitBetweenScenarios":{{ .Values.volumeParameters.waitBetweenScenarios }} }'
+                --data '{"class":"RepositoryPerformanceWorkbenchConfig","tutRepositoryServerName":"'"${CRUX_SERVER}"'","instancesPerType":{{ .Values.volumeParameters.instancesPerType }},"maxSearchResults":{{ .Values.volumeParameters.maxSearchResults }},"waitBetweenScenarios":{{ .Values.volumeParameters.waitBetweenScenarios }},"profilesToSkip":{{ .Values.volumeParameters.profilesToSkip }} }'
                 &&
                 curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST
                 ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/instance

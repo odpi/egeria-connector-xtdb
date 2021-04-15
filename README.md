@@ -5,7 +5,7 @@
 <!-- [![Snapshot](https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Ftoken%3A82d3aaedcfbb070176d9b30df29ea28768b90691%40maven.pkg.github.com%2Fodpi%2Fegeria-connector-crux%2Forg%2Fodpi%2Fegeria%2Fegeria-connector-crux%2Fmaven-metadata.xml)](https://github.com/odpi/egeria-connector-crux/packages/617324) -->
 
 [![License](https://img.shields.io/github/license/odpi/egeria-connector-crux)](LICENSE)
-[![Build](https://github.com/odpi/egeria-connector-crux/workflows/Maven%20Package/badge.svg)](https://github.com/odpi/egeria-connector-crux/actions?query=workflow%3A%22Maven+Package%22)
+[![Build](https://github.com/odpi/egeria-connector-crux/workflows/Build/badge.svg)](https://github.com/odpi/egeria-connector-crux/actions?query=workflow%3ABuild)
 [![Snapshot](https://img.shields.io/badge/pre--release-v2.8--SNAPSHOT-blue)](https://github.com/odpi/egeria-connector-crux/releases/download/v0.1-alpha/egeria-connector-crux-2.8-SNAPSHOT-jar-with-dependencies.jar)
 [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux)](https://mvnrepository.com/artifact/org.odpi.egeria/egeria-connector-crux)
 
