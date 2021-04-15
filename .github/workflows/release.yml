@@ -2,17 +2,9 @@
 # Copyright Contributors to the ODPi Egeria project.
 name: "Release"
 
-# Trigger when a Release is created in github
-# - does not run on modification (may be just text)
-
 on:
-  # No checks for branch or repo - assuming release creation is manual, controlled
   release:
-    types:
-      - created
-  # Also allow for manual invocation for testing
-  workflow_dispatch:
-
+    types: [published]
 
 jobs:
   build:
