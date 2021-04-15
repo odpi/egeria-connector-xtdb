@@ -77,7 +77,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
         CruxDocument.Builder builder = CruxDocument.builder(getGuidReference(instanceHeader));
         super.buildDoc(builder, instanceHeader);
         builder.put(INSTANCE_URL, instanceHeader.getInstanceURL());
-        // TODO builder.put(RE_IDENTIFIED_FROM_GUID, instanceHeader.getReIdentifiedFromGUID());
+        builder.put(RE_IDENTIFIED_FROM_GUID, instanceHeader.getReIdentifiedFromGUID());
         return builder;
     }
 
@@ -94,7 +94,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
             if (INSTANCE_URL.equals(property)) {
                 instanceHeader.setInstanceURL(value);
             } else if (RE_IDENTIFIED_FROM_GUID.equals(property)) {
-                // TODO instanceHeader.setReIdentifiedFromGUID(value);
+                instanceHeader.setReIdentifiedFromGUID(value);
             } else {
                 log.warn("Unmapped InstanceHeader property ({}): {}", property, objValue);
             }
