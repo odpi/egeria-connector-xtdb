@@ -115,15 +115,12 @@
 							Start by downloading the Crux repository connector:
 						</p>
 						<div align="center">
-							<a href="https://github.com/odpi/egeria-connector-crux/releases/download/v0.1-alpha/egeria-connector-crux-2.8-SNAPSHOT-jar-with-dependencies.jar">
-								<img alt="Pre-Release" src="https://img.shields.io/badge/pre--release-v2.8--SNAPSHOT-blue">
+							<a href="http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies">
+								<img alt="Release" src="https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release">
 							</a>
-						<!--	<a href="https://search.maven.org/remotecontent?filepath=org/odpi/egeria/egeria-connector-crux/1.0/egeria-connector-crux-1.0-jar-with-dependencies.jar">
-								<img alt="Maven Central" src="https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release">
+							<a href="https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/" target="dev">
+								<img alt="Development" src="https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux?label=development&server=https%3A%2F%2Foss.sonatype.org">
 							</a>
-							<a href="https://github.com/odpi/egeria-connector-crux/packages/617324" target="gp">
-								<img alt="Development snapshot" src="https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Ftoken%3A82d3aaedcfbb070176d9b30df29ea28768b90691%40maven.pkg.github.com%2Fodpi%2Fegeria-connector-crux%2Forg%2Fodpi%2Fegeria%2Fegeria-connector-crux%2Fmaven-metadata.xml">
-							</a> -->
 						</div>
 						<p style="font-size: x-large; text-align: left;">
 							The single file downloaded is the connector:<br>
@@ -133,14 +130,13 @@
 					<section>
 						<h3 style="text-align: left;">Snapshots</h3>
 						<p style="font-size: x-large; text-align: left;">
-							Our development snapshots are hosted directly within GitHub. You can download them there
-							using Maven itself, or by <a href="https://github.com/odpi/egeria-connector-crux/packages/617324" target="gp">navigating to the site</a> and looking for the latest version of
-							the <code>jar-with-dependencies.jar</code> file.
+							Our development snapshots are hosted directly within Nexus's open source snapshot repository.
+							You can download them there using Maven itself, or by
+							<a href="https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/" target="dev">navigating to the site</a>
+							and looking for the latest version of the <code>jar-with-dependencies.jar</code> file.
 						</p>
 						<p class="fragment" style="font-size: x-large; text-align: left;">
-							That being said, there are unfortunately currently a number of issues with GitHub Package's
-							web-based UI, so if you really want to use the latest development snapshot you may actually
-							find it easier to build it yourself...
+							Alternatively, you may want to build it yourself...
 						</p>
 					</section>
 					<section data-auto-animate data-menu-title="Building">
@@ -330,11 +326,11 @@ $ mvn clean install
 							Download Egeria's server chassis (you will need at least release 2.7 or later):
 						</p>
 						<div align="center">
-							<a href="https://search.maven.org/remotecontent?filepath=org/odpi/egeria/server-chassis-spring/2.7/server-chassis-spring-2.7.jar">
-								<img alt="Maven Central" src="https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release">
+							<a href="http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=server-chassis-spring&v=RELEASE">
+								<img alt="Release" src="https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release">
 							</a>
-							<a href="https://odpi.jfrog.io/artifactory/egeria-snapshot/org/odpi/egeria/server-chassis-spring/2.8-SNAPSHOT/server-chassis-spring-2.8-SNAPSHOT.jar">
-								<img alt="Maven metadata URL" src="https://img.shields.io/maven-metadata/v?label=development&metadataUrl=https%3A%2F%2Fodpi.jfrog.io%2Fartifactory%2Fegeria-snapshot%2Forg%2Fodpi%2Fegeria%2Fserver-chassis-spring%2Fmaven-metadata.xml">
+							<a href="https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/" target="dev">
+								<img alt="Development" src="https://img.shields.io/nexus/s/org.odpi.egeria/server-chassis-spring?label=development&server=https%3A%2F%2Foss.sonatype.org">
 							</a>
 						</div>
 						<p style="font-size: x-large; text-align: left;">
@@ -345,14 +341,13 @@ $ mvn clean install
 					<section>
 						<h3 style="text-align: left;">Snapshots</h3>
 						<p style="font-size: x-large; text-align: left;">
-							Our development snapshots will soon be hosted directly within GitHub. You can download them there
-							using Maven itself, or by <a href="https://github.com/odpi/egeria-connector-crux/packages/" target="gp">navigating to the site</a> and looking for the latest version of
-							the <code>jar-with-dependencies.jar</code> file.
+							Our development snapshots are hosted on Nexus's open source repository. You can download them there
+							using Maven itself, or by
+							<a href="https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/" target="dev">navigating to the site</a>
+							and looking for the latest version of the <code>jar-with-dependencies.jar</code> file.
 						</p>
 						<p class="fragment" style="font-size: x-large; text-align: left;">
-							That being said, there are unfortunately currently a number of issues with GitHub Package's
-							web-based UI, so if you really want to use the latest development snapshot you may actually
-							find it easier to build it yourself...
+							Alternatively, you may want to build it yourself...
 						</p>
 					</section>
 					<section data-auto-animate data-menu-title="Building">
