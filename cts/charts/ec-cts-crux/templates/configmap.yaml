@@ -25,10 +25,8 @@ data:
   CRUX_SERVER: {{ .Values.crux.proxyserver }}
 
   # Used for downloads
-  #CONNECTOR_JAR: egeria-connector-crux-{{ .Values.crux.snapshotversion }}-jar-with-dependencies.jar
-  #CONNECTOR_URL: https://{{ .Values.crux.snapshottoken }}@maven.pkg.github.com/odpi/egeria-connector-crux/org/odpi/egeria/egeria-connector-crux/{{ .Values.crux.connectorversion }}/egeria-connector-crux-{{ .Values.crux.snapshotversion }}-jar-with-dependencies.jar
-  CONNECTOR_JAR: egeria-connector-crux-2.8-SNAPSHOT-jar-with-dependencies.jar
-  CONNECTOR_URL: https://github.com/odpi/egeria-connector-crux/releases/download/v0.1-alpha/egeria-connector-crux-2.8-SNAPSHOT-jar-with-dependencies.jar
+  CONNECTOR_JAR: egeria-connector-crux-{{ .Values.crux.connectorversion }}-jar-with-dependencies.jar
+  CONNECTOR_URL: {{  .Values.crux.connectorurl }}
   CRUX_ROCKS_JAR_URL: https://clojars.org/repo/juxt/crux-rocksdb/{{ .Values.crux.version }}/crux-rocksdb-{{ .Values.crux.version }}.jar
   ROCKS_JAR_URL: https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/{{ .Values.rocksdb.version }}/rocksdbjni-{{ .Values.rocksdb.version }}.jar
   JNR_JAR_URL: https://repo1.maven.org/maven2/com/github/jnr/jnr-ffi/{{ .Values.jnr.version }}/jnr-ffi-{{ .Values.jnr.version }}.jar

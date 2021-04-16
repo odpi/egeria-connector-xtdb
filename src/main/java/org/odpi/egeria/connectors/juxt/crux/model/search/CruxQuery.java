@@ -53,11 +53,7 @@ public class CruxQuery {
      * @param reference the primary key value of an entity, used to match either end of a relationship
      */
     public void addRelationshipEndpointConditions(String reference) {
-        List<Object> orConditions = new ArrayList<>();
-        orConditions.add(ConditionBuilder.OR_OPERATOR);
-        orConditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_ONE_PROXY), reference));
-        orConditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_TWO_PROXY), reference));
-        conditions.add(PersistentList.create(orConditions));
+        conditions.add(getReferenceCondition(Keyword.intern(RelationshipMapping.ENTITY_PROXIES), reference));
     }
 
     /**
@@ -77,13 +73,7 @@ public class CruxQuery {
      * @param subtypeLimits limit the results to only these subtypes (if provided: ignored if typeGuid is null)
      */
     public void addTypeCondition(TypeDefCategory category, String typeGuid, List<String> subtypeLimits) {
-        if (typeGuid != null) {
-            conditions.add(getTypeCondition(DOC_ID, typeGuid, subtypeLimits));
-        } else {
-            // If a type GUID has not even been provided, then fallback to only limiting based on whether we want
-            // instances of entities or relationships (but leave out if we have type GUIDs, as this is otherwise redundant)
-            conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
-        }
+        conditions.addAll(getTypeCondition(DOC_ID, category, typeGuid, subtypeLimits));
         // And if we are searching for entities, enforce that we retrieve only full entities (not proxies)
         if (category.equals(TypeDefCategory.ENTITY_DEF)) {
             conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER), false));
@@ -93,27 +83,49 @@ public class CruxQuery {
     /**
      * Add a condition to limit the type of the results by their TypeDef GUID.
      * @param variable to resolve against the type
+     * @param category by which to limit results
      * @param typeGuid by which to limit the results
      * @param subtypeLimits limit the results to only these subtypes (if provided)
-     * @return IPersistentList of the conditions
+     * @return {@code List<IPersistentCollection>} of the conditions
      */
-    protected IPersistentList getTypeCondition(Symbol variable, String typeGuid, List<String> subtypeLimits) {
-        List<Object> orConditions = new ArrayList<>();
-        orConditions.add(ConditionBuilder.OR_OPERATOR);
+    protected List<IPersistentCollection> getTypeCondition(Symbol variable, TypeDefCategory category, String typeGuid, List<String> subtypeLimits) {
+        List<IPersistentCollection> conditions = new ArrayList<>();
         if (subtypeLimits != null && !subtypeLimits.isEmpty()) {
             // If subtypes were specified, search only for those (explicitly)
-            for (String subtypeGuid : subtypeLimits) {
-                orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), subtypeGuid));
-                orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), subtypeGuid));
+            if (subtypeLimits.size() == 1) {
+                // If there is only one, set a condition against that directly
+                conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), subtypeLimits.get(0)));
+            } else {
+
+                // If there are multiple, build a hash-set against which to compare
+                Symbol setVar = Symbol.intern("tf");
+                Symbol typeVar = Symbol.intern("types");
+                // [e :type.guids types]
+                conditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUIDS, typeVar));
+
+                List<Object> set = new ArrayList<>();
+                set.add(ConditionBuilder.SET_OPERATOR);
+                set.addAll(subtypeLimits);
+                // [(hash-set "..." "..." ...) tf]
+                conditions.add(PersistentVector.create(PersistentList.create(set), setVar));
+
+                List<Object> contains = new ArrayList<>();
+                contains.add(Symbol.intern("contains?"));
+                contains.add(setVar);
+                contains.add(typeVar);
+                // [(contains? tf types)]
+                conditions.add(PersistentVector.create(PersistentList.create(contains)));
+
             }
+        } else if (typeGuid != null) {
+            // Otherwise, if there is a typeGuid, search for any matches against the typeGuid exactly or where it is a supertype
+            conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), typeGuid));
         } else {
-            // Otherwise, search for any matches against the typeGuid exactly or where it is a supertype
-            // - exactly matching the TypeDef:  [e :type.guid "..."]
-            orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), typeGuid));
-            // - matching any of the super types:  [e :type.supers "...]
-            orConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.SUPERTYPE_DEF_GUIDS), typeGuid));
+            // If a type GUID has not even been provided, then fallback to only limiting based on whether we want
+            // instances of entities or relationships (but leave out if we have type GUIDs, as this is otherwise redundant)
+            conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
         }
-        return PersistentList.create(orConditions);
+        return conditions;
     }
 
     /**
@@ -237,9 +249,9 @@ public class CruxQuery {
      */
     public void addStatusLimiters(List<InstanceStatus> limitResultsByStatus) {
         if (limitResultsByStatus != null && !limitResultsByStatus.isEmpty()) {
-            IPersistentCollection statusCondition = getStatusLimiters(DOC_ID, limitResultsByStatus);
-            if (statusCondition != null) {
-                conditions.add(statusCondition);
+            List<IPersistentCollection> statusConditions = getStatusLimiters(DOC_ID, limitResultsByStatus);
+            if (statusConditions != null && !statusConditions.isEmpty()) {
+                conditions.addAll(statusConditions);
             }
         } else {
             // If no status limit was specified, retrieve only non-DELETED objects
@@ -259,30 +271,49 @@ public class CruxQuery {
      * Retrieve the status condition(s) for the provided status limiters.
      * @param variable that should be limited
      * @param limitResultsByStatus list of statuses by which to limit results
-     * @return IPersistentCollection of the condition(s)
+     * @return {@code List<IPersistentCollection>} of the condition(s)
      */
-    protected IPersistentCollection getStatusLimiters(Symbol variable, List<InstanceStatus> limitResultsByStatus) {
-        IPersistentCollection result = null;
-        List<IPersistentVector> statusConditions = new ArrayList<>();
+    protected List<IPersistentCollection> getStatusLimiters(Symbol variable, List<InstanceStatus> limitResultsByStatus) {
+
+        List<IPersistentCollection> statusConditions = new ArrayList<>();
+        List<Integer> ordinals = new ArrayList<>();
+
         for (InstanceStatus limitByStatus : limitResultsByStatus) {
             Integer ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(limitByStatus);
             if (ordinal != null) {
-                statusConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS), ordinal));
+                ordinals.add(ordinal);
             }
         }
-        if (!statusConditions.isEmpty()) {
-            if (statusConditions.size() == 1) {
-                // If there is only one, return it directly
-                result = statusConditions.get(0);
+
+        if (!ordinals.isEmpty()) {
+            if (ordinals.size() == 1) {
+                // If there is only a single status, set it as the sole condition
+                statusConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS), ordinals.get(0)));
             } else {
-                // Otherwise, wrap the conditions in an OR-predicate, and add that list to the conditions
-                List<Object> wrapped = new ArrayList<>();
-                wrapped.add(ConditionBuilder.OR_OPERATOR);
-                wrapped.addAll(statusConditions);
-                result = PersistentList.create(wrapped);
+                // Otherwise, create a set of conditions looking up against a hash-set
+                Symbol setVar = Symbol.intern("sf");
+                Symbol statusVar = Symbol.intern("status");
+                // [e :currentStatus status]
+                statusConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.CURRENT_STATUS, statusVar));
+
+                List<Object> set = new ArrayList<>();
+                set.add(ConditionBuilder.SET_OPERATOR);
+                set.addAll(ordinals);
+                // [(hash-set 1 2 ...) sf]
+                statusConditions.add(PersistentVector.create(PersistentList.create(set), setVar));
+
+                List<Object> contains = new ArrayList<>();
+                contains.add(Symbol.intern("contains?"));
+                contains.add(setVar);
+                contains.add(statusVar);
+                // [(contains? sf status)]
+                statusConditions.add(PersistentVector.create(PersistentList.create(contains)));
+
             }
         }
-        return result;
+
+        return statusConditions;
+
     }
 
     /**

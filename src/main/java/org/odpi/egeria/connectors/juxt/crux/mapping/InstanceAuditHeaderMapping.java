@@ -43,8 +43,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     public static final String CREATE_TIME = getKeyword(N_CREATE_TIME);
     public static final String UPDATE_TIME = getKeyword(N_UPDATE_TIME);
     public static final String CURRENT_STATUS = getKeyword(N_CURRENT_STATUS);
-    public static final String TYPE_DEF_GUID = getKeyword(N_TYPE + ".guid");
-    public static final String SUPERTYPE_DEF_GUIDS = getKeyword(N_TYPE + ".supers");
+    public static final String TYPE_DEF_GUIDS = getKeyword(N_TYPE + ".guids");
     public static final String TYPE_DEF_CATEGORY = getKeyword(N_TYPE + ".category");
 
     public static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
@@ -111,19 +110,18 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         builder.put(getKeyword(namespace, N_VERSION), iah.getVersion());
 
         // Note that for the type, we will break things out a bit to optimise search:
-        // - the GUID on its own (under 'type.guid')
-        // - the list of supertypes of the instances TypeDef (under 'type.supers')
+        // - a list of all type GUIDs for this type: its actual type and all of its supertypes (under 'type.guids')
         // Then we'll also serialize the full InstanceType information into the N_TYPE property itself.
+        List<String> typeList = new ArrayList<>();
         InstanceType type = iah.getType();
-        builder.put(getKeyword(namespace, N_TYPE + ".guid"), type.getTypeDefGUID());
+        typeList.add(type.getTypeDefGUID());
         List<TypeDefLink> superTypes = type.getTypeDefSuperTypes();
         if (superTypes != null) {
-            List<String> stList = new ArrayList<>();
             for (TypeDefLink superType : superTypes) {
-                stList.add(superType.getGUID());
+                typeList.add(superType.getGUID());
             }
-            builder.put(getKeyword(namespace, N_TYPE + ".supers"), PersistentVector.create(stList));
         }
+        builder.put(getKeyword(namespace, N_TYPE + ".guids"), PersistentVector.create(typeList));
         builder.put(getKeyword(namespace, N_TYPE + ".category"), type.getTypeDefCategory().getOrdinal());
         builder.put(getKeyword(namespace, N_TYPE), getEmbeddedSerializedForm(type));
         builder.put(getKeyword(namespace, N_INSTANCE_PROVENANCE_TYPE), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()));
