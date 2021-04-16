@@ -104,7 +104,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     Object cruxCfg = configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG);
                     if (cruxCfg instanceof Map) {
                         Map<?, ?> cruxConfig = (Map<?, ?>) cruxCfg;
-                        log.debug("Writing configuration to: {}", configFile.getCanonicalPath());
+                        if (log.isDebugEnabled())
+                            log.debug("Writing configuration to: {}", configFile.getCanonicalPath());
                         mapper.writeValue(configFile, cruxConfig);
                         // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
                         // the configurationProperties
@@ -283,9 +284,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      */
     public EntitySummary getEntitySummary(String guid) {
         CruxDocument cruxDoc = getCruxObjectByReference(EntitySummaryMapping.getReference(guid));
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled())
             log.debug("Found results: {}", cruxDoc == null ? null : cruxDoc.toMap());
-        }
         EntitySummaryMapping esm = new EntitySummaryMapping(this, cruxDoc);
         return esm.toEgeria();
     }
@@ -301,9 +301,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     public EntityDetail getEntity(String guid, Date asOfTime, boolean acceptProxies) throws EntityProxyOnlyException {
         final String methodName = "getEntity";
         CruxDocument cruxDoc = getCruxObjectByReference(EntityDetailMapping.getReference(guid), asOfTime);
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled())
             log.debug("Found results: {}", cruxDoc == null ? null : cruxDoc.toMap());
-        }
         if (cruxDoc == null) {
             return null;
         }
@@ -881,32 +880,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         InstanceGraph consolidated = new InstanceGraph();
         List<EntityDetail> oneEntities = one.getEntities();
         List<EntityDetail> twoEntities = two.getEntities();
+        LinkedHashSet<EntityDetail> mergedEntities = new LinkedHashSet<>();
         if (oneEntities != null) {
-            if (twoEntities != null) {
-                oneEntities.removeAll(twoEntities);
-                oneEntities.addAll(twoEntities);
-            }
-        } else {
-            oneEntities = twoEntities;
+            mergedEntities.addAll(oneEntities);
         }
-        consolidated.setEntities(oneEntities);
-        if (oneEntities != null) {
-            log.debug("Merged entities: {}", oneEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList()));
+        if (twoEntities != null) {
+            mergedEntities.addAll(twoEntities);
         }
+        consolidated.setEntities(new ArrayList<>(mergedEntities));
+        if (log.isDebugEnabled())
+            log.debug("Merged entities: {}", mergedEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList()));
         List<Relationship> oneRelationships = one.getRelationships();
         List<Relationship> twoRelationships = two.getRelationships();
+        LinkedHashSet<Relationship> mergedRelationships = new LinkedHashSet<>();
         if (oneRelationships != null) {
-            if (twoRelationships != null) {
-                oneRelationships.removeAll(twoRelationships);
-                oneRelationships.addAll(twoRelationships);
-            }
-        } else {
-            oneRelationships = twoRelationships;
+            mergedRelationships.addAll(oneRelationships);
         }
-        consolidated.setRelationships(oneRelationships);
-        if (oneRelationships != null) {
-            log.debug("Merged relationships: {}", oneRelationships.stream().map(Relationship::getGUID).collect(Collectors.toList()));
+        if (twoRelationships != null) {
+            mergedRelationships.addAll(twoRelationships);
         }
+        consolidated.setRelationships(new ArrayList<>(mergedRelationships));
+        if (log.isDebugEnabled())
+            log.debug("Merged relationships: {}", mergedRelationships.stream().map(Relationship::getGUID).collect(Collectors.toList()));
         return consolidated;
     }
 
@@ -1240,9 +1235,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
             CruxDocument cruxDoc = getCruxObjectByReference(db, RelationshipMapping.getReference(guid));
-            if (log.isDebugEnabled()) {
+            if (log.isDebugEnabled())
                 log.debug("Found results: {}", cruxDoc == null ? null : cruxDoc.toMap());
-            }
             RelationshipMapping rm = new RelationshipMapping(this, cruxDoc, db);
             result = rm.toEgeria();
 
@@ -1787,8 +1781,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 sequencingOrder,
                 namespace,
                 userId);
-        log.debug("Querying with: {}", query.getQuery());
-        Collection<List<?>> results = cruxAPI.db(asOfTime).query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = cruxAPI.db(asOfTime).query(q);
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromElement, pageSize);
     }
@@ -1838,8 +1833,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 sequencingOrder,
                 namespace,
                 userId);
-        log.debug("Querying with: {}", query.getQuery());
-        Collection<List<?>> results = db.query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = db.query(q);
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromElement, pageSize);
     }
@@ -1886,8 +1882,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 sequencingOrder,
                 namespace,
                 userId);
-        log.debug("Querying with: {}", query.getQuery());
-        Collection<List<?>> results = cruxAPI.db(asOfTime).query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = cruxAPI.db(asOfTime).query(q);
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromElement, pageSize);
     }
@@ -1934,8 +1931,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 sequencingOrder,
                 namespace,
                 userId);
-        log.debug("Querying with: {}", query.getQuery());
-        Collection<List<?>> results = db.query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = db.query(q);
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromElement, pageSize);
     }
@@ -1977,8 +1975,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 sequencingOrder,
                 null,
                 userId);
-        log.debug("Querying with: {}", query.getQuery());
-        Collection<List<?>> results = db.query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = db.query(q);
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromRelationshipElement, pageSize);
     }
@@ -2023,8 +2022,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         } catch (TypeErrorException e) {
             log.error("Unexpected type error, when no types are being explicitly used.", e);
         }
-        log.debug("Querying with: {}", query.getQuery());
-        Collection<List<?>> results = db.query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = db.query(q);
         // Note: we de-duplicate here, against the full set of results from Crux
         return deduplicate(results);
     }
@@ -2047,11 +2047,11 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                    List<InstanceStatus> limitResultsByStatus,
                                                    List<String> limitResultsByClassification) throws TimeoutException {
         CruxGraphQuery query = new CruxGraphQuery();
-        query.addEntityAnchorCondition(entityGUID);
-        query.addRelationshipLimiters(relationshipTypeGUIDs, limitResultsByStatus);
+        query.addRelationshipLimiters(entityGUID, relationshipTypeGUIDs, limitResultsByStatus);
         query.addEntityLimiters(entityTypeGUIDs, limitResultsByClassification);
-        log.debug("Querying with: {}", query.getQuery());
-        return db.query(query.getQuery());
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        return db.query(q);
     }
 
     /**
@@ -2257,9 +2257,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return TransactionInstant transaction details
      */
     public TransactionInstant runTx(Transaction statements) {
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled())
             log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements.toVector());
-        }
         TransactionInstant tx = cruxAPI.submitTx(statements);
         // Null for the timeout here means use the default (which is therefore configurable directly by the Crux
         // configurationProperties of the connector)

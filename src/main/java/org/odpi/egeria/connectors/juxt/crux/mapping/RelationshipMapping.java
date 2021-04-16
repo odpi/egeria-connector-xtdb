@@ -2,6 +2,8 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import clojure.lang.IPersistentVector;
+import clojure.lang.PersistentVector;
 import crux.api.CruxDocument;
 import crux.api.ICruxDatasource;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
@@ -20,11 +22,9 @@ public class RelationshipMapping extends InstanceHeaderMapping {
     public static final String INSTANCE_REF_PREFIX = "r";
 
     public static final String RELATIONSHIP_PROPERTIES_NS = "relationshipProperties";
-    public static final String N_ENTITY_ONE_PROXY = "entityOneProxy";
-    public static final String N_ENTITY_TWO_PROXY = "entityTwoProxy";
+    private static final String N_ENTITY_PROXIES = "entityProxies";
 
-    public static final String ENTITY_ONE_PROXY = getKeyword(N_ENTITY_ONE_PROXY);
-    public static final String ENTITY_TWO_PROXY = getKeyword(N_ENTITY_TWO_PROXY);
+    public static final String ENTITY_PROXIES = getKeyword(N_ENTITY_PROXIES);
 
     private ICruxDatasource db;
 
@@ -77,8 +77,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
         Relationship relationship = (Relationship) instanceHeader;
         EntityProxy one = relationship.getEntityOneProxy();
         EntityProxy two = relationship.getEntityTwoProxy();
-        builder.put(ENTITY_ONE_PROXY, EntityProxyMapping.getReference(one.getGUID()));
-        builder.put(ENTITY_TWO_PROXY, EntityProxyMapping.getReference(two.getGUID()));
+        builder.put(ENTITY_PROXIES, PersistentVector.create(EntityProxyMapping.getReference(one.getGUID()), EntityProxyMapping.getReference(two.getGUID())));
         InstancePropertiesMapping.addToDoc(cruxConnector, builder, relationship.getType(), relationship.getProperties(), RELATIONSHIP_PROPERTIES_NS);
         return builder;
     }
@@ -90,15 +89,17 @@ public class RelationshipMapping extends InstanceHeaderMapping {
     protected void fromDoc() {
         super.fromDoc();
         try {
-            Object oneRef = cruxDoc.get(ENTITY_ONE_PROXY);
-            if (oneRef instanceof String) {
-                EntityProxy one = getEntityProxyFromRef((String) oneRef);
-                ((Relationship) instanceHeader).setEntityOneProxy(one);
-            }
-            Object twoRef = cruxDoc.get(ENTITY_TWO_PROXY);
-            if (twoRef instanceof String) {
-                EntityProxy two = getEntityProxyFromRef((String) twoRef);
-                ((Relationship) instanceHeader).setEntityTwoProxy(two);
+            Object proxies = cruxDoc.get(ENTITY_PROXIES);
+            if (proxies instanceof IPersistentVector) {
+                IPersistentVector v = (IPersistentVector) proxies;
+                if (v.length() == 2) {
+                    EntityProxy one = getEntityProxyFromRef((String) v.nth(0));
+                    EntityProxy two = getEntityProxyFromRef((String) v.nth(1));
+                    if (one != null && two != null) {
+                        ((Relationship) instanceHeader).setEntityOneProxy(one);
+                        ((Relationship) instanceHeader).setEntityTwoProxy(two);
+                    }
+                }
             }
             InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, RELATIONSHIP_PROPERTIES_NS);
             ((Relationship) instanceHeader).setProperties(ip);

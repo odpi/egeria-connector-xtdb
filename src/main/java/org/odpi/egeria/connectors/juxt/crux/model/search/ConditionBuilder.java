@@ -44,7 +44,7 @@ public class ConditionBuilder {
     protected static final Symbol NOT_NULL_OPERATOR = Symbol.intern("some?");
     protected static final Symbol REGEX_OPERATOR = Symbol.intern("re-matches");
     protected static final Symbol IN_OPERATOR = Symbol.intern("contains?");
-    protected static final Symbol SET_OPERATOR = Symbol.intern("hash-set");
+    public static final Symbol SET_OPERATOR = Symbol.intern("hash-set");
 
     protected static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
     private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
@@ -518,7 +518,7 @@ public class ConditionBuilder {
      */
     private static List<IPersistentCollection> getNoResultsCondition() {
         List<IPersistentCollection> conditions = new ArrayList<>();
-        conditions.add(PersistentVector.create(CruxQuery.DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUID), "NON_EXISTENT_TO_FORCE_NO_RESULTS"));
+        conditions.add(PersistentVector.create(CruxQuery.DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), -1));
         return conditions;
     }
 
