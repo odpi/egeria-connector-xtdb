@@ -6,6 +6,8 @@ import crux.api.Crux;
 import crux.api.ICruxAPI;
 import org.odpi.egeria.connectors.juxt.crux.migration.model.UpgradeInitialTo2;
 import org.odpi.egeria.connectors.juxt.crux.model.PersistenceLayer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -17,10 +19,12 @@ public class Migrator {
 
     public static final int DEFAULT_BATCH_SIZE = 500;
 
+    private static final Logger log = LoggerFactory.getLogger(Migrator.class);
+
     public static void main(String[] args) {
 
         if (args.length == 0) {
-            System.err.println("No configuration file path provided. The path to a JSON configuration file for the node must be provided.");
+            log.error("No configuration file path provided. The path to a JSON configuration file for the node must be provided.");
             System.exit(1);
         }
 
@@ -32,19 +36,19 @@ public class Migrator {
             batchSize = Integer.parseInt(args[1]);
         }
 
-        System.out.println("Starting a Crux node using configuration: " + configFile);
+        log.info("Starting a Crux node using configuration: {}", configFile);
         try (ICruxAPI cruxAPI = Crux.startNode(config)) {
 
-            System.out.println("... checking if migration is needed (" + cruxAPI + ")");
+            log.info("... checking if migration is needed ({})", cruxAPI);
 
             if (PersistenceLayer.isLatestVersion(cruxAPI)) {
-                System.out.println("This node is already at the latest version of the persistence layer -- no migration needed.");
+                log.info("This node is already at the latest version of the persistence layer ({}) -- no migration needed.", PersistenceLayer.LATEST_VERSION);
             } else {
 
                 while (!PersistenceLayer.isLatestVersion(cruxAPI)) {
 
                     long currentVersion = PersistenceLayer.getVersion(cruxAPI);
-                    System.out.println("The node is at version " + currentVersion + ", while latest is " + PersistenceLayer.LATEST_VERSION + " -- migrating...");
+                    log.info("The node is at version {}, while latest is {} -- migrating...", currentVersion, PersistenceLayer.LATEST_VERSION);
 
                     if (currentVersion == -1) {
                         UpgradeInitialTo2 upgradeInitialTo2 = new UpgradeInitialTo2(cruxAPI, batchSize);
@@ -55,10 +59,10 @@ public class Migrator {
 
             }
 
-        } catch (Exception ex) {
-            System.err.println("Fatal error!");
-            ex.printStackTrace();
+        } catch (Exception e) {
+            log.error("Fatal error!", e);
         }
+        log.info("Work complete -- exiting.");
 
     }
 
