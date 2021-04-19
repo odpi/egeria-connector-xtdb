@@ -81,7 +81,7 @@
         <!-- Build processing -->
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <spotbugs.version>4.2.2</spotbugs.version>
+        <spotbugs.version>4.2.3</spotbugs.version>
     </properties>
 
     <repositories>
