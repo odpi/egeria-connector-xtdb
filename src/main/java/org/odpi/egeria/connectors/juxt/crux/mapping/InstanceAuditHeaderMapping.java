@@ -40,6 +40,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     private static final String N_MAPPING_PROPERTIES = "mappingProperties";
 
     // Note that these have no namespace, and therefore not useful on classifications (only entity, relationship)
+    public static final String METADATA_COLLECTION_ID = getKeyword(N_METADATA_COLLECTION_ID);
     public static final String CREATE_TIME = getKeyword(N_CREATE_TIME);
     public static final String UPDATE_TIME = getKeyword(N_UPDATE_TIME);
     public static final String CURRENT_STATUS = getKeyword(N_CURRENT_STATUS);

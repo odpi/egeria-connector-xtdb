@@ -9,6 +9,7 @@ import crux.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
+import org.odpi.egeria.connectors.juxt.crux.model.PersistenceLayer;
 import org.odpi.egeria.connectors.juxt.crux.model.search.CruxGraphQuery;
 import org.odpi.egeria.connectors.juxt.crux.model.search.CruxQuery;
 import org.odpi.egeria.connectors.juxt.crux.model.search.TextConditionBuilder;
@@ -147,6 +148,19 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             log.debug(" ... luceneRegexes?    {}", luceneRegexes);
             log.debug(" ... synchronousIndex? {}", synchronousIndex);
             Object version = details.get(Constants.CRUX_VERSION);
+            long persistenceVersion = PersistenceLayer.getVersion(cruxAPI);
+            boolean emptyDataStore = isDataStoreEmpty();
+            if (persistenceVersion == -1 && emptyDataStore) {
+                // If there is no persistence layer defined, and there is no metadata stored yet, mark the
+                // version per this connector
+                PersistenceLayer.setVersion(cruxAPI, PersistenceLayer.LATEST_VERSION);
+            } else if (persistenceVersion != PersistenceLayer.LATEST_VERSION) {
+                // Otherwise, there is something in the data store already (the persistence layer details, and / or
+                // pre-existing metadata), so if the versions do not match we must exit to ensure integrity of the data
+                cruxAPI.close();
+                throw new ConnectorCheckedException(CruxOMRSErrorCode.PERSISTENCE_LAYER_MISMATCH.getMessageDefinition("" + persistenceVersion, "" + PersistenceLayer.LATEST_VERSION),
+                        this.getClass().getName(), methodName);
+            }
             auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(getServerName(), version == null ? "<null>" : version.toString()));
         } catch (Exception e) {
             log.error("Unable to start the repository based on the provided configuration.", e);
@@ -191,6 +205,22 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             log.info("Crux repository connector has shutdown.");
         }
 
+    }
+
+    /**
+     * Checks whether the data store is currently empty.
+     * @return true of the data store is empty (has no metadata stored), otherwise false
+     */
+    public boolean isDataStoreEmpty() {
+        CruxQuery query = new CruxQuery();
+        List<IPersistentCollection> conditions = new ArrayList<>();
+        conditions.add(PersistentVector.create(CruxQuery.DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.METADATA_COLLECTION_ID), Symbol.intern("_")));
+        query.addConditions(conditions);
+        IPersistentMap q = query.getQuery();
+        q = q.assoc(Keyword.intern("limit"), 1);
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = cruxAPI.db().query(q);
+        return results == null || results.isEmpty();
     }
 
     /**

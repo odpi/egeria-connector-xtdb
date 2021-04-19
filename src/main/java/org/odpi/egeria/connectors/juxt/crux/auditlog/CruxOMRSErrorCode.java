@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.auditlog;
 
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.ExceptionMessageDefinition;
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.ExceptionMessageSet;
+import org.odpi.openmetadata.repositoryservices.auditlog.OMRSAuditLogRecordSeverity;
 
 /**
  * The CruxOMRSErrorCode is used to define first failure data capture (FFDC) for errors that occur when working with
@@ -61,6 +62,10 @@ public enum CruxOMRSErrorCode implements ExceptionMessageSet {
             "The Crux connector failed to disconnect",
             "The local server failed to disconnect from Crux.",
             "Investigate the logs for additional information and cleanup Crux if needed."),
+    PERSISTENCE_LAYER_MISMATCH(500, "OMRS-CRUX-REPOSITORY-500-003",
+            "The Crux connector detected a different version of the persistence layer ({0}) than is supported by this release ({1})",
+            "The local server cannot be started against a different version of the persistence layer.",
+            "Run the migration utilities to upgrade your pre-existing metadata before running this version of the connector."),
     REGEX_NOT_IMPLEMENTED(501, "OMRS-CRUX-REPOSITORY-501-001 ",
             "Repository {0} is not able to support the regular expression \"{1}\"",
             "This repository has a fixed subset of regular expressions it can support.",

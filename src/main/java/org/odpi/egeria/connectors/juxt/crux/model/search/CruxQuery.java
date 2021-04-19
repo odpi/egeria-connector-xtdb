@@ -426,7 +426,9 @@ public class CruxQuery {
         // Add the conditions to the query:  :where [[ ... condition ...], [ ... condition ... ], ... ]
         query = query.assoc(Keyword.intern("where"), PersistentVector.create(conditions));
         // Add the sequencing information to the query:  :order-by [[ ... ]]
-        query = query.assoc(Keyword.intern("order-by"), PersistentVector.create(sequencing));
+        if (sequencing != null && !sequencing.isEmpty()) {
+            query = query.assoc(Keyword.intern("order-by"), PersistentVector.create(sequencing));
+        }
         return query;
     }
 
