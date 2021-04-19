@@ -21,9 +21,11 @@ Of particular interest for Egeria is that it has native support for storing hist
 
 ## Quick links
 
-- See our [Getting Started](https://odpi.github.io/egeria-connector-crux/getting-started/) guide for step-by-step
+- See the [Getting Started](https://odpi.github.io/egeria-connector-crux/getting-started/) guide for step-by-step
   instructions on using this connector as an Egeria repository.
 - See the [CTS Results](cts/README.md) for details on its conformance and rough performance numbers.
+- See the [Migration](https://odpi.github.io/egeria-connector-crux/migrating/) guide for upgrading an existing Egeria
+  Crux repository to a newer version.
 
 ## How it works
 

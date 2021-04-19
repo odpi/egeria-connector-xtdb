@@ -396,7 +396,108 @@ $ mvn clean install
         </section>
         <section>
             <section>
-                <h2 style="text-align: left;">3. Run the in-place upgrade</h2>
+                <h2 style="text-align: left;">3. Make a backup</h2>
+                <p style="font-size: x-large; text-align: left;">
+                    As the migration runs in-place, it is always a good practice to take a backup
+                    of your repository first:
+                </p>
+                <pre data-id="code-animation" class="shell session" style="font-size: small;"><code class="hljs" data-trim data-line-numbers="1">
+$ tar cvf backup.tar .../data/servers/crux
+a .../data/servers/crux
+a .../data/servers/crux/rdb-index
+a .../data/servers/crux/lucene
+a .../data/servers/crux/config
+a .../data/servers/crux/cohorts
+a .../data/servers/crux/rdb-tx
+a .../data/servers/crux/rdb-docs
+a .../data/servers/crux/rdb-docs/LOG.old.1618821614946783
+a .../data/servers/crux/rdb-docs/MANIFEST-055963
+a .../data/servers/crux/rdb-docs/055956.sst
+a .../data/servers/crux/rdb-docs/IDENTITY
+a .../data/servers/crux/rdb-docs/OPTIONS-055963
+a .../data/servers/crux/rdb-docs/LOCK
+a .../data/servers/crux/rdb-docs/LOG.old.1618823379594188
+a .../data/servers/crux/rdb-docs/CURRENT
+a .../data/servers/crux/rdb-docs/LOG
+a .../data/servers/crux/rdb-docs/OPTIONS-055966
+a .../data/servers/crux/rdb-docs/055962.sst
+a .../data/servers/crux/rdb-docs/055964.log
+a .../data/servers/crux/rdb-docs/055958.sst
+a .../data/servers/crux/rdb-tx/IDENTITY
+a .../data/servers/crux/rdb-tx/055918.log
+a .../data/servers/crux/rdb-tx/055908.sst
+a .../data/servers/crux/rdb-tx/LOCK
+a .../data/servers/crux/rdb-tx/055916.sst
+a .../data/servers/crux/rdb-tx/CURRENT
+a .../data/servers/crux/rdb-tx/OPTIONS-055917
+a .../data/servers/crux/rdb-tx/055910.sst
+a .../data/servers/crux/rdb-tx/OPTIONS-055920
+a .../data/servers/crux/rdb-tx/055912.sst
+a .../data/servers/crux/rdb-tx/LOG.old.1618821615456822
+a .../data/servers/crux/rdb-tx/LOG
+a .../data/servers/crux/rdb-tx/MANIFEST-055917
+a .../data/servers/crux/rdb-tx/LOG.old.1618823380203383
+a .../data/servers/crux/cohorts/cocoCohort.registrystore
+a .../data/servers/crux/config/crux.config
+a .../data/servers/crux/lucene/_mx7.cfe
+a .../data/servers/crux/lucene/_mx6_Lucene84_0.doc
+a .../data/servers/crux/lucene/_mx6.fnm
+a .../data/servers/crux/lucene/_mx6_Lucene84_0.tip
+a .../data/servers/crux/lucene/_mx6.fdx
+a .../data/servers/crux/lucene/_mx6_Lucene84_0.pos
+a .../data/servers/crux/lucene/_mx6.fdm
+a .../data/servers/crux/lucene/_mx6_Lucene84_0.tim
+a .../data/servers/crux/lucene/_mx6_Lucene84_0.tmd
+a .../data/servers/crux/lucene/_mx8.cfs
+a .../data/servers/crux/lucene/_mx6.si
+a .../data/servers/crux/lucene/_mx7.cfs
+a .../data/servers/crux/lucene/_mx6_1.liv
+a .../data/servers/crux/lucene/_mx6.nvd
+a .../data/servers/crux/lucene/_mx6.nvm
+a .../data/servers/crux/lucene/_mx7.si
+a .../data/servers/crux/lucene/_mx6.fdt
+a .../data/servers/crux/lucene/segments_j7d
+a .../data/servers/crux/lucene/write.lock
+a .../data/servers/crux/lucene/_mx8.si
+a .../data/servers/crux/lucene/_mx7_2.liv
+a .../data/servers/crux/lucene/_mx8.cfe
+a .../data/servers/crux/rdb-index/000170.log
+a .../data/servers/crux/rdb-index/MANIFEST-000169
+a .../data/servers/crux/rdb-index/000173.sst
+a .../data/servers/crux/rdb-index/IDENTITY
+a .../data/servers/crux/rdb-index/OPTIONS-000172
+a .../data/servers/crux/rdb-index/OPTIONS-000169
+a .../data/servers/crux/rdb-index/LOCK
+a .../data/servers/crux/rdb-index/LOG.old.1618821614837424
+a .../data/servers/crux/rdb-index/LOG.old.1618823379143533
+a .../data/servers/crux/rdb-index/CURRENT
+a .../data/servers/crux/rdb-index/LOG
+                </code></pre>
+                <p style="font-size: x-large; text-align: left;">
+                    ... where <code>.../data/servers/crux</code> is the location of your repository.
+                </p>
+            </section>
+            <section data-menu-title="Backup details" data-auto-animate>
+                <h4 style="text-align: left;">Backup details</h4>
+                <p style="font-size: x-large; text-align: left;">
+                    Different configurations will require different approaches to backup. The example given in the
+                    previous slide will work when your repository is entirely file-based (for example, if it is
+                    configured to use RocksDB, Lucene, and / or LMDB).
+                </p>
+                <p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+                    If your configuration makes use of other pluggable components (Kafka, JDBC, etc) then you should
+                    follow the best practices for backing up those components themselves: either from Apache Kafka or
+                    the database vendor.
+                </p>
+                <p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+                    In all cases, you should ensure that your connector is shutdown (not running), and that any data
+                    is appropriately quiesced prior to running the backup.
+                </p>
+            </section>
+        </section>
+        <section>
+            <section>
+                <h2 style="text-align: left;">4. Run the in-place upgrade</h2>
                 <p style="font-size: x-large; text-align: left;">
                     Run the following command to execute the in-place upgrade:
                 </p>
@@ -456,11 +557,26 @@ The node is at version -1, while latest is 2 -- migrating...
         </section>
         <section>
             <section>
-                <h2 style="text-align: left;">4. Start the connector</h2>
+                <h2 style="text-align: left;">5. Start the connector</h2>
                 <p style="font-size: x-large; text-align: left;">
                     Once the previous (in-place upgrade) command completes, you should now be able to start your
                     connector. See the <a href="../getting-started/">Getting Started guide</a> for more details.
                 </p>
+            </section>
+            <section>
+                <h3 style="text-align: left;">Change Log</h3>
+                <p style="font-size: x-large; text-align: left;">
+                    There should be no need to actually understand these details, as the connector (and migration)
+                    will handle them for you. However, for the interested reader, the following changes were made to
+                    the storage layer:
+                </p>
+                <ul style="font-size: x-large; text-align: left;">
+                    <li>2.9: <code>InstanceAuditHeaderMapping</code> no longer separates the type GUID and supertype
+                        GUIDs, but places all such information into a single vector (for improved search performance);
+                        <code>RelationshipMapping</code> no longer has separate properties for each entity proxy, but
+                        stores them as a vector: this retains their ordering, but allows relationships to be more
+                        efficiently searched from either related entity</li>
+                </ul>
             </section>
         </section>
 
