@@ -183,19 +183,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         // Ready the embedded Crux node for GC
         try {
-            // Just before closing a Crux node, output the list of the slowest queries (potentially useful for
-            // optimisation considerations).
-            if (log.isDebugEnabled()) {
-                log.debug("Listing the slowest queries against the node just before shutting down:");
-                List<IQueryState> slowestQueries = this.cruxAPI.slowestQueries();
-                for (IQueryState slowQuery : slowestQueries) {
-                    long started  = slowQuery.getStartedAt().getTime();
-                    long finished = slowQuery.getFinishedAt() == null ? 0 : slowQuery.getFinishedAt().getTime();
-                    log.debug(" ... query ({} ms): {}", (finished - started), slowQuery.getQuery());
-                }
-            }
             this.cruxAPI.close();
         } catch (IOException e) {
+            log.error("Fatal error when attempting to close Crux repository.", e);
             throw new ConnectorCheckedException(CruxOMRSErrorCode.FAILED_DISCONNECT.getMessageDefinition(),
                     this.getClass().getName(), methodName, e);
         }

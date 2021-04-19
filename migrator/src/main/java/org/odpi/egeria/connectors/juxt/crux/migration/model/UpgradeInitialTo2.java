@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Copyright Contributors to the ODPi Egeria project. */
-package org.odpi.egeria.connectors.juxt.crux.model.migration;
+package org.odpi.egeria.connectors.juxt.crux.migration.model;
 
 import clojure.lang.*;
 import crux.api.*;
@@ -68,7 +68,7 @@ public class UpgradeInitialTo2 extends UpgradePersistence {
                                 upgraded = migrateRelationship(upgraded);
                             }
                             // Add the migrated docs in batches
-                            putToBatch(upgraded, valid, txn);
+                            putToBatch(upgraded, valid, null);
                         }
 
                     }

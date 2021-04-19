@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Copyright Contributors to the ODPi Egeria project. */
-package org.odpi.egeria.connectors.juxt.crux.utilities;
+package org.odpi.egeria.connectors.juxt.crux.migration;
 
 import crux.api.Crux;
 import crux.api.ICruxAPI;
+import org.odpi.egeria.connectors.juxt.crux.migration.model.UpgradeInitialTo2;
 import org.odpi.egeria.connectors.juxt.crux.model.PersistenceLayer;
-import org.odpi.egeria.connectors.juxt.crux.model.migration.UpgradeInitialTo2;
 
 import java.io.File;
 

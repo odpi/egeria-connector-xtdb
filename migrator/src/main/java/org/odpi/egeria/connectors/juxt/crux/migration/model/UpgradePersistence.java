@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Copyright Contributors to the ODPi Egeria project. */
-package org.odpi.egeria.connectors.juxt.crux.model.migration;
+package org.odpi.egeria.connectors.juxt.crux.migration.model;
 
 import crux.api.CruxDocument;
 import crux.api.ICruxAPI;
@@ -100,6 +100,7 @@ public abstract class UpgradePersistence {
      * Submit the current queue of transactions.
      */
     private void submitBatch() {
+        System.out.println("Submitting batch: " + tx.build().toVector());
         cruxAPI.submitTx(tx.build());
     }
 
