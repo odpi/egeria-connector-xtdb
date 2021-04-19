@@ -100,7 +100,6 @@ public abstract class UpgradePersistence {
      * Submit the current queue of transactions.
      */
     private void submitBatch() {
-        System.out.println("Submitting batch: " + tx.build().toVector());
         cruxAPI.submitTx(tx.build());
     }
 

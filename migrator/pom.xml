@@ -29,6 +29,12 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>juxt</groupId>
             <artifactId>crux-core</artifactId>
         </dependency>
@@ -81,7 +87,6 @@
             <!-- Note test scope dependencies can't be reliably checked -->
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.2</version>
                 <executions>
                     <execution>
                         <id>analyze</id>
