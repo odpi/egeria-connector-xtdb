@@ -9,12 +9,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.odpi.egeria</groupId>
-    <artifactId>egeria-connector-crux</artifactId>
+    <artifactId>egeria-connector-crux-module</artifactId>
+    <packaging>pom</packaging>
     <version>2.9-SNAPSHOT</version>
+    <modules>
+        <module>connector</module>
+        <module>migrator</module>
+    </modules>
 
-    <name>Egeria Connector for Crux</name>
+    <name>Overall Crux Connector Module</name>
     <description>
-        An OCF OMRS Connector for a historical metadata back-end based on Crux.
+        The outer module for an OCF OMRS Connector for a historical metadata back-end based on Crux.
     </description>
 
     <url>https://odpi.github.io/Egeria</url>
@@ -76,12 +81,7 @@
         <!-- Build processing -->
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <maven-compiler.version>3.8.1</maven-compiler.version>
-        <maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
-        <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
-        <spotbugs.version>4.2.2</spotbugs.version>
-        <surefire.plugin.version>3.0.0-M5</surefire.plugin.version>
-        <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
+        <spotbugs.version>4.2.3</spotbugs.version>
     </properties>
 
     <repositories>
@@ -181,61 +181,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <dependencies>
-        <dependency>
-            <groupId>juxt</groupId>
-            <artifactId>crux-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>juxt</groupId>
-            <artifactId>crux-metrics</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-queryparser</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-analyzers-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>juxt</groupId>
-            <artifactId>crux-rocksdb</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>juxt</groupId>
-            <artifactId>crux-kafka</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.clojure</groupId>
-            <artifactId>clojure</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.odpi.egeria</groupId>
-            <artifactId>audit-log-framework</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.odpi.egeria</groupId>
-            <artifactId>repository-services-apis</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.odpi.egeria</groupId>
-            <artifactId>open-connector-framework</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-    </dependencies>
-
     <build>
 
         <pluginManagement>
@@ -249,6 +194,36 @@
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>0.8.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.1.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.2.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.2.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>3.3.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>1.6</version>
                 </plugin>
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
@@ -267,13 +242,8 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-antrun-plugin</artifactId>
-                    <version>${maven-antrun.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${surefire.plugin.version}</version>
+                    <version>3.0.0-M5</version>
                     <configuration>
                         <forkCount>3</forkCount>
                         <reuseForks>true</reuseForks>
@@ -306,7 +276,6 @@
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler.version}</version>
                 <configuration>
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <failOnWarning>false</failOnWarning>
@@ -385,7 +354,7 @@
                         <exclude>cts/results/**/*.deployment</exclude>
                         <exclude>cts/results/**/configmap.yaml</exclude>
                         <exclude>cts/results/**/*.registrystore</exclude>
-                        <exclude>docs/getting-started/reveal.js/**</exclude>
+                        <exclude>docs/reveal.js/**</exclude>
                     </excludes>
                     <licenseFamilies>
                         <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
@@ -451,7 +420,6 @@
             <!-- Note test scope dependencies can't be reliably checked -->
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.2</version>
                 <executions>
                     <execution>
                         <id>analyze</id>
@@ -482,15 +450,23 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Packaging -->
+            <!-- Packaging
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.odpi.egeria.connectors.juxt.crux.utilities.Migrator</mainClass>
+                        </manifest>
+                    </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
+                    <descriptors>
+                        <descriptor>src/assembly/migrator.xml</descriptor>
+                    </descriptors>
                 </configuration>
                 <executions>
                     <execution>
@@ -500,12 +476,10 @@
                         <phase>package</phase>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin> -->
             <!-- Generate and attach sources -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>${maven-source-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -517,9 +491,7 @@
             </plugin>
             <!-- Generate and attach javadocs -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
                     <quiet>true</quiet>
                 </configuration>
@@ -548,9 +520,7 @@
                     <!-- Request that distributed artifacts are signed before flowing to Maven Central distributions -->
 
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${maven-gpg-plugin.version}</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -627,7 +597,6 @@
                     </plugin>
                     <!-- Optional PMD scan - static code analysis -->
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-pmd-plugin</artifactId>
                         <configuration>
                             <failOnViolation>false</failOnViolation>
@@ -710,9 +679,7 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${maven-gpg-plugin.version}</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
