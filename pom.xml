@@ -28,7 +28,7 @@
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
         <license>
             <name>Creative Commons Attribution 4.0 International (CC BY 4.0)</name>
@@ -38,13 +38,13 @@
 
     <organization>
         <name>ODPi</name>
-        <url>http://www.odpi.org</url>
+        <url>https://www.odpi.org</url>
     </organization>
 
     <scm>
         <connection>scm:git:git://github.com/odpi/egeria-connector-crux.git</connection>
         <developerConnection>scm:git:ssh://github.com:odpi/egeria-connector-crux.git</developerConnection>
-        <url>http://github.com/odpi/egeria-connector-crux/tree/master</url>
+        <url>https://github.com/odpi/egeria-connector-crux/tree/master</url>
     </scm>
 
     <issueManagement>
