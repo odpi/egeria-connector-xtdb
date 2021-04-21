@@ -33,7 +33,11 @@ public class Migrator {
 
         int batchSize = DEFAULT_BATCH_SIZE;
         if (args.length == 2) {
-            batchSize = Integer.parseInt(args[1]);
+            try {
+                batchSize = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                log.warn("Unable to parse batch size '{}' as an integer -- falling back to default batch size.", args[1]);
+            }
         }
 
         log.info("Starting a Crux node using configuration: {}", configFile);
