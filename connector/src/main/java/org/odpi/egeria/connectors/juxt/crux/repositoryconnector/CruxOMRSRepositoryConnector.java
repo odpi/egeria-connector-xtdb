@@ -710,6 +710,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param limitResultsByClassification list of classifications that must be present on all returned entities
      * @param asOfTime historical query of the radiated relationships and entities (null means current values)
      * @param level the number of relationships out from the starting entity that
+     * @param includeRelationships whether to include relationships in the resulting graph (true) or not (false)
      * @return InstanceGraph of the neighborhood
      * @throws RepositoryErrorException if any issue closing an open Crux resource
      * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
@@ -720,7 +721,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                           List<InstanceStatus> limitResultsByStatus,
                                           List<String> limitResultsByClassification,
                                           Date asOfTime,
-                                          int level) throws RepositoryErrorException, RepositoryTimeoutException {
+                                          int level,
+                                          boolean includeRelationships) throws RepositoryErrorException, RepositoryTimeoutException {
 
         final String methodName = "findNeighborhood";
         InstanceGraph instanceGraph;
@@ -780,7 +782,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 }
 
                 // TODO: exclude proxies (somehow) from the entity detail list (?)
-                InstanceGraph neighbors = resultsToGraph(db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved);
+                InstanceGraph neighbors = resultsToGraph(db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved, includeRelationships);
                 if (neighbors != null) {
                     instanceGraph = mergeGraphs(instanceGraph, neighbors);
                 }
@@ -904,7 +906,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     1);
 
             // TODO: exclude proxies (somehow) from the entity detail list (?)
-            InstanceGraph furtherTraversals = resultsToGraph(db, successfulTraversals, entityGUIDsVisited, relationshipGUIDsVisited);
+            InstanceGraph furtherTraversals = resultsToGraph(db, successfulTraversals, entityGUIDsVisited, relationshipGUIDsVisited, true);
             if (furtherTraversals == null || furtherTraversals.getEntities() == null || furtherTraversals.getEntities().isEmpty()) {
                 // If there are no entities, return an empty graph
                 instanceGraph = null;
@@ -1036,13 +1038,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * Translate the collection of Crux tuple results (from a graph query) into an Egeria InstanceGraph.
      * @param db already opened point-in-time view of the database
      * @param cruxResults list of result tuples, eg. from a neighborhood or other graph search
+     * @param entityGUIDsVisited the list of entity GUIDs that have already been retrieved
+     * @param relationshipGUIDsVisited the list of relationship GUIDs that have already been retrieved
+     * @param includeRelationships whether to include relationships in the resulting graph (true) or not (false)
      * @return InstanceGraph
-     * @see #findNeighborhood(String, List, List, List, List, Date, int)
+     * @see #findNeighborhood(String, List, List, List, List, Date, int, boolean)
      */
     private InstanceGraph resultsToGraph(ICruxDatasource db,
                                          Collection<List<?>> cruxResults,
                                          Set<String> entityGUIDsVisited,
-                                         Set<String> relationshipGUIDsVisited) {
+                                         Set<String> relationshipGUIDsVisited,
+                                         boolean includeRelationships) {
         InstanceGraph results = null;
         if (cruxResults != null) {
             List<Relationship> relationships = new ArrayList<>();
@@ -1058,14 +1064,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         entities.add(entity);
                     }
                 }
-                String relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
-                String relationshipGuid = InstanceHeaderMapping.trimGuidFromReference(relationshipRef);
-                if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
-                    Relationship relationship = getRelationshipByRef(db, relationshipRef);
-                    if (relationship == null) {
-                        log.warn("Unable to resolve search result into relationship: {}", cruxResult);
-                    } else {
-                        relationships.add(relationship);
+                if (includeRelationships) {
+                    String relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
+                    String relationshipGuid = InstanceHeaderMapping.trimGuidFromReference(relationshipRef);
+                    if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
+                        Relationship relationship = getRelationshipByRef(db, relationshipRef);
+                        if (relationship == null) {
+                            log.warn("Unable to resolve search result into relationship: {}", cruxResult);
+                        } else {
+                            relationships.add(relationship);
+                        }
                     }
                 }
             }
