@@ -35,6 +35,7 @@ public class CruxQuery {
     private IPersistentMap query;
     private final List<Symbol> findElements;
     protected final List<IPersistentCollection> conditions;
+    protected final List<IPersistentCollection> rules;
     private final List<IPersistentVector> sequencing;
 
     /**
@@ -45,6 +46,7 @@ public class CruxQuery {
         findElements = new ArrayList<>();
         findElements.add(DOC_ID); // Always have the DocID itself as the first element, to ease parsing of results
         conditions = new ArrayList<>();
+        rules = new ArrayList<>();
         sequencing = new ArrayList<>();
     }
 
@@ -425,6 +427,10 @@ public class CruxQuery {
         query = query.assoc(Keyword.intern("find"), PersistentVector.create(findElements));
         // Add the conditions to the query:  :where [[ ... condition ...], [ ... condition ... ], ... ]
         query = query.assoc(Keyword.intern("where"), PersistentVector.create(conditions));
+        // Add the rules information to the query:  :rules [[ ... ]]
+        if (rules != null && !rules.isEmpty()) {
+            query = query.assoc(Keyword.intern("rules"), PersistentVector.create(rules));
+        }
         // Add the sequencing information to the query:  :order-by [[ ... ]]
         if (sequencing != null && !sequencing.isEmpty()) {
             query = query.assoc(Keyword.intern("order-by"), PersistentVector.create(sequencing));

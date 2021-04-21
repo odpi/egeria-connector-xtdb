@@ -693,21 +693,16 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 sequencingOrder,
                 pageSize);
 
-        // Retrieve ALL (full depth) neighborhood from the starting entity
-        InstanceGraph adjacent = this.getEntityNeighborhood(userId,
+        return cruxRepositoryConnector.getRelatedEntities(userId,
                 startEntityGUID,
                 entityTypeGUIDs,
-                null,
+                fromEntityElement,
                 limitResultsByStatus,
                 limitResultsByClassification,
                 asOfTime,
-                -1);
-
-        if (adjacent != null) {
-            // ... and then simply limit the entity results according to the sequencing and paging parameters
-            return repositoryHelper.formatEntityResults(adjacent.getEntities(), fromEntityElement, sequencingProperty, sequencingOrder, pageSize);
-        }
-        return null;
+                sequencingProperty,
+                sequencingOrder,
+                pageSize);
 
     }
 

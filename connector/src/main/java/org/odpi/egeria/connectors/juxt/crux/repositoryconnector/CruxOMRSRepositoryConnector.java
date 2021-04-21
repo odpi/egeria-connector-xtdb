@@ -594,6 +594,113 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Return the list of entities that are of the types listed in entityTypeGUIDs and are connected, either directly or
+     * indirectly to the entity identified by startEntityGUID.
+     * @param userId unique identifier for requesting user
+     * @param startEntityGUID unique identifier of the starting entity
+     * @param entityTypeGUIDs list of types to search for, null means any type
+     * @param fromEntityElement starting element for results list (for paging), where 0 means first element
+     * @param limitResultsByStatus By default, related entities in all non-DELETED statuses are returned. However, it is
+     *                             possible to specify a list of statuses (e.g. ACTIVE) to restrict the results. Null
+     *                             means all status values except DELETED.
+     * @param limitResultsByClassification list of classifications that must be present on all returned entities
+     * @param asOfTime requests a historical query of the relationships for the entity, null means present values
+     * @param sequencingProperty string name of the property to use in ordering the results, null means do not order
+     *                           by a property
+     * @param sequencingOrder enum defining how the results should be ordered
+     * @param pageSize maximum number of result entities that can be returned on this request, where 0 means return
+     *                 all results (unrestricted)
+     * @return {@code List<EntityDetail>} of the related entities
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryErrorException if any issue closing an open Crux resource
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
+     */
+    public List<EntityDetail> getRelatedEntities(String userId,
+                                                 String startEntityGUID,
+                                                 List<String> entityTypeGUIDs,
+                                                 int fromEntityElement,
+                                                 List<InstanceStatus> limitResultsByStatus,
+                                                 List<String> limitResultsByClassification,
+                                                 Date asOfTime,
+                                                 String sequencingProperty,
+                                                 SequencingOrder sequencingOrder,
+                                                 int pageSize) throws TypeErrorException, RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "getRelatedEntities";
+        try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
+            Collection<List<?>> cruxResults = findRelatedEntities(db,
+                    startEntityGUID,
+                    entityTypeGUIDs,
+                    fromEntityElement,
+                    limitResultsByStatus,
+                    limitResultsByClassification,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize,
+                    userId);
+            log.debug("Found results: {}", cruxResults);
+            return translateEntityResults(cruxResults, asOfTime);
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
+        }
+
+    }
+
+    /**
+     * Find the entities that are related to the provided startEntityGUID either directly or indirectly, and fit the
+     * other limiting criteria provided.
+     * @param db an already-opened point-in-time view of the database
+     * @param startEntityGUID unique identifier of the starting entity
+     * @param entityTypeGUIDs list of types to search for, null means any type
+     * @param fromEntityElement starting element for results list (for paging), where 0 means first element
+     * @param limitResultsByStatus By default, related entities in all non-DELETED statuses are returned. However, it is
+     *                             possible to specify a list of statuses (e.g. ACTIVE) to restrict the results. Null
+     *                             means all status values except DELETED.
+     * @param limitResultsByClassification list of classifications that must be present on all returned entities
+     * @param sequencingProperty string name of the property to use in ordering the results, null means do not order
+     *                           by a property
+     * @param sequencingOrder enum defining how the results should be ordered
+     * @param pageSize maximum number of result entities that can be returned on this request, where 0 means return
+     *                 all results (unrestricted)
+     * @param userId unique identifier for requesting user
+     * @return {@code Collection<List<?>>} of the requested page of unique Crux document references for the matching related entities
+     * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
+     */
+    public Collection<List<?>> findRelatedEntities(ICruxDatasource db,
+                                                   String startEntityGUID,
+                                                   List<String> entityTypeGUIDs,
+                                                   int fromEntityElement,
+                                                   List<InstanceStatus> limitResultsByStatus,
+                                                   List<String> limitResultsByClassification,
+                                                   String sequencingProperty,
+                                                   SequencingOrder sequencingOrder,
+                                                   int pageSize,
+                                                   String userId) throws TypeErrorException, TimeoutException {
+
+        String namespace = EntityDetailMapping.ENTITY_PROPERTIES_NS;
+
+        CruxGraphQuery query = new CruxGraphQuery();
+        query.addRelatedEntitiesNestedQuery(EntitySummaryMapping.getReference(startEntityGUID));
+        query.addEntityLimiters(entityTypeGUIDs, limitResultsByClassification);
+        query.addStatusLimiters(limitResultsByStatus);
+        Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, null, entityTypeGUIDs, namespace);
+        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
+
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = db.query(q);
+
+        // Note: we de-duplicate and apply paging here, against the full set of results from Crux
+        return deduplicateAndPage(results, fromEntityElement, pageSize);
+
+    }
+
+    /**
      * Find the entities and relationships that radiate out from the supplied entity GUID.
      * The results are scoped by the provided type GUIDs, other limiters, and the level.
      * @param entityGUID the starting point for the radiation
