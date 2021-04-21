@@ -731,7 +731,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
         try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
-            instanceGraph = new InstanceGraph();
+            instanceGraph = null;
 
             Set<List<?>> consolidated = new LinkedHashSet<>();
 
@@ -742,14 +742,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             List<String> nextEntityGUIDs = new ArrayList<>();
             nextEntityGUIDs.add(entityGUID);
 
-            // Start the InstanceGraph off with the entity starting point that was requested
-            // (not clear if this is the intended logic, but follows other repository implementations)
-            List<EntityDetail> startingEntities = new ArrayList<>();
             EntityDetail startingEntity = this.getEntityByGuid(db, entityGUID);
 
             if (startingEntity != null) {
-                startingEntities.add(startingEntity);
-                instanceGraph.setEntities(startingEntities);
                 entityGUIDsRetrieved.add(entityGUID);
 
                 int levelTraversed = 0;
@@ -782,10 +777,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 }
 
                 // TODO: exclude proxies (somehow) from the entity detail list (?)
-                InstanceGraph neighbors = resultsToGraph(db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved, includeRelationships);
-                if (neighbors != null) {
-                    instanceGraph = mergeGraphs(instanceGraph, neighbors);
-                }
+                instanceGraph = resultsToGraph(startingEntity, db, consolidated, entityGUIDsRetrieved, relationshipGUIDsRetrieved, includeRelationships);
 
             }
 
@@ -877,14 +869,11 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
         try (ICruxDatasource db = asOfTime == null ? cruxAPI.openDB() : cruxAPI.openDB(asOfTime)) {
 
-            instanceGraph = new InstanceGraph();
-
             Set<String> entityGUIDsVisited = new HashSet<>();
             Set<String> relationshipGUIDsVisited = new HashSet<>();
 
             // Start the InstanceGraph off with the entity starting point that was requested
             // (not clear if this is the intended logic, but follows other repository implementations)
-            List<EntityDetail> startingEntities = new ArrayList<>();
             EntityDetail startingEntity = this.getEntityByGuid(db, startEntityGUID);
 
             if (startingEntity == null) {
@@ -892,8 +881,6 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         startEntityGUID, repositoryName), this.getClass().getName(), methodName);
             }
 
-            startingEntities.add(startingEntity);
-            instanceGraph.setEntities(startingEntities);
             entityGUIDsVisited.add(startEntityGUID);
 
             Set<String> traversedGuids = new HashSet<>();
@@ -906,12 +893,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     1);
 
             // TODO: exclude proxies (somehow) from the entity detail list (?)
-            InstanceGraph furtherTraversals = resultsToGraph(db, successfulTraversals, entityGUIDsVisited, relationshipGUIDsVisited, true);
-            if (furtherTraversals == null || furtherTraversals.getEntities() == null || furtherTraversals.getEntities().isEmpty()) {
-                // If there are no entities, return an empty graph
+            instanceGraph = resultsToGraph(startingEntity, db, successfulTraversals, entityGUIDsVisited, relationshipGUIDsVisited, true);
+            if (instanceGraph != null && instanceGraph.getEntities() != null && instanceGraph.getEntities().size() == 1) {
+                // If there were no entities other than the starting entity, return an empty graph
                 instanceGraph = null;
-            } else {
-                instanceGraph = mergeGraphs(instanceGraph, furtherTraversals);
             }
 
         } catch (IOException e) {
@@ -1000,42 +985,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
-     * Merge the provided instance graphs into a single consolidated graph, without any duplicates.
-     * @param one first graph to merge
-     * @param two second graph to merge
-     * @return InstanceGraph containing all elements from both graphs, only once
-     */
-    private InstanceGraph mergeGraphs(InstanceGraph one, InstanceGraph two) {
-        InstanceGraph consolidated = new InstanceGraph();
-        List<EntityDetail> oneEntities = one.getEntities();
-        List<EntityDetail> twoEntities = two.getEntities();
-        LinkedHashSet<EntityDetail> mergedEntities = new LinkedHashSet<>();
-        if (oneEntities != null) {
-            mergedEntities.addAll(oneEntities);
-        }
-        if (twoEntities != null) {
-            mergedEntities.addAll(twoEntities);
-        }
-        consolidated.setEntities(new ArrayList<>(mergedEntities));
-        if (log.isDebugEnabled())
-            log.debug("Merged entities: {}", mergedEntities.stream().map(EntityDetail::getGUID).collect(Collectors.toList()));
-        List<Relationship> oneRelationships = one.getRelationships();
-        List<Relationship> twoRelationships = two.getRelationships();
-        LinkedHashSet<Relationship> mergedRelationships = new LinkedHashSet<>();
-        if (oneRelationships != null) {
-            mergedRelationships.addAll(oneRelationships);
-        }
-        if (twoRelationships != null) {
-            mergedRelationships.addAll(twoRelationships);
-        }
-        consolidated.setRelationships(new ArrayList<>(mergedRelationships));
-        if (log.isDebugEnabled())
-            log.debug("Merged relationships: {}", mergedRelationships.stream().map(Relationship::getGUID).collect(Collectors.toList()));
-        return consolidated;
-    }
-
-    /**
      * Translate the collection of Crux tuple results (from a graph query) into an Egeria InstanceGraph.
+     * @param startingEntity the EntityDetail from which the graph query was anchored
      * @param db already opened point-in-time view of the database
      * @param cruxResults list of result tuples, eg. from a neighborhood or other graph search
      * @param entityGUIDsVisited the list of entity GUIDs that have already been retrieved
@@ -1044,44 +995,63 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return InstanceGraph
      * @see #findNeighborhood(String, List, List, List, List, Date, int, boolean)
      */
-    private InstanceGraph resultsToGraph(ICruxDatasource db,
+    private InstanceGraph resultsToGraph(EntityDetail startingEntity,
+                                         ICruxDatasource db,
                                          Collection<List<?>> cruxResults,
                                          Set<String> entityGUIDsVisited,
                                          Set<String> relationshipGUIDsVisited,
                                          boolean includeRelationships) {
+
         InstanceGraph results = null;
-        if (cruxResults != null) {
-            List<Relationship> relationships = new ArrayList<>();
+
+        if (startingEntity != null) {
+
+            // Start the InstanceGraph off with the entity starting point that was requested
+            // (not clear if this is the intended logic, but follows other repository implementations)
+            results = new InstanceGraph();
             List<EntityDetail> entities = new ArrayList<>();
-            for (List<?> cruxResult : cruxResults) {
-                String entityRef = getEntityRefFromGraphTuple(cruxResult);
-                String entityGuid = InstanceHeaderMapping.trimGuidFromReference(entityRef);
-                if (!entityGUIDsVisited.contains(entityGuid)) {
-                    EntityDetail entity = getEntityByRef(db, entityRef);
-                    if (entity == null) {
-                        log.warn("Unable to resolve search result into entity: {}", cruxResult);
-                    } else {
-                        entities.add(entity);
-                    }
-                }
-                if (includeRelationships) {
-                    String relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
-                    String relationshipGuid = InstanceHeaderMapping.trimGuidFromReference(relationshipRef);
-                    if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
-                        Relationship relationship = getRelationshipByRef(db, relationshipRef);
-                        if (relationship == null) {
-                            log.warn("Unable to resolve search result into relationship: {}", cruxResult);
+            List<Relationship> relationships = new ArrayList<>();
+            entities.add(startingEntity);
+            entityGUIDsVisited.add(startingEntity.getGUID());
+
+            if (cruxResults != null) {
+
+                for (List<?> cruxResult : cruxResults) {
+                    String entityRef = getEntityRefFromGraphTuple(cruxResult);
+                    String entityGuid = InstanceHeaderMapping.trimGuidFromReference(entityRef);
+                    if (!entityGUIDsVisited.contains(entityGuid)) {
+                        EntityDetail entity = getEntityByRef(db, entityRef);
+                        entityGUIDsVisited.add(entityGuid);
+                        if (entity == null) {
+                            log.warn("Unable to resolve search result into entity: {}", cruxResult);
                         } else {
-                            relationships.add(relationship);
+                            entities.add(entity);
+                        }
+                    }
+                    if (includeRelationships) {
+                        String relationshipRef = getRelationshipRefFromGraphTuple(cruxResult);
+                        String relationshipGuid = InstanceHeaderMapping.trimGuidFromReference(relationshipRef);
+                        if (!relationshipGUIDsVisited.contains(relationshipGuid)) {
+                            Relationship relationship = getRelationshipByRef(db, relationshipRef);
+                            relationshipGUIDsVisited.add(relationshipGuid);
+                            if (relationship == null) {
+                                log.warn("Unable to resolve search result into relationship: {}", cruxResult);
+                            } else {
+                                relationships.add(relationship);
+                            }
                         }
                     }
                 }
+
             }
-            results = new InstanceGraph();
+
             results.setEntities(entities);
             results.setRelationships(relationships);
+
         }
+
         return results;
+
     }
 
     /**
