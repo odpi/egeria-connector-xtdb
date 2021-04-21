@@ -3,7 +3,6 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.crux.mapping.EntitySummaryMapping;
 import org.odpi.egeria.connectors.juxt.crux.mapping.RelationshipMapping;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
@@ -81,10 +80,10 @@ public class CruxGraphQuery extends CruxQuery {
 
         Symbol related = Symbol.intern("related");
 
-        // :where [(related s e)]
+        // :where [(related "..." e)]
         List<Object> clause = new ArrayList<>();
         clause.add(related);
-        clause.add(START);
+        clause.add(startingDocId);
         clause.add(DOC_ID);
         IPersistentList searchClause = PersistentList.create(clause);
         inner.conditions.add(searchClause);
@@ -95,9 +94,6 @@ public class CruxGraphQuery extends CruxQuery {
         clause.add(PersistentVector.create(START));
         clause.add(DOC_ID);
         IPersistentList ruleClause = PersistentList.create(clause);
-
-        // :where [[s :crux.db/id "..."]]
-        inner.conditions.add(PersistentVector.create(START, Constants.CRUX_PK, startingDocId));
 
         List<Object> recurse = new ArrayList<>();
         recurse.add(related);

@@ -656,7 +656,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 limitResultsByStatus,
                 limitResultsByClassification,
                 asOfTime,
-                level);
+                level,
+                true);
 
     }
 
@@ -693,16 +694,37 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 sequencingOrder,
                 pageSize);
 
-        return cruxRepositoryConnector.getRelatedEntities(userId,
-                startEntityGUID,
+        final String methodName = "getRelatedEntities";
+        final String limitedResultsByClassificationParameterName = "limitResultsByClassification";
+
+        this.validateRepositoryConnector(methodName);
+        parentConnector.validateRepositoryIsActive(methodName);
+        repositoryValidator.validateUserId(repositoryName, userId, methodName);
+
+        if (limitResultsByClassification != null) {
+            for (String classificationName : limitResultsByClassification) {
+                repositoryValidator.validateClassificationName(repositoryName,
+                        limitedResultsByClassificationParameterName,
+                        classificationName,
+                        methodName);
+            }
+        }
+
+        // Retrieve ALL (full depth) neighborhood from the starting entity (not retrieving any relationships)
+        InstanceGraph adjacent = cruxRepositoryConnector.findNeighborhood(startEntityGUID,
                 entityTypeGUIDs,
-                fromEntityElement,
+                null,
                 limitResultsByStatus,
                 limitResultsByClassification,
                 asOfTime,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize);
+                -1,
+                false);
+
+        if (adjacent != null) {
+            // ... and then simply limit the entity results according to the sequencing and paging parameters
+            return repositoryHelper.formatEntityResults(adjacent.getEntities(), fromEntityElement, sequencingProperty, sequencingOrder, pageSize);
+        }
+        return null;
 
     }
 
