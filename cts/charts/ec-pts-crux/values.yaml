@@ -15,10 +15,6 @@ egeria:
   cohort: coco
   server: myserver
 
-release:
-  version: 2.8-SNAPSHOT
-  repo: snapshot
-
 image:
   egeria:
     name: egeria
@@ -47,8 +43,6 @@ jnr:
   version: 2.2.1
 
 kafka:
-  securityContext:
-    enabled: false
   zookeeper:
     persistence:
       enabled: false

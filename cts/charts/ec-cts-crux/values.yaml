@@ -39,8 +39,6 @@ jnr:
   version: 2.2.1
 
 kafka:
-  securityContext:
-    enabled: false
   zookeeper:
     persistence:
       enabled: false
