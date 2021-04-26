@@ -150,9 +150,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             EntityNotKnownException,
-            EntityProxyOnlyException,
-            FunctionNotSupportedException,
-            UserNotAuthorizedException {
+            EntityProxyOnlyException {
         final String methodName = "getEntityDetailHistory";
         super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
         return cruxRepositoryConnector.getPreviousVersionsOfEntity(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
@@ -436,9 +434,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                                      HistorySequencingOrder sequencingOrder) throws
             InvalidParameterException,
             RepositoryErrorException,
-            RelationshipNotKnownException,
-            FunctionNotSupportedException,
-            UserNotAuthorizedException {
+            RelationshipNotKnownException {
         final String methodName = "getRelationshipHistory";
         super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
         return cruxRepositoryConnector.getPreviousVersionsOfRelationship(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
@@ -1917,12 +1913,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, guidParameterName, entityGUID, methodName);
 
-        EntityDetail retrievedEntity;
+        EntitySummary retrievedEntity = null;
         try {
-            retrievedEntity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
+            retrievedEntity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
         } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+            // Should never reach this point
+            log.warn("Received an EntityProxyOnlyException despite allowing proxies.", e);
         }
 
         List<Classification> homeClassifications = new ArrayList<>();
@@ -1938,6 +1934,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                     }
                 }
             }
+        } else {
+            super.reportEntityNotKnown(entityGUID, methodName);
         }
 
         return homeClassifications.isEmpty() ? null : homeClassifications;
