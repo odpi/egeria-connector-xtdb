@@ -35,7 +35,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * Provides all connectivity and API-based interaction with a Crux back-end.
@@ -1527,6 +1526,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results to include (paging)
      * @param order whether to order the results in reverse-chronological order (backwards) or chronologically (forwards)
      * @return {@code List<EntityDetail>} giving all versions of the entity within the range requested
+     * @throws EntityNotKnownException if the requested entity was not known to the repository during the specified time range
      * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
      */
     public List<EntityDetail> getPreviousVersionsOfEntity(String guid,
@@ -1534,15 +1534,18 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                           Date to,
                                                           int offset,
                                                           int pageSize,
-                                                          HistorySequencingOrder order) throws RepositoryErrorException {
+                                                          HistorySequencingOrder order) throws EntityNotKnownException, RepositoryErrorException {
 
         final String methodName = "getPreviousVersionsOfEntity";
         List<EntityDetail> results = new ArrayList<>();
         String docRef = EntitySummaryMapping.getReference(guid);
 
+        boolean noResults;
+
         // Open the database view at the latest point against which we are interested
         try (ICruxDatasource db = to == null ? cruxAPI.openDB() : cruxAPI.openDB(to)) {
             List<CruxDocument> history = getPreviousVersions(db, docRef, from, order);
+            noResults = (history == null || history.isEmpty());
 
             // Default to the maximum allowable page size if none was specified
             if (pageSize == 0) {
@@ -1573,6 +1576,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     this.getClass().getName(), methodName, e);
         }
 
+        if (noResults)
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(guid),
+                    this.getClass().getName(), methodName);
+
         return results;
 
     }
@@ -1586,6 +1593,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param pageSize maximum number of results to include (paging)
      * @param order whether to order the results in reverse-chronological order (backwards) or chronologically (forwards)
      * @return {@code List<Relationship>} giving all versions of the relationship within the range requested
+     * @throws RelationshipNotKnownException if the requested relationship was not known to the repository during the specified time range
      * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
      */
     public List<Relationship> getPreviousVersionsOfRelationship(String guid,
@@ -1593,15 +1601,18 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                                 Date to,
                                                                 int offset,
                                                                 int pageSize,
-                                                                HistorySequencingOrder order) throws RepositoryErrorException {
+                                                                HistorySequencingOrder order) throws RelationshipNotKnownException, RepositoryErrorException {
 
         final String methodName = "getPreviousVersionsOfRelationship";
         List<Relationship> results = new ArrayList<>();
         String docRef = RelationshipMapping.getReference(guid);
 
+        boolean noResults;
+
         // Open the database view at the latest point against which we are interested
         try (ICruxDatasource db = to == null ? cruxAPI.openDB() : cruxAPI.openDB(to)) {
             List<CruxDocument> history = getPreviousVersions(db, docRef, from, order);
+            noResults = (history == null || history.isEmpty());
 
             // Default to the maximum allowable page size if none was specified
             if (pageSize == 0) {
@@ -1634,6 +1645,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
                     this.getClass().getName(), methodName, e);
         }
+
+        if (noResults)
+            throw new RelationshipNotKnownException(CruxOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(guid),
+                    this.getClass().getName(), methodName);
 
         return results;
 
