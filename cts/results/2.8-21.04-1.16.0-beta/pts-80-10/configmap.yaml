@@ -1,0 +1,32 @@
+apiVersion: v1
+data:
+  CONNECTOR_JAR: egeria-connector-crux-2.8-jar-with-dependencies.jar
+  CONNECTOR_URL: http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies
+  CRUX_ROCKS_JAR_URL: https://clojars.org/repo/juxt/crux-rocksdb/21.04-1.16.0-beta/crux-rocksdb-21.04-1.16.0-beta.jar
+  CRUX_SERVER: crux
+  CRUXPROXY_ENDPOINT: https://c80-10-crux-service:9443
+  EGERIA_COHORT: coco
+  EGERIA_SERVER: myserver
+  EGERIA_USER: myuser
+  JNR_JAR_URL: https://repo1.maven.org/maven2/com/github/jnr/jnr-ffi/2.2.1/jnr-ffi-2.2.1.jar
+  KAFKA_ENDPOINT: c80-10-kafka:9092
+  LOGGING_LEVEL_ROOT: INFO
+  PTS_REPORT_NAME: c80-10
+  ROCKS_JAR_URL: https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/6.15.2/rocksdbjni-6.15.2.jar
+  STRICT_SSL: "false"
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: c80-10
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2021-04-20T10:10:24Z"
+  labels:
+    app.kubernetes.io/instance: c80-10
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ec-pts-crux
+    helm.sh/chart: ec-pts-crux-0.1
+  name: c80-10-configmap
+  namespace: default
+  resourceVersion: "15708332"
+  selfLink: /api/v1/namespaces/default/configmaps/c80-10-configmap
+  uid: 452eb9ac-7df8-4f74-839e-b4022e85696c
