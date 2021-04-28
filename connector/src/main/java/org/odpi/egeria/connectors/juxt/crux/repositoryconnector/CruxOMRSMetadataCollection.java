@@ -1189,6 +1189,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             } else {
                 newClassification = repositoryHelper.getNewClassification(repositoryName,
                         externalSourceGUID,
+                        externalSourceName,
                         InstanceProvenanceType.EXTERNAL_SOURCE,
                         userId,
                         classificationName,
