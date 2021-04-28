@@ -115,64 +115,64 @@ not desirable. This should be [fixed](https://github.com/odpi/egeria-connector-c
 along with knock-on improvements to other areas that rely on the search operations (e.g. graph queries,
 entity re-identification, and entity deletes).
 
-Profile | Method | 5-2 | 10-5 | 20-10 | 40-10 | 80-10
+Profile | Method | pts-05-02 | pts-10-05 | pts-20-10 | pts-40-10 | pts-80-10
 ---|---|---|---|---|---|---
-Entity creation | addEntity | 95.0 | 93.0 | 94.0 | 93.0
-... | saveEntityReferenceCopy | 88.0 | 89.0 | 91.0 | 90.0
-Entity search | findEntities | 242.0 | 677.0 | 1167.0 | 2140.0
-... | findEntitiesByProperty | 208.0 | 424.0 | 823.0 | 2018.0
-... | findEntitiesByPropertyValue | 79.0 | 176.0 | 273.5 | 453.5
-Relationship creation | addRelationship | 96.0 | 97.0 | 97.0 | 95.0
-... | saveRelationshipReferenceCopy | 98.0 | 98.0 | 98.0 | 96.0
-Relationship search | findRelationships | 462.0 | 1186.0 | 2203.5 | 5195.0
-... | findRelationshipsByProperty | 354.0 | 760.0 | 1458.0 | 3554.0
-... | findRelationshipsByPropertyValue | 58.5 | 99.0 | 206.5 | 363.5
-Entity classification | classifyEntity | 126.0 | 139.5 | 132.0 | 129.0
-... | saveClassificationReferenceCopy | 116.0 | 129.0 | 125.0 | 120.0
-Classification search | findEntitiesByClassification | 39.0 | 55.0 | 73.0 | 97.0
-Entity update | reTypeEntity | 97.0 | 95.0 | 96.0 | 94.0
-... | updateEntityProperties | 109.0 | 116.0 | 115.0 | 111.0
-Relationship update | updateRelationshipProperties | 118.0 | 125.0 | 123.0 | 115.0
-Classification update | updateEntityClassification | 143.5 | 159.0 | 153.0 | 152.0
-Entity undo | undoEntityUpdate | 105.0 | 112.0 | 113.0 | 109.0
-Relationship undo | undoRelationshipUpdate | 116.0 | 124.0 | 124.0 | 112.0
-Entity retrieval | getEntityDetail | 16.0 | 16.0 | 16.0 | 15.0
-... | getEntitySummary | 15.5 | 16.0 | 16.0 | 15.0
-... | isEntityKnown | 16.0 | 17.0 | 16.0 | 15.0
-Entity history retrieval | getEntityDetail | 19.0 | 20.0 | 19.0 | 18.0
-... | getEntityDetailHistory | 22.0 | 22.0 | 21.0 | 20.0
-Relationship retrieval | getRelationship | 17.0 | 18.0 | 17.0 | 16.0
-... | isRelationshipKnown | 17.0 | 18.0 | 17.0 | 16.0
-Relationship history retrieval | getRelationship | 20.0 | 21.0 | 20.0 | 19.0
-... | getRelationshipHistory | 22.0 | 22.0 | 21.0 | 20.0
-Entity history search | findEntities | 265.0 | 674.0 | 1157.0 | 2365.0
-... | findEntitiesByProperty | 43.0 | 60.0 | 81.0 | 117.0
-... | findEntitiesByPropertyValue | 82.5 | 171.5 | 271.5 | 593.0
-Relationship history search | findRelationships | 509.0 | 1299.0 | 2268.0 | 4608.5
-... | findRelationshipsByProperty | 38.0 | 52.0 | 68.5 | 71.0
-... | findRelationshipsByPropertyValue | 71.0 | 131.0 | 223.0 | 413.5
-Graph queries | getEntityNeighborhood | 35.0 | 39.0 | 36.0 | --
-... | getLinkingEntities | 21.0 | 37.0 | 34.0 | --
-... | getRelatedEntities | 4019.0 | 9743.0 | 17602.5 | --
-... | getRelationshipsForEntity | 197.0 | 459.0 | 781.0 | --
-Graph history queries | getEntityNeighborhood | 34.5 | 38.0 | 35.0 | --
-... | getLinkingEntities | 21.0 | 36.0 | 34.0 | --
-... | getRelatedEntities | 4026.5 | 9829.0 | 17668.0 | --
-... | getRelationshipsForEntity | 196.0 | 456.0 | 774.0 | --
-Entity re-home | reHomeEntity | 111.0 | 104.0 | 118.0 | 112.0
-Relationship re-home | reHomeRelationship | 102.0 | 104.0 | 111.0 | 104.0
-Entity declassify | declassifyEntity | 127.0 | 133.0 | 136.0 | 130.0
-... | purgeClassificationReferenceCopy | 118.0 | 122.0 | 131.0 | 114.0
-Entity re-identify | reIdentifyEntity | 301.0 | 513.0 | 858.0 | 2080.0
-Relationship re-identify | reIdentifyRelationship | 115.0 | 120.0 | 119.0 | 119.0
-Relationship delete | deleteRelationship | 102.0 | 106.0 | 110.0 | 114.0
-Entity delete | deleteEntity | 336.0 | 582.0 | 1028.5 | 2726.0
-Entity restore | restoreEntity | 97.0 | 97.0 | 100.0 | 97.0
-Relationship restore | restoreRelationship | 100.0 | 105.0 | 106.0 | 104.0
-Relationship purge | purgeRelationship | 111.0 | 106.0 | 104.0 | 119.0
-... | purgeRelationshipReferenceCopy | 95.0 | 95.0 | 95.0 | 106.0
-Entity purge | purgeEntity | 113.0 | 112.0 | 110.0 | 130.0
-... | purgeEntityReferenceCopy | 91.0 | 92.0 | 93.0 | 103.0
+Entity creation | addEntity | 95.0 | 93.0 | 94.0 | 93.0 | 93.0
+... | saveEntityReferenceCopy | 88.0 | 89.0 | 91.0 | 90.0 | 90.0
+Entity search | findEntities | 242.0 | 677.0 | 1167.0 | 2140.0 | 4571.0
+... | findEntitiesByProperty | 208.0 | 424.0 | 823.0 | 2018.0 | 4656.0
+... | findEntitiesByPropertyValue | 79.0 | 176.0 | 273.5 | 453.5 | 1017.5
+Relationship creation | addRelationship | 96.0 | 97.0 | 97.0 | 95.0 | 97.0
+... | saveRelationshipReferenceCopy | 98.0 | 98.0 | 98.0 | 96.0 | 98.0
+Relationship search | findRelationships | 462.0 | 1186.0 | 2203.5 | 5195.0 | 10429.0
+... | findRelationshipsByProperty | 354.0 | 760.0 | 1458.0 | 3554.0 | 8611.0
+... | findRelationshipsByPropertyValue | 58.5 | 99.0 | 206.5 | 363.5 | 820.0
+Entity classification | classifyEntity | 126.0 | 139.5 | 132.0 | 129.0 | 134.0
+... | saveClassificationReferenceCopy | 116.0 | 129.0 | 125.0 | 120.0 | 125.0
+Classification search | findEntitiesByClassification | 39.0 | 55.0 | 73.0 | 97.0 | 141.0
+Entity update | reTypeEntity | 97.0 | 95.0 | 96.0 | 94.0 | 97.0
+... | updateEntityProperties | 109.0 | 116.0 | 115.0 | 111.0 | 116.0
+Relationship update | updateRelationshipProperties | 118.0 | 125.0 | 123.0 | 115.0 | 118.0
+Classification update | updateEntityClassification | 143.5 | 159.0 | 153.0 | 152.0 | 156.0
+Entity undo | undoEntityUpdate | 105.0 | 112.0 | 113.0 | 109.0 | 110.0
+Relationship undo | undoRelationshipUpdate | 116.0 | 124.0 | 124.0 | 112.0 | 122.0
+Entity retrieval | getEntityDetail | 16.0 | 16.0 | 16.0 | 15.0 | 15.0
+... | getEntitySummary | 15.5 | 16.0 | 16.0 | 15.0 | 15.0
+... | isEntityKnown | 16.0 | 17.0 | 16.0 | 15.0 | 15.0
+Entity history retrieval | getEntityDetail | 19.0 | 20.0 | 19.0 | 18.0 | 18.0
+... | getEntityDetailHistory | 22.0 | 22.0 | 21.0 | 20.0 | 20.0
+Relationship retrieval | getRelationship | 17.0 | 18.0 | 17.0 | 16.0 | 16.0
+... | isRelationshipKnown | 17.0 | 18.0 | 17.0 | 16.0 | 16.0
+Relationship history retrieval | getRelationship | 20.0 | 21.0 | 20.0 | 19.0 | 19.0
+... | getRelationshipHistory | 22.0 | 22.0 | 21.0 | 20.0 | 20.0
+Entity history search | findEntities | 265.0 | 674.0 | 1157.0 | 2365.0 | 5156.0
+... | findEntitiesByProperty | 43.0 | 60.0 | 81.0 | 117.0 | 261.0
+... | findEntitiesByPropertyValue | 82.5 | 171.5 | 271.5 | 593.0 | 1280.5
+Relationship history search | findRelationships | 509.0 | 1299.0 | 2268.0 | 4608.5 | 10170.5
+... | findRelationshipsByProperty | 38.0 | 52.0 | 68.5 | 71.0 | 86.0
+... | findRelationshipsByPropertyValue | 71.0 | 131.0 | 223.0 | 413.5 | 885.0
+Graph queries | getEntityNeighborhood | 35.0 | 39.0 | 36.0 | -- | --
+... | getLinkingEntities | 21.0 | 37.0 | 34.0 | -- | --
+... | getRelatedEntities | 4019.0 | 9743.0 | 17602.5 | -- | --
+... | getRelationshipsForEntity | 197.0 | 459.0 | 781.0 | -- | --
+Graph history queries | getEntityNeighborhood | 34.5 | 38.0 | 35.0 | -- | --
+... | getLinkingEntities | 21.0 | 36.0 | 34.0 | -- | --
+... | getRelatedEntities | 4026.5 | 9829.0 | 17668.0 | -- | --
+... | getRelationshipsForEntity | 196.0 | 456.0 | 774.0 | -- | --
+Entity re-home | reHomeEntity | 111.0 | 104.0 | 118.0 | 112.0 | 112.0
+Relationship re-home | reHomeRelationship | 102.0 | 104.0 | 111.0 | 104.0 | 109.0
+Entity declassify | declassifyEntity | 127.0 | 133.0 | 136.0 | 130.0 | 135.0
+... | purgeClassificationReferenceCopy | 118.0 | 122.0 | 131.0 | 114.0 | 121.0
+Entity re-identify | reIdentifyEntity | 301.0 | 513.0 | 858.0 | 2080.0 | 4403.0
+Relationship re-identify | reIdentifyRelationship | 115.0 | 120.0 | 119.0 | 119.0 | 120.0
+Relationship delete | deleteRelationship | 102.0 | 106.0 | 110.0 | 114.0 | 115.0
+Entity delete | deleteEntity | 336.0 | 582.0 | 1028.5 | 2726.0 | 5942.0
+Entity restore | restoreEntity | 97.0 | 97.0 | 100.0 | 97.0 | 97.0
+Relationship restore | restoreRelationship | 100.0 | 105.0 | 106.0 | 104.0 | 104.0
+Relationship purge | purgeRelationship | 111.0 | 106.0 | 104.0 | 119.0 | 113.0
+... | purgeRelationshipReferenceCopy | 95.0 | 95.0 | 95.0 | 106.0 | 113.0
+Entity purge | purgeEntity | 113.0 | 112.0 | 110.0 | 130.0 | 131.0
+... | purgeEntityReferenceCopy | 91.0 | 92.0 | 93.0 | 103.0 | 107.0
 
 ### Crux (connector 2.8, Egeria 2.8, Crux 21.04-1.16.0) vs JanusGraph (Egeria 2.8)
 
