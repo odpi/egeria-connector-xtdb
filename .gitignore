@@ -89,3 +89,5 @@ Gemfile
 # ignore settings.xml used for automating packaging
 settings.xml
 
+# ignore Helm chart dependencies
+cts/charts/**/charts/
