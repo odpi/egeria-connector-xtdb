@@ -30,7 +30,7 @@ volumeParameters:
   instancesPerType: 5
   maxSearchResults: 2
   waitBetweenScenarios: 0
-  profilesToSkip: "[]"
+  profilesToSkip: "[\"Graph queries\",\"Graph history queries\"]"
 
 kafka:
   zookeeper:
