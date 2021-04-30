@@ -29,4 +29,6 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Assemblies
-          path: target/*.jar
+          path: |
+            connector/target/*.jar
+            migrator/target/*.jar
