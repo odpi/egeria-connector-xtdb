@@ -75,6 +75,7 @@
         <jackson.version>2.12.3</jackson.version>
         <lucene.version>8.8.2</lucene.version>
         <slf4j.version>1.7.30</slf4j.version>
+        <testng.version>7.4.0</testng.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -178,6 +179,54 @@
                 <version>${slf4j.version}</version>
                 <scope>provided</scope>
             </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-nop</artifactId>
+                <version>${slf4j.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <scope>test</scope>
+                <version>${testng.version}</version>
+                <exclusions>
+                    <!-- Exclude snakeyaml, which has open CVEs and is unused -->
+                    <exclusion>
+                        <groupId>org.yaml</groupId>
+                        <artifactId>snakeyaml</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.odpi.egeria</groupId>
+                <artifactId>repository-services-implementation</artifactId>
+                <version>${open-metadata.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.odpi.egeria</groupId>
+                <artifactId>connector-configuration-factory</artifactId>
+                <version>${open-metadata.version}</version>
+                <scope>test</scope>
+                <exclusions>
+                    <!-- Exclude the graph repository, as unused and will extend to many other dependencies -->
+                    <exclusion>
+                        <groupId>org.odpi.egeria</groupId>
+                        <artifactId>graph-repository-connector</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.odpi.egeria</groupId>
+                <artifactId>open-metadata-types</artifactId>
+                <version>${open-metadata.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -251,7 +300,7 @@
                             <include>**/*Test.java</include>
                         </includes>
                         <systemPropertyVariables>
-                            <org.slf4j.simpleLogger.defaultLogLevel>INFO</org.slf4j.simpleLogger.defaultLogLevel>
+                            <org.slf4j.simpleLogger.defaultLogLevel>ERROR</org.slf4j.simpleLogger.defaultLogLevel>
                         </systemPropertyVariables>
                     </configuration>
                 </plugin>
@@ -434,10 +483,8 @@
                                 <ignoredUnusedDeclaredDependency>org.testng:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>junit:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.junit.platform:*</ignoredUnusedDeclaredDependency>
-                                <!-- Used with slf4j as default implementation in test scope only -->
-                                <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
-                                <!-- Used with slf4j as default implementation for chassis & apps (more configurable in xml)-->
-                                <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-simple:*</ignoredUnusedDeclaredDependency>
+                                <!-- Used with slf4j as default implementation for testing -->
+                                <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-nop:*</ignoredUnusedDeclaredDependency>
                                 <!-- Ignore these as usage depends on runtime configuration -->
                                 <ignoredUnusedDeclaredDependency>juxt:crux-metrics:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>juxt:crux-rocksdb:*</ignoredUnusedDeclaredDependency>

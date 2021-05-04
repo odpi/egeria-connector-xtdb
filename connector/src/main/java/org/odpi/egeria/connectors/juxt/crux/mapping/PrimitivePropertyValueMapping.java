@@ -55,33 +55,35 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
     public static Object getPrimitiveValueForComparison(PrimitivePropertyValue ppv) {
         PrimitiveDefCategory category = ppv.getPrimitiveDefCategory();
         Object value = null;
-        switch (category) {
-            case OM_PRIMITIVE_TYPE_DATE:
-                // Dates are the only thing we need to translate, from their native Long form into Crux's
-                // native Date form
-                Object longForm = ppv.getPrimitiveValue();
-                if (longForm instanceof Long) {
-                    value = new Date((Long) longForm);
-                }
-                break;
-            case OM_PRIMITIVE_TYPE_STRING:
-                // Note: further translation of strings into regexes is only necessary for queries, so that will be
-                // done in the CruxQuery class directly.
-            case OM_PRIMITIVE_TYPE_BOOLEAN:
-            case OM_PRIMITIVE_TYPE_BIGINTEGER:
-            case OM_PRIMITIVE_TYPE_BIGDECIMAL:
-            case OM_PRIMITIVE_TYPE_DOUBLE:
-            case OM_PRIMITIVE_TYPE_SHORT:
-            case OM_PRIMITIVE_TYPE_FLOAT:
-            case OM_PRIMITIVE_TYPE_LONG:
-            case OM_PRIMITIVE_TYPE_INT:
-            case OM_PRIMITIVE_TYPE_CHAR:
-            case OM_PRIMITIVE_TYPE_BYTE:
-            case OM_PRIMITIVE_TYPE_UNKNOWN:
-            default:
-                // For everything else, we can translate directly into a straight Java object
-                value = ppv.getPrimitiveValue();
-                break;
+        if (category != null) {
+            switch (category) {
+                case OM_PRIMITIVE_TYPE_DATE:
+                    // Dates are the only thing we need to translate, from their native Long form into Crux's
+                    // native Date form
+                    Object longForm = ppv.getPrimitiveValue();
+                    if (longForm instanceof Long) {
+                        value = new Date((Long) longForm);
+                    }
+                    break;
+                case OM_PRIMITIVE_TYPE_STRING:
+                    // Note: further translation of strings into regexes is only necessary for queries, so that will be
+                    // done in the CruxQuery class directly.
+                case OM_PRIMITIVE_TYPE_BOOLEAN:
+                case OM_PRIMITIVE_TYPE_BIGINTEGER:
+                case OM_PRIMITIVE_TYPE_BIGDECIMAL:
+                case OM_PRIMITIVE_TYPE_DOUBLE:
+                case OM_PRIMITIVE_TYPE_SHORT:
+                case OM_PRIMITIVE_TYPE_FLOAT:
+                case OM_PRIMITIVE_TYPE_LONG:
+                case OM_PRIMITIVE_TYPE_INT:
+                case OM_PRIMITIVE_TYPE_CHAR:
+                case OM_PRIMITIVE_TYPE_BYTE:
+                case OM_PRIMITIVE_TYPE_UNKNOWN:
+                default:
+                    // For everything else, we can translate directly into a straight Java object
+                    value = ppv.getPrimitiveValue();
+                    break;
+            }
         }
         return value;
     }
