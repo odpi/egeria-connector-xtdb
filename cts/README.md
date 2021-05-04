@@ -178,6 +178,26 @@ hours in this connector, so the complete graph queries portion would take _more 
 complete (even at the lowest volume (5-2) configuration). This portion of the tests was therefore explicitly skipped,
 and hence no results are shown for those methods below.
 
+![Graphical comparison](results/2.9-21.04-1.16.0-beta/comparison.png)
+
+> Graphical comparison
+
+In the graphical comparison, a point plot is used to show the typical execution time of each method at the different
+volumes for the two repositories. Each point on the plot represents the _median_ execution time for that method, in a
+given repository (`pts` = Crux, `janus` = JanusGraph), with a given volume of metadata (`5-2` = 4,410 instances,
+`10-5` = 8,820 instances). The horizontal lines that appear around each point are confidence intervals calculated by
+a bootstrapping process: in simple terms, the larger the horizontal line, the more variability there is for that
+particular method's execution time (a singular median value is insufficient to represent such variability).
+
+Note that in almost all cases, the Crux repository is _significantly_ faster than JanusGraph: always completing in
+less than 200ms and with very little variability (no horizontal confidence intervals are even visible). For JanusGraph,
+on the other hand, there is significant variability (in particular for methods like `findEntitiesByClassification`),
+and there are numerous examples of the median execution time taking over a full second.
+
+Following is a table of the specific median values for each repository and volume (also including the results for
+methods that are only currently implemented by the Crux repository connector, or only return in a sufficiently timely
+manner to be included in the tests):
+
 Profile | Method | 05-02 (Crux) | 05-02 (Janus) | 10-05 (Crux) | 10-05 (Janus)
 ---|---|---|---|---|---
 Entity creation | addEntity | 95.0 | 426.5 | 94.0 | 422.0
