@@ -111,64 +111,79 @@ The volume parameters that were used for each test are specified using the follo
 
 ### Crux (connector 2.9, Egeria 2.9, Crux 21.04-1.16.0)
 
+![Graphical comparison](results/2.9-21.04-1.16.0-beta/volume_comparison.png)
+
+> Graphical comparison of volumes
+
+In the graphical comparison, a point plot is used to show the typical execution time of each method at the different
+volumes. Each point on the plot represents the _median_ execution time for that method, at a given volume of metadata.
+The horizontal lines that appear around each point are confidence intervals calculated by a bootstrapping process: in
+simple terms, the larger the horizontal line, the more variability there is for that particular method's execution time
+(a singular median value is insufficient to represent such variability).
+
+We can see that the retrieval and write operations remain very consistent, with almost no variability, throughout the
+growth in volume. The search operations, however, begin to clearly degrade at the highest volumes tested. Further
+investigation into other optimized settings for the search operations for these larger volumes is likely warranted
+as the next step to continue to improve performance.
+
 Profile | Method | 05-02 (4,410) | 10-05 (8,820) | 20-10 (17,640) | 40-10 (35,280) | 80-10 (70,560)
 ---|---|---|---|---|---|---
-Entity creation | addEntity | 95.0 | 94.0 | 92.0 | 92.0
-... | saveEntityReferenceCopy | 88.0 | 90.0 | 89.0 | 88.0
-Entity search | findEntities | 43.0 | 72.0 | 108.5 | 221.0
-... | findEntitiesByProperty | 32.0 | 45.0 | 54.0 | 97.0
-... | findEntitiesByPropertyValue | 41.0 | 70.0 | 103.0 | 126.0
-Relationship creation | addRelationship | 98.0 | 96.0 | 95.0 | 98.0
-... | saveRelationshipReferenceCopy | 99.0 | 95.0 | 95.0 | 97.0
-Relationship search | findRelationships | 27.0 | 33.0 | 41.0 | 40.0
-... | findRelationshipsByProperty | 32.0 | 46.0 | 53.0 | 106.0
-... | findRelationshipsByPropertyValue | 41.0 | 52.0 | 70.5 | 104.0
-Entity classification | classifyEntity | 129.0 | 132.0 | 133.0 | 127.0
-... | saveClassificationReferenceCopy | 121.0 | 119.0 | 125.0 | 119.0
-Classification search | findEntitiesByClassification | 38.0 | 50.0 | 66.0 | 98.0
-Entity update | reTypeEntity | 91.0 | 104.0 | 85.0 | 92.0
-... | updateEntityProperties | 114.0 | 113.0 | 113.0 | 110.0
-Relationship update | updateRelationshipProperties | 127.0 | 121.0 | 122.0 | 119.0
-Classification update | updateEntityClassification | 150.0 | 150.0 | 157.0 | 147.5
-Entity undo | undoEntityUpdate | 111.0 | 107.0 | 110.0 | 109.0
-Relationship undo | undoRelationshipUpdate | 123.0 | 122.0 | 120.0 | 117.0
-Entity retrieval | getEntityDetail | 15.0 | 15.0 | 16.0 | 14.0
-... | getEntitySummary | 15.0 | 15.0 | 16.0 | 14.0
-... | isEntityKnown | 15.0 | 15.0 | 16.0 | 14.0
-Entity history retrieval | getEntityDetail | 18.0 | 18.0 | 19.0 | 17.0
-... | getEntityDetailHistory | 20.0 | 19.0 | 20.0 | 19.0
-Relationship retrieval | getRelationship | 17.0 | 16.0 | 17.0 | 15.0
-... | isRelationshipKnown | 17.0 | 16.0 | 17.0 | 15.0
-Relationship history retrieval | getRelationship | 20.0 | 18.0 | 20.0 | 18.0
-... | getRelationshipHistory | 21.0 | 19.0 | 21.0 | 19.0
-Entity history search | findEntities | 66.0 | 96.0 | 173.0 | 577.5
-... | findEntitiesByProperty | 36.0 | 40.0 | 50.0 | 61.0
-... | findEntitiesByPropertyValue | 51.0 | 66.0 | 108.0 | 195.0
-Relationship history search | findRelationships | 33.0 | 41.0 | 50.0 | 52.0
-... | findRelationshipsByProperty | 38.0 | 50.0 | 61.0 | 65.0
-... | findRelationshipsByPropertyValue | 52.5 | 86.0 | 113.0 | 157.0
-Graph queries | getEntityNeighborhood | 32.0 | 35.0 | 35.0 | --
-... | getLinkingEntities | 20.0 | 38.0 | 3230.0 | --
-... | getRelatedEntities | 1909.0 | 4028.5 | 9125.5 | --
-... | getRelationshipsForEntity | 29.0 | 33.0 | 33.0 | --
-Graph history queries | getEntityNeighborhood | 33.0 | 35.0 | 35.0 | --
-... | getLinkingEntities | 20.0 | 37.0 | 3218.5 | --
-... | getRelatedEntities | 1904.0 | 4044.0 | 9058.5 | --
-... | getRelationshipsForEntity | 28.0 | 31.0 | 31.0 | --
-Entity re-home | reHomeEntity | 107.0 | 104.0 | 103.0 | 112.0
-Relationship re-home | reHomeRelationship | 100.0 | 98.0 | 98.0 | 106.0
-Entity declassify | declassifyEntity | 120.0 | 131.0 | 120.0 | 132.0
-... | purgeClassificationReferenceCopy | 109.0 | 119.0 | 110.0 | 118.0
-Entity re-identify | reIdentifyEntity | 126.0 | 154.0 | 122.0 | 133.0
-Relationship re-identify | reIdentifyRelationship | 112.0 | 127.0 | 107.0 | 119.0
-Relationship delete | deleteRelationship | 101.0 | 108.0 | 97.0 | 110.0
-Entity delete | deleteEntity | 108.0 | 115.0 | 106.0 | 119.0
-Entity restore | restoreEntity | 97.0 | 102.0 | 93.0 | 101.0
-Relationship restore | restoreRelationship | 99.0 | 105.0 | 94.0 | 104.0
-Relationship purge | purgeRelationship | 106.0 | 118.0 | 101.0 | 115.0
-... | purgeRelationshipReferenceCopy | 95.0 | 103.0 | 93.0 | 104.0
-Entity purge | purgeEntity | 113.0 | 119.0 | 107.0 | 120.0
-... | purgeEntityReferenceCopy | 91.0 | 97.0 | 89.0 | 100.0
+Entity creation | addEntity | 95.0 | 94.0 | 92.0 | 92.0 | 93.0
+... | saveEntityReferenceCopy | 88.0 | 90.0 | 89.0 | 88.0 | 90.0
+Entity search | findEntities | 43.0 | 72.0 | 108.5 | 221.0 | 511.0
+... | findEntitiesByProperty | 32.0 | 45.0 | 54.0 | 97.0 | 194.0
+... | findEntitiesByPropertyValue | 41.0 | 70.0 | 103.0 | 126.0 | 255.5
+Relationship creation | addRelationship | 98.0 | 96.0 | 95.0 | 98.0 | 102.0
+... | saveRelationshipReferenceCopy | 99.0 | 95.0 | 95.0 | 97.0 | 100.0
+Relationship search | findRelationships | 27.0 | 33.0 | 41.0 | 40.0 | 45.0
+... | findRelationshipsByProperty | 32.0 | 46.0 | 53.0 | 106.0 | 218.0
+... | findRelationshipsByPropertyValue | 41.0 | 52.0 | 70.5 | 104.0 | 209.0
+Entity classification | classifyEntity | 129.0 | 132.0 | 133.0 | 127.0 | 134.0
+... | saveClassificationReferenceCopy | 121.0 | 119.0 | 125.0 | 119.0 | 125.0
+Classification search | findEntitiesByClassification | 38.0 | 50.0 | 66.0 | 98.0 | 141.0
+Entity update | reTypeEntity | 91.0 | 104.0 | 85.0 | 92.0 | 95.0
+... | updateEntityProperties | 114.0 | 113.0 | 113.0 | 110.0 | 117.0
+Relationship update | updateRelationshipProperties | 127.0 | 121.0 | 122.0 | 119.0 | 122.0
+Classification update | updateEntityClassification | 150.0 | 150.0 | 157.0 | 147.5 | 157.0
+Entity undo | undoEntityUpdate | 111.0 | 107.0 | 110.0 | 109.0 | 112.0
+Relationship undo | undoRelationshipUpdate | 123.0 | 122.0 | 120.0 | 117.0 | 123.0
+Entity retrieval | getEntityDetail | 15.0 | 15.0 | 16.0 | 14.0 | 16.0
+... | getEntitySummary | 15.0 | 15.0 | 16.0 | 14.0 | 15.0
+... | isEntityKnown | 15.0 | 15.0 | 16.0 | 14.0 | 16.0
+Entity history retrieval | getEntityDetail | 18.0 | 18.0 | 19.0 | 17.0 | 18.0
+... | getEntityDetailHistory | 20.0 | 19.0 | 20.0 | 19.0 | 20.0
+Relationship retrieval | getRelationship | 17.0 | 16.0 | 17.0 | 15.0 | 17.0
+... | isRelationshipKnown | 17.0 | 16.0 | 17.0 | 15.0 | 17.0
+Relationship history retrieval | getRelationship | 20.0 | 18.0 | 20.0 | 18.0 | 19.0
+... | getRelationshipHistory | 21.0 | 19.0 | 21.0 | 19.0 | 21.0
+Entity history search | findEntities | 66.0 | 96.0 | 173.0 | 577.5 | 1586.0
+... | findEntitiesByProperty | 36.0 | 40.0 | 50.0 | 61.0 | 90.0
+... | findEntitiesByPropertyValue | 51.0 | 66.0 | 108.0 | 195.0 | 502.0
+Relationship history search | findRelationships | 33.0 | 41.0 | 50.0 | 52.0 | 60.0
+... | findRelationshipsByProperty | 38.0 | 50.0 | 61.0 | 65.0 | 76.0
+... | findRelationshipsByPropertyValue | 52.5 | 86.0 | 113.0 | 157.0 | 305.5
+Graph queries | getEntityNeighborhood | 32.0 | 35.0 | 35.0 | -- | --
+... | getLinkingEntities | 20.0 | 38.0 | 3230.0 | -- | --
+... | getRelatedEntities | 1909.0 | 4028.5 | 9125.5 | -- | --
+... | getRelationshipsForEntity | 29.0 | 33.0 | 33.0 | -- | --
+Graph history queries | getEntityNeighborhood | 33.0 | 35.0 | 35.0 | -- | --
+... | getLinkingEntities | 20.0 | 37.0 | 3218.5 | -- | --
+... | getRelatedEntities | 1904.0 | 4044.0 | 9058.5 | -- | --
+... | getRelationshipsForEntity | 28.0 | 31.0 | 31.0 | -- | --
+Entity re-home | reHomeEntity | 107.0 | 104.0 | 103.0 | 112.0 | 115.0
+Relationship re-home | reHomeRelationship | 100.0 | 98.0 | 98.0 | 106.0 | 111.0
+Entity declassify | declassifyEntity | 120.0 | 131.0 | 120.0 | 132.0 | 139.0
+... | purgeClassificationReferenceCopy | 109.0 | 119.0 | 110.0 | 118.0 | 121.0
+Entity re-identify | reIdentifyEntity | 126.0 | 154.0 | 122.0 | 133.0 | 139.0
+Relationship re-identify | reIdentifyRelationship | 112.0 | 127.0 | 107.0 | 119.0 | 126.0
+Relationship delete | deleteRelationship | 101.0 | 108.0 | 97.0 | 110.0 | 119.0
+Entity delete | deleteEntity | 108.0 | 115.0 | 106.0 | 119.0 | 128.0
+Entity restore | restoreEntity | 97.0 | 102.0 | 93.0 | 101.0 | 108.0
+Relationship restore | restoreRelationship | 99.0 | 105.0 | 94.0 | 104.0 | 116.0
+Relationship purge | purgeRelationship | 106.0 | 118.0 | 101.0 | 115.0 | 120.0
+... | purgeRelationshipReferenceCopy | 95.0 | 103.0 | 93.0 | 104.0 | 110.0
+Entity purge | purgeEntity | 113.0 | 119.0 | 107.0 | 120.0 | 131.0
+... | purgeEntityReferenceCopy | 91.0 | 97.0 | 89.0 | 100.0 | 108.0
 
 ### Crux (connector 2.9, Egeria 2.9, Crux 21.04-1.16.0) vs JanusGraph (Egeria 2.9)
 
@@ -177,6 +192,26 @@ Unfortunately, the graph queries portion of the suite for a single metadata type
 hours in this connector, so the complete graph queries portion would take _more than a month of non-stop execution_ to
 complete (even at the lowest volume (5-2) configuration). This portion of the tests was therefore explicitly skipped,
 and hence no results are shown for those methods below.
+
+![Graphical comparison](results/2.9-21.04-1.16.0-beta/repo_comparison.png)
+
+> Graphical comparison of repositories
+
+In the graphical comparison, a point plot is used to show the typical execution time of each method at the different
+volumes for the two repositories. Each point on the plot represents the _median_ execution time for that method, in a
+given repository (`pts` = Crux, `janus` = JanusGraph), with a given volume of metadata (`5-2` = 4,410 instances,
+`10-5` = 8,820 instances). The horizontal lines that appear around each point are confidence intervals calculated by
+a bootstrapping process: in simple terms, the larger the horizontal line, the more variability there is for that
+particular method's execution time (a singular median value is insufficient to represent such variability).
+
+Note that in almost all cases, the Crux repository is _significantly_ faster than JanusGraph: always completing in
+less than 200ms and with very little variability (no horizontal confidence intervals are even visible). For JanusGraph,
+on the other hand, there is significant variability (in particular for methods like `findEntitiesByClassification`),
+and there are numerous examples of the median execution time taking over a full second.
+
+Following is a table of the specific median values for each repository and volume (also including the results for
+methods that are only currently implemented by the Crux repository connector, or only return in a sufficiently timely
+manner to be included in the tests):
 
 Profile | Method | 05-02 (Crux) | 05-02 (Janus) | 10-05 (Crux) | 10-05 (Janus)
 ---|---|---|---|---|---
