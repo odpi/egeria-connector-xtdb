@@ -23,6 +23,8 @@ public class InstancePropertiesMapping {
 
     /**
      * Retrieve the instance property values from the provided Crux document.
+     * NOTE: whether empty or null, the instance properties will always be returned back from the Crux representation
+     * as an empty set of properties (not null).
      * @param type of the Egeria instance from which we are retrieving the values
      * @param cruxDoc from which to retrieve the values
      * @param namespace by which the properties to retrieve are qualified

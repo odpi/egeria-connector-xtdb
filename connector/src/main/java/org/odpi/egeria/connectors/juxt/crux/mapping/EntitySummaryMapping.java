@@ -83,7 +83,7 @@ public class EntitySummaryMapping extends InstanceHeaderMapping {
      * @return String giving the Crux reference to this entity summary document
      */
     public static String getReference(String guid) {
-        return getGuid(INSTANCE_REF_PREFIX, guid);
+        return getReference(INSTANCE_REF_PREFIX, guid);
     }
 
 }

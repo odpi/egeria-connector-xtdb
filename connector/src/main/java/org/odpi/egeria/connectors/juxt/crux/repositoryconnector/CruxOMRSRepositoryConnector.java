@@ -2390,6 +2390,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Retrieve the Crux API directly.
+     * NOTE: This should only be used in very exceptional circumstances where direct access to the API
+     * is needed (e.g. for testing purposes). Use any other method where possible.
+     * @return ICruxAPI
+     */
+    public ICruxAPI getCruxAPI() {
+        return cruxAPI;
+    }
+
+    /**
      * Add a write operation to the transaction (applicable for any write operation, since it is append-only).
      * Note: this should be used rather than calling '.put' directly against the transaction builder, as this method
      * will set the historical date based on the information within the document itself (if any), allowing us to have

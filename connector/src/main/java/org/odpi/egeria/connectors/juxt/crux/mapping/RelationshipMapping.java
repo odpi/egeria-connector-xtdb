@@ -126,7 +126,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
      * @return String giving the Crux reference to this relationship document
      */
     public static String getReference(String guid) {
-        return getGuid(INSTANCE_REF_PREFIX, guid);
+        return getReference(INSTANCE_REF_PREFIX, guid);
     }
 
 }

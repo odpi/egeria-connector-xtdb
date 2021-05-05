@@ -109,9 +109,9 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
     public static String getGuidReference(InstanceHeader ih) {
         TypeDefCategory type = ih.getType().getTypeDefCategory();
         if (type.equals(TypeDefCategory.ENTITY_DEF)) {
-            return getGuid(EntitySummaryMapping.INSTANCE_REF_PREFIX, ih.getGUID());
+            return getReference(EntitySummaryMapping.INSTANCE_REF_PREFIX, ih.getGUID());
         } else if (type.equals(TypeDefCategory.RELATIONSHIP_DEF)) {
-            return getGuid(RelationshipMapping.INSTANCE_REF_PREFIX, ih.getGUID());
+            return getReference(RelationshipMapping.INSTANCE_REF_PREFIX, ih.getGUID());
         } else {
             log.warn("Attempted to retrieve a GUID reference to a non-reference-able type -- returning null: {}", ih);
             return null;
@@ -133,7 +133,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
      * @param guid of the instance
      * @return String for the Crux reference
      */
-    protected static String getGuid(String instanceType, String guid) {
+    protected static String getReference(String instanceType, String guid) {
         return instanceType + "_" + guid;
     }
 
