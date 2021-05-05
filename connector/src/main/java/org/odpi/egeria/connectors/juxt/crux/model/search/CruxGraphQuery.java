@@ -17,7 +17,7 @@ import java.util.List;
  */
 public class CruxGraphQuery extends CruxQuery {
 
-    private static final Symbol RELATIONSHIP = Symbol.intern("r");
+    public static final Symbol RELATIONSHIP = Symbol.intern("r");
     private static final Symbol TRANSITIVE = Symbol.intern("t");
     private static final Symbol START = Symbol.intern("s");
     private static final Keyword ENTITY_PROXIES = Keyword.intern(RelationshipMapping.ENTITY_PROXIES);
@@ -73,7 +73,7 @@ public class CruxGraphQuery extends CruxQuery {
      * up-front applying any restrictions. Subsequent query restrictions can then be applied to the results of this
      * rule-based traversal to filter or sort the results.
      * @param startingDocId Crux document ID from which to radiate
-     */
+
     public void addRelatedEntitiesNestedQuery(String startingDocId) {
 
         CruxQuery inner = new CruxQuery();
@@ -118,7 +118,7 @@ public class CruxGraphQuery extends CruxQuery {
         conditions.add(PersistentVector.create(PersistentList.create(nested),
                 PersistentVector.create((IPersistentVector) PersistentVector.create(DOC_ID))));
 
-    }
+    }*/
 
     /**
      * Add condition(s) to limit the resulting entities by the provided classifications.
