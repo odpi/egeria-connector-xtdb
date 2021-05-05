@@ -103,7 +103,7 @@ public class CruxQuery {
                 Symbol setVar = Symbol.intern("tf");
                 Symbol typeVar = Symbol.intern("types");
                 // [e :type.guids types]
-                conditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.TYPE_DEF_GUIDS, typeVar));
+                conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), typeVar));
 
                 List<Object> set = new ArrayList<>();
                 set.add(ConditionBuilder.SET_OPERATOR);
