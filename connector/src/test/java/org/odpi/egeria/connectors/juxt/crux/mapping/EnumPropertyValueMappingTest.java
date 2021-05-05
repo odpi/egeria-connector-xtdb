@@ -3,6 +3,8 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EnumPropertyValue;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProvenanceType;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.*;
@@ -33,6 +35,32 @@ public class EnumPropertyValueMappingTest {
         EnumPropertyValue epv = new EnumPropertyValue();
         Integer comparison = EnumPropertyValueMapping.getEnumPropertyValueForComparison(epv);
         assertEquals(comparison, Integer.valueOf(99), "Empty enum ordinal value is expected to default to 99.");
+    }
+
+    @Test
+    void testInstanceProvenanceType() {
+
+        InstanceProvenanceType ipt = EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(1);
+        assertNotNull(ipt);
+        int ordinal = EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(ipt);
+        assertEquals(ordinal, 1, "InstanceProvenanceType ordinal is expected to be identical after conversion.");
+
+        assertNull(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(null));
+        assertNull(EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(null));
+
+    }
+
+    @Test
+    void testInstanceStatus() {
+
+        InstanceStatus is = EnumPropertyValueMapping.getInstanceStatusFromOrdinal(1);
+        assertNotNull(is);
+        int ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(is);
+        assertEquals(ordinal, 1, "InstanceStatus ordinal is expected to be identical after conversion.");
+
+        assertNull(EnumPropertyValueMapping.getInstanceStatusFromOrdinal(null));
+        assertNull(EnumPropertyValueMapping.getOrdinalForInstanceStatus(null));
+
     }
 
 }
