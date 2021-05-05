@@ -105,7 +105,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                 }
                 builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
                 builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
-                InstancePropertiesMapping.addToDoc(cruxConnector, builder, classification.getType(), classification.getProperties(), qualifiedNamespace + "." + CLASSIFICATION_PROPERTIES_NS);
+                InstancePropertiesMapping.addToDoc(cruxConnector, builder, classification.getType(), classification.getProperties(), getNamespaceForProperties(qualifiedNamespace));
             }
             // Add the list of classification names, for easing search
             builder.put(getKeyword(namespace), PersistentVector.create(classificationNames));
@@ -164,6 +164,12 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                 if (ip != null) {
                     classification.setProperties(ip);
                 }
+
+                String originGuid = (String) cruxDoc.get(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN_GUID));
+                classification.setClassificationOriginGUID(originGuid);
+                String originSymbolicName = (String) cruxDoc.get(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN));
+                ClassificationOrigin classificationOrigin = getClassificationOriginFromSymbolicName(originSymbolicName);
+                classification.setClassificationOrigin(classificationOrigin);
 
                 list.add(classification);
             }
@@ -231,6 +237,15 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
      */
     public static String getSymbolicNameForClassificationOrigin(ClassificationOrigin co) {
         return co == null ? null : co.getName();
+    }
+
+    /**
+     * Retrieve the namespace for properties of the classification
+     * @param qualifiedRoot the classification-qualified root for the namespace
+     * @return String
+     */
+    public static String getNamespaceForProperties(String qualifiedRoot) {
+        return qualifiedRoot + "." + CLASSIFICATION_PROPERTIES_NS;
     }
 
 }
