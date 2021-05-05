@@ -29,8 +29,8 @@ public class CruxQuery {
     public static final Symbol SORT_PROPERTY = Symbol.intern("sp");
 
     // Sort orders
-    protected static final Keyword SORT_ASCENDING = Keyword.intern("asc");
-    protected static final Keyword SORT_DESCENDING = Keyword.intern("desc");
+    public static final Keyword SORT_ASCENDING = Keyword.intern("asc");
+    public static final Keyword SORT_DESCENDING = Keyword.intern("desc");
 
     private IPersistentMap query;
     private final List<Symbol> findElements;
@@ -296,7 +296,7 @@ public class CruxQuery {
                 Symbol setVar = Symbol.intern("sf");
                 Symbol statusVar = Symbol.intern("status");
                 // [e :currentStatus status]
-                statusConditions.add(PersistentVector.create(variable, InstanceAuditHeaderMapping.CURRENT_STATUS, statusVar));
+                statusConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS), statusVar));
 
                 List<Object> set = new ArrayList<>();
                 set.add(ConditionBuilder.SET_OPERATOR);
