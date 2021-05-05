@@ -42,11 +42,7 @@ public class PersistenceLayer {
      * @param version to set
      */
     public static void setVersion(ICruxAPI cruxAPI, long version) {
-        CruxDocument doc = getPersistenceDetails(cruxAPI);
         CruxDocument.Builder builder = CruxDocument.builder(PERSISTENCE_DOC);
-        if (doc != null) {
-            builder = CruxDocument.builder(doc);
-        }
         builder.put(VERSION, version);
         Transaction.Builder tx = Transaction.builder();
         tx.put(builder.build());

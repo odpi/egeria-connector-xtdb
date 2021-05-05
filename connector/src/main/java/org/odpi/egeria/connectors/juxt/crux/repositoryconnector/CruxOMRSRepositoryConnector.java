@@ -613,7 +613,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws RepositoryErrorException if any issue closing an open Crux resource
      * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
-     */
+
     public List<EntityDetail> getRelatedEntities(String userId,
                                                  String startEntityGUID,
                                                  List<String> entityTypeGUIDs,
@@ -647,7 +647,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     this.getClass().getName(), methodName, e);
         }
 
-    }
+    }*/
 
     /**
      * Find the entities that are related to the provided startEntityGUID either directly or indirectly, and fit the
@@ -669,7 +669,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return {@code Collection<List<?>>} of the requested page of unique Crux document references for the matching related entities
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
-     */
+
     public Collection<List<?>> findRelatedEntities(ICruxDatasource db,
                                                    String startEntityGUID,
                                                    List<String> entityTypeGUIDs,
@@ -697,7 +697,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromEntityElement, pageSize);
 
-    }
+    }*/
 
     /**
      * Find the entities and relationships that radiate out from the supplied entity GUID.
