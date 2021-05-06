@@ -266,18 +266,20 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
         // since the property itself may actually be defined at the super-type level of one of the limited types, we
         // cannot simply do a set intersection between types but must traverse and take the appropriate (super)type name
         // for qualification
-        for (String typeNameWithProperty : validTypesForProperty) {
-            String candidateRef = getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName);
-            if (!qualifiedNames.contains(candidateRef)) { // short-circuit if we already have this one in the list
-                for (String limitToType : limitToTypes) {
-                    // Only if the type definition by which we are limiting is a subtype of this type definition should
-                    // we consider the type definitions' properties
-                    if (repositoryHelper.isTypeOf(repositoryName, limitToType, typeNameWithProperty)) {
-                        // Only if the property's types align do we continue with ensuring that the type itself should be included
-                        // (While this conditional itself will further loop over cached information, it should do so only
-                        // in limited cases due to the short-circuiting above)
-                        if (propertyDefMatchesValueType(repositoryHelper, repositoryName, typeNameWithProperty, propertyName, value)) {
-                            qualifiedNames.add(candidateRef);
+        if (validTypesForProperty != null) {
+            for (String typeNameWithProperty : validTypesForProperty) {
+                String candidateRef = getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName);
+                if (!qualifiedNames.contains(candidateRef)) { // short-circuit if we already have this one in the list
+                    for (String limitToType : limitToTypes) {
+                        // Only if the type definition by which we are limiting is a subtype of this type definition should
+                        // we consider the type definitions' properties
+                        if (repositoryHelper.isTypeOf(repositoryName, limitToType, typeNameWithProperty)) {
+                            // Only if the property's types align do we continue with ensuring that the type itself should be included
+                            // (While this conditional itself will further loop over cached information, it should do so only
+                            // in limited cases due to the short-circuiting above)
+                            if (propertyDefMatchesValueType(repositoryHelper, repositoryName, typeNameWithProperty, propertyName, value)) {
+                                qualifiedNames.add(candidateRef);
+                            }
                         }
                     }
                 }

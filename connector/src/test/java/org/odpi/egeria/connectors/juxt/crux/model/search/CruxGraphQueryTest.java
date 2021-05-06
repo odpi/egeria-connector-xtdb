@@ -4,8 +4,6 @@ package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
-import org.odpi.egeria.connectors.juxt.crux.mocks.MockConnection;
-import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
 import org.testng.annotations.Test;
 
