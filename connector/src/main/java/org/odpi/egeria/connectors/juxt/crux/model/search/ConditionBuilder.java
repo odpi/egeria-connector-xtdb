@@ -356,7 +356,7 @@ public class ConditionBuilder {
                         );
                         allPropertyConditions = new ArrayList<>(conditionsForOneProperty);
                     }
-                } else {
+                } else if (luceneEnabled) {
                     // Otherwise, in cases where there are MULTIPLE valid property variations and the value is a string,
                     // we may be able to optimize the search via Lucene: by allowing Lucene's wildcard search to tell
                     // us the matching variable names (not construct a costly OR-based across all potential combinations)
