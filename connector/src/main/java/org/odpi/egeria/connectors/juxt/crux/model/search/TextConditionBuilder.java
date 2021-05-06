@@ -29,9 +29,9 @@ public class TextConditionBuilder {
     private static final Logger log = LoggerFactory.getLogger(TextConditionBuilder.class);
 
     // Variable names (for destructuring)
-    protected static final Symbol ELIDE = Symbol.intern("_");
-    protected static final Symbol VALUE = Symbol.intern("v");
-    protected static final Symbol ATTRIBUTE = Symbol.intern("a");
+    public static final Symbol ELIDE = Symbol.intern("_");
+    public static final Symbol VALUE = Symbol.intern("v");
+    public static final Symbol ATTRIBUTE = Symbol.intern("a");
 
     // Predicates (for comparisons)
     protected static final Symbol WILDCARD_TEXT_SEARCH_CI = Symbol.intern("wildcard-text-search-ci");
