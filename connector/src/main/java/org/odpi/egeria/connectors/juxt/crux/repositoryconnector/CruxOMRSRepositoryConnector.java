@@ -1378,8 +1378,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             restored.setUpdateTime(new Date());
             restored.setUpdatedBy(userId);
             List<String> maintainedBy = restored.getMaintainedBy();
-            if (maintainedBy != null && !maintainedBy.contains(userId)) {
+            if (maintainedBy == null) {
+                maintainedBy = new ArrayList<>();
+            }
+            if (!maintainedBy.contains(userId)) {
                 maintainedBy.add(userId);
+                restored.setMaintainedBy(maintainedBy);
             }
             // Then submit this version back into Crux as an update, and return the result
             return updateEntity(restored);
@@ -1416,6 +1420,14 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 restored.setVersion(currentVersion + 1);
                 restored.setUpdateTime(new Date());
                 restored.setUpdatedBy(userId);
+                List<String> maintainedBy = restored.getMaintainedBy();
+                if (maintainedBy == null) {
+                    maintainedBy = new ArrayList<>();
+                }
+                if (!maintainedBy.contains(userId)) {
+                    maintainedBy.add(userId);
+                    restored.setMaintainedBy(maintainedBy);
+                }
                 // Then submit this version back into Crux as an update
                 restored = updateRelationship(restored);
             }

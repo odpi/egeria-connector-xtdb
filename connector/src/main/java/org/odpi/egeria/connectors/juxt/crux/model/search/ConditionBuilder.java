@@ -106,15 +106,16 @@ public class ConditionBuilder {
                 List<Object> predicatedConditions = new ArrayList<>();
                 switch (matchCriteria) {
                     case ALL:
+                        List<IPersistentCollection> unwrapped = allConditions.stream().flatMap(Collection::stream).collect(Collectors.toList());
                         if (orNested && allConditions.size() > 1) {
                             // we should only wrap with an 'AND' predicate if we're nested inside an 'OR' predicate and
                             // there is more than a single condition
                             predicatedConditions.add(AND_OPERATOR);
-                            predicatedConditions.addAll(allConditions);
+                            predicatedConditions.addAll(unwrapped);
                         } else {
                             // otherwise, we can return the conditions directly (nothing more to process on them)
                             // (though remember they are a nested list, so we should flatten that list before returning it)
-                            return allConditions.stream().flatMap(Collection::stream).collect(Collectors.toList());
+                            return unwrapped;
                         }
                         break;
                     case ANY:
