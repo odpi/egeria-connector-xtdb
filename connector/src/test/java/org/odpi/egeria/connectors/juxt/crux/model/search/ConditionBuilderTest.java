@@ -24,7 +24,7 @@ import java.util.Set;
 import static org.testng.Assert.*;
 
 /**
- * Tests the graph query model.
+ * Tests the condition builder model.
  */
 public class ConditionBuilderTest {
 
