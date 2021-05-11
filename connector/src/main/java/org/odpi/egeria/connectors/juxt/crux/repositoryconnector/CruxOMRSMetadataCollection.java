@@ -2028,7 +2028,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                         methodName);
 
                 if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
-                    updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
                     cruxRepositoryConnector.updateEntity(updatedEntity);
                 } else {
                     cruxRepositoryConnector.saveReferenceCopy(updatedEntity);
