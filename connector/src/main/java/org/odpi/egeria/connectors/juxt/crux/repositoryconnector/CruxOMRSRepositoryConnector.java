@@ -1369,6 +1369,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             EntityDetailMapping edmC = new EntityDetailMapping(this, history.get(0));
             EntityDetail current = edmC.toEgeria();
             long currentVersion = current.getVersion();
+            List<Classification> currentClassifications = current.getClassifications();
             EntityDetailMapping edmP = new EntityDetailMapping(this, history.get(1));
             EntityDetail restored = edmP.toEgeria();
             // Update the version of the restored instance to be one more than the latest (current) version, the update
@@ -1377,6 +1378,9 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
             restored.setVersion(currentVersion + 1);
             restored.setUpdateTime(new Date());
             restored.setUpdatedBy(userId);
+            // Ensure that we also retain any of the classifications from the current version, as these are treated
+            // independently from any other updates to the entity
+            restored.setClassifications(currentClassifications);
             List<String> maintainedBy = restored.getMaintainedBy();
             if (maintainedBy == null) {
                 maintainedBy = new ArrayList<>();
@@ -1512,15 +1516,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         if (cursor != null) {
             if (cursor.hasNext()) {
                 Map<Keyword, ?> currentVersionTxn = cursor.next();
-                if (cursor.hasNext()) {
-                    // ... so use these transaction details to retrieve the actual objects, and return those
-                    Map<Keyword, ?> previousVersionTxn = cursor.next();
-                    CruxDocument current = getCruxObjectByReference(reference, currentVersionTxn);
-                    if (current != null) {
-                        results.add(current);
+                // ... so use these transaction details to retrieve the actual objects
+                CruxDocument current = getCruxObjectByReference(reference, currentVersionTxn);
+                if (current != null) {
+                    long currentVersion = (Long) current.get(InstanceAuditHeaderMapping.VERSION);
+                    CruxDocument previous = null;
+                    while (previous == null && cursor.hasNext()) {
+                        Map<Keyword, ?> candidateTxn = cursor.next();
+                        // This candidate MUST be a previous _version_ of the instance itself rather than
+                        // just a previously-dated view (for example, if an entity had a classification added to it the
+                        // entity's version will not have changed but it will have a new historical entry -- this is NOT
+                        // a previous _version_ of the entity, and thus must be skipped over)
+                        CruxDocument candidate = getCruxObjectByReference(reference, candidateTxn);
+                        long candidateVersion  = (Long) candidate.get(InstanceAuditHeaderMapping.VERSION);
+                        if (candidateVersion < currentVersion) {
+                            previous = candidate;
+                        }
                     }
-                    CruxDocument previous = getCruxObjectByReference(reference, previousVersionTxn);
+                    // If we have exited the loop above with a non-null previous version, then put both into
+                    // the results (otherwise do not put anything in the results, as there was no previous
+                    // version to include)
                     if (previous != null) {
+                        results.add(current);
                         results.add(previous);
                     }
                 }

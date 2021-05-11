@@ -41,16 +41,15 @@ public class CruxOMRSRepositoryConnectorTest {
     @Test
     void testStart() {
 
-        Path dir = null;
+        Map<String, String> luceneConfig = new HashMap<>();
         try {
-            dir = Files.createTempDirectory("lucene");
+            Path dir = Files.createTempDirectory("lucene");
+            luceneConfig.put("db-dir", dir.toString());
         } catch (IOException e) {
             e.printStackTrace();
             assertNull(e, "Unable to create temporary directory for connector config.");
         }
 
-        Map<String, String> luceneConfig = new HashMap<>();
-        luceneConfig.put("db-dir", dir.toString());
         Map<String, Object> cruxConfig = new HashMap<>();
         cruxConfig.put("egeria.crux.lucene/lucene-store", luceneConfig);
 
