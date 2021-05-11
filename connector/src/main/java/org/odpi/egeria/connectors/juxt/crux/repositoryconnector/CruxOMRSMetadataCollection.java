@@ -1276,7 +1276,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         Classification classification = repositoryHelper.getClassificationFromEntity(repositoryName, entity, classificationName, methodName);
         Classification newClassification = new Classification(classification);
         newClassification.setProperties(properties);
-        repositoryHelper.incrementVersion(userId, classification, newClassification);
 
         EntityDetail updatedEntity = repositoryHelper.updateClassificationInEntity(repositoryName,
                 userId,
