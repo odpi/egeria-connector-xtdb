@@ -53,28 +53,30 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * @return Object value that Crux can compare
      */
     public static Object getValueForComparison(InstancePropertyValue ipv) {
-        InstancePropertyCategory category = ipv.getInstancePropertyCategory();
         Object value = null;
-        switch (category) {
-            case PRIMITIVE:
-                value = PrimitivePropertyValueMapping.getPrimitiveValueForComparison((PrimitivePropertyValue) ipv);
-                break;
-            case ENUM:
-                value = EnumPropertyValueMapping.getEnumPropertyValueForComparison((EnumPropertyValue) ipv);
-                break;
-            case ARRAY:
-                value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison((ArrayPropertyValue) ipv);
-                break;
-            case MAP:
-                value = MapPropertyValueMapping.getMapPropertyValueForComparison((MapPropertyValue) ipv);
-                break;
-            case STRUCT:
-                value = StructPropertyValueMapping.getStructPropertyValueForComparison((StructPropertyValue) ipv);
-                break;
-            case UNKNOWN:
-            default:
-                log.warn("Unmapped value type: {}", category);
-                break;
+        if (ipv != null) {
+            InstancePropertyCategory category = ipv.getInstancePropertyCategory();
+            switch (category) {
+                case PRIMITIVE:
+                    value = PrimitivePropertyValueMapping.getPrimitiveValueForComparison((PrimitivePropertyValue) ipv);
+                    break;
+                case ENUM:
+                    value = EnumPropertyValueMapping.getEnumPropertyValueForComparison((EnumPropertyValue) ipv);
+                    break;
+                case ARRAY:
+                    value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison((ArrayPropertyValue) ipv);
+                    break;
+                case MAP:
+                    value = MapPropertyValueMapping.getMapPropertyValueForComparison((MapPropertyValue) ipv);
+                    break;
+                case STRUCT:
+                    value = StructPropertyValueMapping.getStructPropertyValueForComparison((StructPropertyValue) ipv);
+                    break;
+                case UNKNOWN:
+                default:
+                    log.warn("Unmapped value type: {}", category);
+                    break;
+            }
         }
         return value;
     }
