@@ -235,7 +235,11 @@ public class ConditionBuilder {
                 List<Object> predicateComparison = new ArrayList<>();
                 predicateComparison.add(predicate);
                 predicateComparison.add(variable);
-                predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
+                // The null predicates only expect a single argument, so do not bother attempting to add
+                // this third argument if the predicate is null-related
+                if (!predicate.equals(IS_NULL_OPERATOR) && !predicate.equals(NOT_NULL_OPERATOR)) {
+                    predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
+                }
                 clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             }
 
