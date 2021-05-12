@@ -75,6 +75,7 @@
         <jackson.version>2.12.3</jackson.version>
         <lucene.version>8.8.2</lucene.version>
         <slf4j.version>1.7.30</slf4j.version>
+        <logback.version>1.2.3</logback.version>
         <testng.version>7.4.0</testng.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -180,9 +181,9 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-nop</artifactId>
-                <version>${slf4j.version}</version>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -484,7 +485,7 @@
                                 <ignoredUnusedDeclaredDependency>junit:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.junit.platform:*</ignoredUnusedDeclaredDependency>
                                 <!-- Used with slf4j as default implementation for testing -->
-                                <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-nop:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
                                 <!-- Ignore these as usage depends on runtime configuration -->
                                 <ignoredUnusedDeclaredDependency>juxt:crux-metrics:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>juxt:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
