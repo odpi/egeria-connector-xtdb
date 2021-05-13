@@ -81,9 +81,9 @@ public class UpgradeInitialTo2 extends UpgradePersistence {
 
     }
 
-    private static final String TYPE_DEF_GUID = "type.guid";
-    private static final String SUPERTYPE_DEF_GUIDS = "type.supers";
-    private static final String TYPE_DEF_GUIDS = "type.guids";
+    static final String TYPE_DEF_GUID = "type.guid";
+    static final String SUPERTYPE_DEF_GUIDS = "type.supers";
+    static final String TYPE_DEF_GUIDS = "type.guids";
 
     /**
      * Migrate from the split type and supertypes to a single vector of all type GUIDs.
@@ -120,9 +120,9 @@ public class UpgradeInitialTo2 extends UpgradePersistence {
 
     }
 
-    private static final String ENTITY_ONE_PROXY = "entityOneProxy";
-    private static final String ENTITY_TWO_PROXY = "entityTwoProxy";
-    private static final String ENTITY_PROXIES = "entityProxies";
+    static final String ENTITY_ONE_PROXY = "entityOneProxy";
+    static final String ENTITY_TWO_PROXY = "entityTwoProxy";
+    static final String ENTITY_PROXIES = "entityProxies";
 
     /**
      * Migrate from the split entity proxies to a single vector of the proxies.
