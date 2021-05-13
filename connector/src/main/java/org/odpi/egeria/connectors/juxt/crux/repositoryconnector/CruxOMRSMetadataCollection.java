@@ -2,10 +2,13 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
+import clojure.lang.IPersistentMap;
 import crux.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
-import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
+import org.odpi.egeria.connectors.juxt.crux.mapping.EntitySummaryMapping;
+import org.odpi.egeria.connectors.juxt.crux.mapping.RelationshipMapping;
+import org.odpi.egeria.connectors.juxt.crux.model.search.CruxQuery;
 import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.OMRSDynamicTypeMetadataCollectionBase;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
@@ -149,8 +152,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                                      HistorySequencingOrder sequencingOrder) throws
             InvalidParameterException,
             RepositoryErrorException,
-            EntityNotKnownException,
-            EntityProxyOnlyException {
+            EntityNotKnownException {
         final String methodName = "getEntityDetailHistory";
         super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
         return cruxRepositoryConnector.getPreviousVersionsOfEntity(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
@@ -259,11 +261,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PagingErrorException {
 
         this.findEntitiesParameterValidation(userId, entityTypeGUID, entitySubtypeGUIDs, matchProperties, fromEntityElement, limitResultsByStatus, matchClassifications, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-
-        // TODO: rework this a bit, so that we retrieve the list of GUIDs and then loop through this
-        //  list making calls to getEntityDetail here in the MetadataCollection (?) (Then all of its additional
-        //  validations will be applied to each entity as well...)
-
         return cruxRepositoryConnector.findEntities(entityTypeGUID,
                 entitySubtypeGUIDs,
                 matchProperties,
@@ -351,9 +348,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         super.findEntitiesByPropertyValueParameterValidation(userId, entityTypeGUID, searchCriteria, fromEntityElement, limitResultsByStatus, limitResultsByClassification, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-
         SearchClassifications searchClassifications = repositoryHelper.getSearchClassificationsFromList(limitResultsByClassification);
-
         return cruxRepositoryConnector.findEntitiesByText(entityTypeGUID,
                 searchCriteria,
                 fromEntityElement,
@@ -460,11 +455,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PagingErrorException {
 
         super.findRelationshipsParameterValidation(userId, relationshipTypeGUID, relationshipSubtypeGUIDs, matchProperties, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-
-        // TODO: rework this a bit, so that we retrieve the list of GUIDs and then loop through this
-        //  list making calls to getEntityDetail here in the MetadataCollection (?) (Then all of its additional
-        //  validations will be applied to each entity as well...)
-
         return cruxRepositoryConnector.findRelationships(relationshipTypeGUID,
                 relationshipSubtypeGUIDs,
                 matchProperties,
@@ -500,9 +490,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         super.findRelationshipsByPropertyParameterValidation(userId, relationshipTypeGUID, matchProperties, matchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-
         SearchProperties searchProperties = repositoryHelper.getSearchPropertiesFromInstanceProperties(repositoryName, matchProperties, matchCriteria);
-
         return findRelationships(userId,
                 relationshipTypeGUID,
                 null,
@@ -537,7 +525,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         super.findRelationshipsByPropertyValueParameterValidation(userId, relationshipTypeGUID, searchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-
         return cruxRepositoryConnector.findRelationshipsByText(relationshipTypeGUID,
                 searchCriteria,
                 fromRelationshipElement,
@@ -747,7 +734,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         //  (If not, then why not, and where should this validation be done instead?)
 
         TypeDef typeDef = super.addEntityParameterValidation(userId, entityTypeGUID, initialProperties, initialClassifications, initialStatus, methodName);
-
         EntityDetail newEntity = repositoryHelper.getNewEntity(repositoryName,
                 metadataCollectionId,
                 InstanceProvenanceType.LOCAL_COHORT,
@@ -755,7 +741,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 typeDef.getName(),
                 initialProperties,
                 initialClassifications);
-
         newEntity.setMetadataCollectionName(metadataCollectionName);
         // TODO: should we not add the calling user to the 'maintainedBy' list?
 
@@ -789,7 +774,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "addExternalEntity";
 
         TypeDef typeDef = super.addExternalEntityParameterValidation(userId, entityTypeGUID, externalSourceGUID, initialProperties, initialClassifications, initialStatus, methodName);
-
         EntityDetail newEntity = repositoryHelper.getNewEntity(repositoryName,
                 externalSourceGUID,
                 InstanceProvenanceType.EXTERNAL_SOURCE,
@@ -797,7 +781,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 typeDef.getName(),
                 initialProperties,
                 initialClassifications);
-
         newEntity.setMetadataCollectionName(externalSourceName);
         newEntity.setReplicatedBy(metadataCollectionId);
 
@@ -966,27 +949,18 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateTypeForInstanceDelete(repositoryName, typeDefGUID, typeDefName, entity, methodName);
         repositoryValidator.validateInstanceStatusForDelete(repositoryName, entity, methodName);
 
+        Transaction.Builder tx = Transaction.builder();
+
+        // 1. Soft-delete every HOMED relationship in which the entity is involved (note that we are only allowed to
+        //    do this against relationships that are homed in this repository, as a soft-delete can only be done by the
+        //    home repository: it changes the version, modification times, etc)
         try {
-            // TODO: optimise this query since we do not really need the entire relationship to delete it?
-            List<Relationship> relationships = this.getRelationshipsForEntity(userId,
-                    obsoleteEntityGUID,
-                    null,
-                    0,
-                    null,
-                    null,
-                    null,
-                    null,
-                    Constants.CASCADE_DELETES_PAGE_SIZE);
+            List<Relationship> relationships = cruxRepositoryConnector.findHomedRelationshipsForEntity(entity, userId);
             if (relationships != null) {
                 for (Relationship relationship : relationships) {
                     if (relationship != null) {
-                        InstanceType type = relationship.getType();
-                        if (type != null) {
-                            this.deleteRelationship(userId,
-                                    type.getTypeDefGUID(),
-                                    type.getTypeDefName(),
-                                    relationship.getGUID());
-                        }
+                        Relationship toDelete = getDeletedRelationshipRepresentation(relationship, userId);
+                        cruxRepositoryConnector.addUpdateRelationshipStatements(tx, toDelete);
                     }
                 }
             }
@@ -994,12 +968,17 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(obsoleteEntityGUID), e);
         }
 
+        // 2. Update the entity itself
         EntityDetail updatedEntity = new EntityDetail(entity);
         updatedEntity.setStatusOnDelete(entity.getStatus());
         updatedEntity.setStatus(InstanceStatus.DELETED);
         updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
+        cruxRepositoryConnector.addUpdateEntityStatements(tx, updatedEntity);
 
-        return cruxRepositoryConnector.updateEntity(updatedEntity);
+        // 3. Commit the transaction containing all of these write operations together
+        cruxRepositoryConnector.runTx(tx.build());
+
+        return updatedEntity;
 
     }
 
@@ -1033,37 +1012,42 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateTypeForInstanceDelete(repositoryName, typeDefGUID, typeDefName, entity, methodName);
         repositoryValidator.validateEntityIsDeleted(repositoryName, entity, methodName);
 
-        // TODO: the InMemoryOMRSMetadataCollection makes this call and catches all exceptions (with no logging), but
-        //  actually the call itself will ALWAYS give an EntityNotKnownException because we are validating just above
-        //  that this entity is deleted, while the getRelationshipsForEntity call is validating that the entity is NOT
-        //  deleted (and if it is, will throw an EntityNotKnownException). So it ALWAYS throws an EntityNotKnownException.
-        //  We can therefore either remove this code entirely (as it does nothing but add Exception processing overhead),
-        //  or we need to change the logic across the various repositories.
-        /*try {
-            List<Relationship> relationships = this.getRelationshipsForEntity(userId,
-                    deletedEntityGUID,
-                    null,
-                    0,
+        Transaction.Builder tx = Transaction.builder();
+
+        // 1. Purge EVERY SINGLE relationship in which the entity is involved (note that we should be able to do this
+        //    against both homed and reference copy relationships since purge operations are allowed against both)
+        try {
+            CruxQuery query = new CruxQuery();
+            query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(deletedEntityGUID));
+            cruxRepositoryConnector.updateQuery(query,
+                    TypeDefCategory.RELATIONSHIP_DEF,
                     null,
                     null,
                     null,
                     null,
-                    Constants.CASCADE_DELETES_PAGE_SIZE);
-            if (relationships != null) {
-                for (Relationship relationship : relationships) {
-                    if (relationship != null) {
-                        // Note: we will not call this.purgeRelationship() directly to avoid re-retrieving all of these
-                        // relationships one-by-one prior to purging
-                        cruxRepositoryConnector.purgeRelationship(relationship.getGUID());
-                    }
-                }
+                    null,
+                    null,
+                    null,
+                    null,
+                    userId);
+            IPersistentMap q = query.getQuery();
+            log.debug("Querying with: {}", q);
+            Collection<List<?>> results = cruxRepositoryConnector.getCruxAPI().db().query(q);
+            Collection<List<?>> relationshipRefs = cruxRepositoryConnector.deduplicate(results);
+            for (List<?> relationshipRef : relationshipRefs) {
+                String docRef = (String) relationshipRef.get(0);
+                String guid = RelationshipMapping.trimGuidFromReference(docRef);
+                cruxRepositoryConnector.addPurgeRelationshipStatements(tx, guid);
             }
         } catch (Exception e) {
-            log.error("Exception was thrown in purgeEntity.", e);
             auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(deletedEntityGUID), e);
-        }*/
+        }
 
-        cruxRepositoryConnector.purgeEntity(entity.getGUID());
+        // 2. Purge the entity itself
+        cruxRepositoryConnector.addPurgeEntityStatements(tx, entity.getGUID());
+
+        // 3. Commit the transaction containing all of these write operations together
+        cruxRepositoryConnector.runTx(tx.build());
 
     }
 
@@ -1501,18 +1485,18 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String parameterName = "obsoleteRelationshipGUID";
 
         this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, obsoleteRelationshipGUID, parameterName, methodName);
-
         Relationship relationship = this.getRelationship(userId, obsoleteRelationshipGUID);
-
         repositoryValidator.validateTypeForInstanceDelete(repositoryName, typeDefGUID, typeDefName, relationship, methodName);
+        Relationship updatedRelationship = getDeletedRelationshipRepresentation(relationship, userId);
+        return cruxRepositoryConnector.updateRelationship(updatedRelationship);
 
+    }
+
+    private Relationship getDeletedRelationshipRepresentation(Relationship relationship, String userId) {
         Relationship updatedRelationship = new Relationship(relationship);
         updatedRelationship.setStatusOnDelete(relationship.getStatus());
         updatedRelationship.setStatus(InstanceStatus.DELETED);
-        updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
-
-        return cruxRepositoryConnector.updateRelationship(updatedRelationship);
-
+        return repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
     }
 
     /**
@@ -2125,7 +2109,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         }
 
         // Only create entity proxies if the above retrievals indicated that they do not yet exist
-        // TODO: there may be a more optimal way of achieving this directly through the Crux statements -- future optimisation?
         Transaction.Builder tx = Transaction.builder();
         if (one == null) {
             cruxRepositoryConnector.addCreateEntityProxyStatements(tx, relationship.getEntityOneProxy());

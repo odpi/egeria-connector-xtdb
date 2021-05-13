@@ -257,6 +257,15 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Retrieve the statements that need to be executed against Crux to update (persist) the entity provided.
+     * @param tx the transaction through which to update the entity
+     * @param entity to be updated
+     */
+    public void addUpdateEntityStatements(Transaction.Builder tx, EntityDetail entity) {
+        addCreateEntityStatements(tx, entity);
+    }
+
+    /**
      * Permanently delete the entity (and all of its history) from the Crux repository.
      * Note that this operation is NOT reversible!
      * @param guid of the entity to permanently delete
@@ -2218,17 +2227,17 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param userId of the user running the query
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      */
-    private void updateQuery(CruxQuery query,
-                             TypeDefCategory category,
-                             String typeGuid,
-                             List<String> subtypeGuids,
-                             SearchProperties matchProperties,
-                             List<InstanceStatus> limitResultsByStatus,
-                             SearchClassifications matchClassifications,
-                             String sequencingProperty,
-                             SequencingOrder sequencingOrder,
-                             String namespace,
-                             String userId) throws TypeErrorException {
+    void updateQuery(CruxQuery query,
+                     TypeDefCategory category,
+                     String typeGuid,
+                     List<String> subtypeGuids,
+                     SearchProperties matchProperties,
+                     List<InstanceStatus> limitResultsByStatus,
+                     SearchClassifications matchClassifications,
+                     String sequencingProperty,
+                     SequencingOrder sequencingOrder,
+                     String namespace,
+                     String userId) throws TypeErrorException {
         // Note that we will put the property search criteria first to optimise the search, which can more than double
         // the speed for very broad scenarios (where no type limiter is specified, or only Referenceable)
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, typeGuid, subtypeGuids, namespace);
@@ -2379,7 +2388,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param results from a Crux query
      * @return {@code Collection<List<?>>} of all unique results
      */
-    private Collection<List<?>> deduplicate(Collection<List<?>> results) {
+    Collection<List<?>> deduplicate(Collection<List<?>> results) {
         if (results == null || results.isEmpty()) {
             return results;
         } else {
