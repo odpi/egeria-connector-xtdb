@@ -48,6 +48,7 @@ spec:
             - "-c"
             - >
                 cd /opt/egeria/scripts &&
+                curl --location https://github.com/cmgrote/egeria-connector-crux/raw/main/cts/charts/ec-ha-crux/bin/waitForStatefulSet.sh --output waitForStatefulSet.sh &&
                 curl --location https://github.com/cmgrote/egeria-connector-crux/raw/main/cts/charts/ec-ha-crux/bin/bootstrapConfig.sh --output bootstrapConfig.sh &&
                 curl --location https://github.com/cmgrote/egeria-connector-crux/raw/main/cts/charts/ec-ha-crux/bin/consolidateResults.sh --output consolidateResults.sh &&
                 curl --location https://github.com/cmgrote/egeria-connector-crux/raw/main/cts/charts/ec-ha-crux/bin/recordEnv.sh --output recordEnv.sh &&
@@ -57,15 +58,6 @@ spec:
           volumeMounts:
             - mountPath: /opt/egeria/scripts
               name: scripts-volume
-        - name: wait-for-proxy
-          image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
-                {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
-                {{ .Values.image.configure.name }}\
-                :{{ .Values.image.configure.tag | default .Values.imageDefaults.tag }}"
-          imagePullPolicy: {{ .Values.image.configure.pullPolicy | default .Values.imageDefaults.pullPolicy }}
-          env:
-            - name: SERVICE
-              value: {{ .Release.Name }}-crux
         - name: wait-for-kafka
           image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
                 {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
@@ -75,6 +67,15 @@ spec:
           env:
             - name: SERVICE
               value: {{ .Release.Name }}-kafka
+        - name: wait-for-proxy
+          image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
+                {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
+                {{ .Values.image.configure.name }}\
+                :{{ .Values.image.configure.tag | default .Values.imageDefaults.tag }}"
+          imagePullPolicy: {{ .Values.image.configure.pullPolicy | default .Values.imageDefaults.pullPolicy }}
+          env:
+            - name: SERVICE
+              value: {{ .Release.Name }}-crux
       # Then configure and startup the PTS, and eventually produce the reports
       containers:
         - name: init-and-report
@@ -91,6 +92,7 @@ spec:
             - "-c"
             - >
                 cd /opt/egeria/scripts &&
+                ./waitForStatefulSet.sh &&
                 ./startPTS.sh &&
                 ./bootstrapConfig.sh &&
                 ./recordEnv.sh &&
