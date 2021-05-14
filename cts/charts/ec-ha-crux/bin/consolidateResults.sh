@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Performance Test Suite is complete -- retrieving all results..."
+
 curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/summary > /tmp/openmetadata_cts_summary.json
 TEST_CASES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases  | jq -r '.testCaseIds[]')
 PROFILES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles | jq -r '.profileNames[]')
@@ -20,6 +22,8 @@ while read -r line; do
   filename=$(echo ${line} | sed -e 's/[<>]/_/g')
   curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases/${urlencoded} > /tmp/test-case-details/${filename}.json
 done < <(echo "${TEST_CASES}")
+
+echo "Consolidating all results into a single tarball archive..."
 
 cd /tmp
 tar cvf pd.tar profile-details/*.json; gzip pd.tar
