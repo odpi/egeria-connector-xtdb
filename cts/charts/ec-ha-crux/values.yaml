@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
+---
+logging:
+  level: INFO
+
+imageDefaults:
+  registry: docker.io
+  namespace: odpi
+  tag: latest
+  pullPolicy: IfNotPresent
+
+egeria:
+  user: myuser
+  cohort: coco
+  server: myserver
+
+image:
+  egeria:
+    name: egeria
+    pullPolicy: Always
+
+  configure:
+    name: egeria-configure
+    pullPolicy: Always
+
+crux:
+  version: 21.04-1.16.0-beta
+  connectorversion: 2.9
+  connectorurl: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies"
+  proxyserver: crux
+  replicaCount: 2
+
+volumeParameters:
+  instancesPerType: 5
+  maxSearchResults: 2
+  waitBetweenScenarios: 0
+  profilesToSkip: "[]"
+
+dependencyVersions:
+  rocksdb: 6.15.2
+  jnr: 2.2.1
+  kafka: 2.8.0
+
+kafka:
+  replicaCount: 2
+  persistence:
+    enabled: false
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - cha
+          topologyKey: "kubernetes.io/hostname"
+  zookeeper:
+    persistence:
+      enabled: false
+    affinity:
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                    - cha
+            topologyKey: "kubernetes.io/hostname"
+...
