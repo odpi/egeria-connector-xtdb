@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
 
 echo "Defining the common configuration via the bootstrap endpoint: ${CRUX_BOOTSTRAP_ENDPOINT}..."
 
@@ -16,18 +18,22 @@ jq -c '.omagserverConfig' /tmp/configresponse.json > /tmp/serverconfig.json
 
 echo "Deploying common configuration to all pods..."
 
-for REPLICA in $(seq 0 ${NUM_REPLICAS}); do
+REPLICA=0
+while [ $REPLICA -lt $NUM_REPLICAS ]; do
   ENDPOINT="https://${CRUX_RELEASE_NAME}-crux-${REPLICA}.${INTERNAL_SVC_NAME}:9443"
   echo " ... deploying configuration to: ${ENDPOINT}"
   curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --header "Content-Type: application/json" ${ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/configuration --data @/tmp/serverconfig.json
+  REPLICA=$(($REPLICA+1))
 done
 
 echo "Starting the server within each pod..."
 
-for REPLICA in $(seq 0 ${NUM_REPLICAS}); do
+REPLICA=0
+while [ $REPLICA -lt $NUM_REPLICAS ]; do
   ENDPOINT="https://${CRUX_RELEASE_NAME}-crux-${REPLICA}.${INTERNAL_SVC_NAME}:9443"
   echo " ... starting server within: ${ENDPOINT}"
   curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --max-time 900 ${ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/instance
+  REPLICA=$(($REPLICA+1))
 done
 
 echo ""

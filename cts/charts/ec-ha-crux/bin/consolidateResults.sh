@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
 
 echo "Performance Test Suite is complete -- retrieving all results..."
 
