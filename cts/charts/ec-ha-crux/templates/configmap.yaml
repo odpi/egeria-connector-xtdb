@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  labels:
+    app.kubernetes.io/name: {{ include "myapp.name" . }}
+    helm.sh/chart: {{ include "myapp.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  # General cluster configuration - for core egeria, kafka - these must be used
+  EGERIA_USER: {{ .Values.egeria.user }}
+  EGERIA_COHORT: {{ .Values.egeria.cohort }}
+  EGERIA_SERVER: {{ .Values.egeria.server }}
+  KAFKA_ENDPOINT: {{ .Release.Name }}-kafka:9092
+
+  # Used by Crux
+  CRUX_RELEASE_NAME: {{ .Release.Name }}
+  NUM_REPLICAS: "{{ .Values.crux.replicaCount }}"
+  STRICT_SSL: "false"
+  LOGGING_LEVEL_ROOT: {{ .Values.logging.level }}
+  INTERNAL_SVC_NAME: {{ .Release.Name }}-crux-headless
+  CRUX_PUBLIC_ENDPOINT: https://{{ .Release.Name }}-crux:9443
+  CRUX_BOOTSTRAP_ENDPOINT: https://{{ .Release.Name }}-crux-0.{{ .Release.Name }}-crux-headless:9443
+  CRUX_SERVER: {{ .Values.crux.proxyserver }}
+
+  # Used for downloads
+  CONNECTOR_JAR: egeria-connector-crux-{{ .Values.crux.connectorversion }}-jar-with-dependencies.jar
+  CONNECTOR_URL: {{  .Values.crux.connectorurl }}
+  CRUX_ROCKS_JAR_URL: https://clojars.org/repo/juxt/crux-rocksdb/{{ .Values.crux.version }}/crux-rocksdb-{{ .Values.crux.version }}.jar
+  ROCKS_JAR_URL: https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/{{ .Values.dependencyVersions.rocksdb }}/rocksdbjni-{{ .Values.dependencyVersions.rocksdb }}.jar
+  JNR_JAR_URL: https://repo1.maven.org/maven2/com/github/jnr/jnr-ffi/{{ .Values.dependencyVersions.jnr }}/jnr-ffi-{{ .Values.dependencyVersions.jnr }}.jar
+  KAFKA_JAR_URL: https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/{{ .Values.dependencyVersions.kafka }}/kafka-clients-{{ .Values.dependencyVersions.kafka }}.jar
+  PTS_REPORT_NAME: {{ .Release.Name }}

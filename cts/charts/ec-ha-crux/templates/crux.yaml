@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-crux-headless
+  labels:
+    app.kubernetes.io/component: egeria-connector-crux
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: proxy
+      port: 9443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app.kubernetes.io/component: egeria-connector-crux
+...
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-crux
+  labels:
+    app.kubernetes.io/component: egeria-connector-crux
+spec:
+  type: ClusterIP
+  ports:
+    - name: proxy
+      port: 9443
+      protocol: TCP
+      targetPort: https
+  selector:
+    app.kubernetes.io/component: egeria-connector-crux
+...
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-crux
+  labels:
+    app.kubernetes.io/component: egeria-connector-crux
+spec:
+  replicas: {{ .Values.crux.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: egeria-connector-crux
+  serviceName: {{ .Release.Name }}-crux-headless
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: egeria-connector-crux
+    spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        - name: egeria-crux-connector-volume
+          emptyDir: {}
+      initContainers:
+        - name: init-connector
+          image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
+                  {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
+                  {{ .Values.image.configure.name }}\
+                  :{{ .Values.image.configure.tag | default .Values.imageDefaults.tag }}"
+          imagePullPolicy: {{ .Values.image.configure.pullPolicy | default .Values.imageDefaults.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+          command:
+            - "/bin/bash"
+            - "-c"
+            - >
+                cd /opt/egeria/connectors &&
+                curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR} &&
+                wget ${CRUX_ROCKS_JAR_URL} &&
+                wget ${ROCKS_JAR_URL} &&
+                wget ${JNR_JAR_URL} &&
+                wget ${KAFKA_JAR_URL}
+          volumeMounts:
+            - mountPath: /opt/egeria/connectors
+              name: egeria-crux-connector-volume
+      containers:
+        - name: proxy
+          image: "{{ if (.Values.image.egeria.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.egeria.registry | default .Values.imageDefaults.registry }}/{{ end }}\
+                  {{ if (.Values.image.egeria.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.egeria.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
+                  {{ .Values.image.egeria.name }}\
+                  :{{ .Values.image.egeria.tag | default .Values.imageDefaults.tag }}"
+          imagePullPolicy: {{ .Values.image.egeria.pullPolicy | default .Values.imageDefaults.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+          env:
+            - name: "LOADER_PATH"
+              value: "/opt/egeria/connectors"
+            - name: "MALLOC_ARENA_MAX"
+              value: "2"
+          ports:
+            - name: https
+              containerPort: 9443
+          readinessProbe:
+            tcpSocket:
+              port: 9443
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "1000m"
+            limits:
+              memory: "8Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - mountPath: /opt/egeria/connectors
+              name: egeria-crux-connector-volume
+              readOnly: true
+...
