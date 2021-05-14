@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
 
 echo "Defining the common configuration via the bootstrap endpoint: ${CRUX_BOOTSTRAP_ENDPOINT}..."
 

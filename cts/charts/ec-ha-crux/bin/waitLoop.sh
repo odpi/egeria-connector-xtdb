@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
 
 echo "Waiting 2 minutes for PTS to start..."
 sleep 120
