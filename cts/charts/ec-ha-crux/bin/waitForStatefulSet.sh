@@ -14,3 +14,5 @@ while [ $REPLICA -lt $NUM_REPLICAS ]; do
   done
   REPLICA=$(($REPLICA+1))
 done
+
+echo ""
