@@ -93,8 +93,8 @@ spec:
             - >
                 cd /opt/egeria/scripts &&
                 ./waitForStatefulSet.sh &&
-                ./startPTS.sh &&
                 ./bootstrapConfig.sh &&
+                ./startPTS.sh &&
                 ./recordEnv.sh &&
                 ./waitLoop.sh &&
                 ./consolidateResults.sh &&
