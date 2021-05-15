@@ -23,6 +23,8 @@ while [ $REPLICA -lt $NUM_REPLICAS ]; do
   ENDPOINT="https://${CRUX_RELEASE_NAME}-crux-${REPLICA}.${INTERNAL_SVC_NAME}:9443"
   echo " ... deploying configuration to: ${ENDPOINT}"
   curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --header "Content-Type: application/json" ${ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/configuration --data @/tmp/serverconfig.json
+  echo " ... ${ENDPOINT} configuration is now as follows:"
+  curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUX_BOOTSTRAP_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/configuration
   REPLICA=$(($REPLICA+1))
 done
 
