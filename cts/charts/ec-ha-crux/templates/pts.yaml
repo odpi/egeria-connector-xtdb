@@ -34,6 +34,28 @@ spec:
       labels:
         app.kubernetes.io/component: egeria-pts
     spec:
+      volumes:
+        - name: egeria-crux-connector-volume
+          emptyDir: {}
+      initContainers:
+        - name: init-connector
+          image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
+                        {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
+                        {{ .Values.image.configure.name }}\
+                        :{{ .Values.image.configure.tag | default .Values.imageDefaults.tag }}"
+          imagePullPolicy: {{ .Values.image.configure.pullPolicy | default .Values.imageDefaults.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-configmap
+          command:
+            - "/bin/bash"
+            - "-c"
+            - >
+                cd /opt/egeria/connectors &&
+                curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR}
+          volumeMounts:
+            - mountPath: /opt/egeria/connectors
+              name: egeria-crux-connector-volume
       containers:
         - name: omag
           image: "{{ if (.Values.image.egeria.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.egeria.registry | default .Values.imageDefaults.registry }}/{{ end }}\
@@ -44,6 +66,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-configmap
+          env:
+            - name: "LOADER_PATH"
+              value: "/opt/egeria/connectors"
           ports:
             - name: https
               containerPort: 9443
@@ -60,4 +85,8 @@ spec:
             limits:
               memory: "4Gi"
               cpu: "2000m"
+          volumeMounts:
+            - mountPath: /opt/egeria/connectors
+              name: egeria-crux-connector-volume
+              readOnly: true
 ...
