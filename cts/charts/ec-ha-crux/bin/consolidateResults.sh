@@ -4,16 +4,16 @@
 
 echo "Performance Test Suite is complete -- retrieving all results..."
 
-curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/summary > /tmp/openmetadata_cts_summary.json
-TEST_CASES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases  | jq -r '.testCaseIds[]')
-PROFILES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles | jq -r '.profileNames[]')
+curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${PTS_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/summary > /tmp/openmetadata_cts_summary.json
+TEST_CASES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${PTS_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases  | jq -r '.testCaseIds[]')
+PROFILES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${PTS_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles | jq -r '.profileNames[]')
 
 mkdir -p /tmp/profile-details
 while read -r line; do
   urlencoded=$(echo ${line} | sed -e 's/ /%20/g')
   filename=$(echo ${line} | sed -e 's/ /_/g')
   echo "Retrieving profile details for: ${line}"
-  curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles/${urlencoded} > /tmp/profile-details/${filename}.json
+  curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${PTS_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles/${urlencoded} > /tmp/profile-details/${filename}.json
 done < <(echo "${PROFILES}")
 
 mkdir -p /tmp/test-case-details
@@ -22,7 +22,7 @@ while read -r line; do
   urlencoded=$(echo ${line} | sed -e 's/</%3C/g')
   urlencoded=$(echo ${urlencoded} | sed -e 's/>/%3E/g')
   filename=$(echo ${line} | sed -e 's/[<>]/_/g')
-  curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUX_BOOTSTRAP_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases/${urlencoded} > /tmp/test-case-details/${filename}.json
+  curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${PTS_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases/${urlencoded} > /tmp/test-case-details/${filename}.json
 done < <(echo "${TEST_CASES}")
 
 echo "Consolidating all results into a single tarball archive..."

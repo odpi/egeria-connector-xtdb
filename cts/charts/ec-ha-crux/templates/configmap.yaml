@@ -22,6 +22,7 @@ data:
   NUM_REPLICAS: "{{ .Values.crux.replicaCount }}"
   STRICT_SSL: "false"
   LOGGING_LEVEL_ROOT: {{ .Values.logging.level }}
+  PTS_ENDPOINT: https://{{ .Release.Name }}-pts:9443
   INTERNAL_SVC_NAME: {{ .Release.Name }}-crux-headless
   CRUX_PUBLIC_ENDPOINT: https://{{ .Release.Name }}-crux:9443
   CRUX_BOOTSTRAP_ENDPOINT: https://{{ .Release.Name }}-crux-0.{{ .Release.Name }}-crux-headless:9443

@@ -67,6 +67,15 @@ spec:
           env:
             - name: SERVICE
               value: {{ .Release.Name }}-kafka
+        - name: wait-for-pts
+          image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
+                {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
+                {{ .Values.image.configure.name }}\
+                :{{ .Values.image.configure.tag | default .Values.imageDefaults.tag }}"
+          imagePullPolicy: {{ .Values.image.configure.pullPolicy | default .Values.imageDefaults.pullPolicy }}
+          env:
+            - name: SERVICE
+              value: {{ .Release.Name }}-pts
         - name: wait-for-proxy
           image: "{{ if (.Values.image.configure.registry | default .Values.imageDefaults.registry) }}{{ .Values.image.configure.registry | default .Values.imageDefaults.registry }}/{{ end }}\
                 {{ if (.Values.image.configure.namespace | default .Values.imageDefaults.namespace) }}{{ .Values.image.configure.namespace | default .Values.imageDefaults.namespace }}/{{ end }}\
@@ -93,8 +102,8 @@ spec:
             - >
                 cd /opt/egeria/scripts &&
                 ./waitForStatefulSet.sh &&
-                ./startPTS.sh &&
                 ./bootstrapConfig.sh &&
+                ./startPTS.sh &&
                 ./recordEnv.sh &&
                 ./waitLoop.sh &&
                 ./consolidateResults.sh &&

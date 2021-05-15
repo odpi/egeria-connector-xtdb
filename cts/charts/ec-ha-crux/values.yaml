@@ -18,11 +18,11 @@ egeria:
 image:
   egeria:
     name: egeria
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 
   configure:
     name: egeria-configure
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 
 crux:
   version: 21.04-1.16.0-beta
