@@ -96,6 +96,8 @@ spec:
               value: "/opt/egeria/connectors"
             - name: "MALLOC_ARENA_MAX"
               value: "2"
+            - name: "LOGGING_LEVEL_ORG_ODPI_EGERIA_CONNECTORS_JUXT_CRUX"
+              value: "DEBUG"
           ports:
             - name: https
               containerPort: 9443
