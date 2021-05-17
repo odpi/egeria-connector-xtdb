@@ -70,7 +70,7 @@ public class TextConditionBuilder {
         final String methodName = "addWildcardTextCondition";
         log.debug("Falling back to a non-Lucene wildcard text condition (likely to be slow!): {}", regexCriteria);
 
-        // TODO: this fallback search should be avoided, as it will only iterate through the potential property
+        // Note: this fallback search should be avoided, as it will only iterate through the potential property
         //  combinations that are valid for the specified typesToInclude. For example, if this is limited to
         //  OpenMetadataRoot (which has no properties) then no property conditions at all will be used for the
         //  search and therefore ALL instances of that type will be retrieved (not the intended behavior of the

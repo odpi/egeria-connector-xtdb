@@ -18,10 +18,7 @@ import java.util.List;
 public class CruxGraphQuery extends CruxQuery {
 
     public static final Symbol RELATIONSHIP = Symbol.intern("r");
-    private static final Symbol TRANSITIVE = Symbol.intern("t");
-    private static final Symbol START = Symbol.intern("s");
     private static final Keyword ENTITY_PROXIES = Keyword.intern(RelationshipMapping.ENTITY_PROXIES);
-    private static final Symbol QUERY = Symbol.intern("q");
 
     /**
      * Default constructor for a new query.
@@ -39,7 +36,7 @@ public class CruxGraphQuery extends CruxQuery {
     public void addRelationshipLimiters(String rootEntityGUID, List<String> relationshipTypeGUIDs, List<InstanceStatus> limitResultsByStatus) {
         addFindElement(RELATIONSHIP);
         // [r :entityProxies e] [r :entityProxies "e_..."]
-        conditions.add(getRelatedToCondition(DOC_ID));
+        conditions.add(getRelatedToCondition());
         conditions.add(getRelatedToCondition(EntitySummaryMapping.getReference(rootEntityGUID)));
         if (relationshipTypeGUIDs != null && !relationshipTypeGUIDs.isEmpty()) {
             // [r :type.guids ...]
@@ -66,59 +63,6 @@ public class CruxGraphQuery extends CruxQuery {
             conditions.addAll(getClassificationConditions(limitResultsByClassification));
         }
     }
-
-    /**
-     * Recursively traverse the graph using a rule-based query to find all (directly or indirectly) related entities to
-     * the provided starting entity. This sets this as a nested query, to strictly focus on the related entities without
-     * up-front applying any restrictions. Subsequent query restrictions can then be applied to the results of this
-     * rule-based traversal to filter or sort the results.
-     * @param startingDocId Crux document ID from which to radiate
-
-    public void addRelatedEntitiesNestedQuery(String startingDocId) {
-
-        CruxQuery inner = new CruxQuery();
-
-        Symbol related = Symbol.intern("related");
-
-        // :where [(related "..." e)]
-        List<Object> clause = new ArrayList<>();
-        clause.add(related);
-        clause.add(startingDocId);
-        clause.add(DOC_ID);
-        IPersistentList searchClause = PersistentList.create(clause);
-        inner.conditions.add(searchClause);
-
-        // :rules [(related [s] e)]
-        clause = new ArrayList<>();
-        clause.add(related);
-        clause.add(PersistentVector.create(START));
-        clause.add(DOC_ID);
-        IPersistentList ruleClause = PersistentList.create(clause);
-
-        List<Object> recurse = new ArrayList<>();
-        recurse.add(related);
-        recurse.add(TRANSITIVE);
-        recurse.add(DOC_ID);
-
-        // :rules [(related [s] e) [r :entityProxies s] [r :entityProxies e]]
-        inner.rules.add(PersistentVector.create(ruleClause,
-                getRelatedToCondition(START),
-                getRelatedToCondition(DOC_ID)));
-
-        // :rules [(related [s] e) [r :entityProxies s] [r :entityProxies t] (related t e)]
-        inner.rules.add(PersistentVector.create(ruleClause,
-                getRelatedToCondition(START),
-                getRelatedToCondition(TRANSITIVE),
-                PersistentList.create(recurse)));
-
-        // :where [[(q {: find ... }) [[e]]]]
-        List<Object> nested = new ArrayList<>();
-        nested.add(QUERY);
-        nested.add(inner.getQuery());
-        conditions.add(PersistentVector.create(PersistentList.create(nested),
-                PersistentVector.create((IPersistentVector) PersistentVector.create(DOC_ID))));
-
-    }*/
 
     /**
      * Add condition(s) to limit the resulting entities by the provided classifications.
@@ -162,11 +106,10 @@ public class CruxGraphQuery extends CruxQuery {
 
     /**
      * Add a condition to match the value of a property to a variable.
-     * @param variable to match
      * @return PersistentVector for the condition
      */
-    protected PersistentVector getRelatedToCondition(Symbol variable) {
-        return PersistentVector.create(RELATIONSHIP, ENTITY_PROXIES, variable);
+    protected PersistentVector getRelatedToCondition() {
+        return PersistentVector.create(RELATIONSHIP, ENTITY_PROXIES, DOC_ID);
     }
 
     /**

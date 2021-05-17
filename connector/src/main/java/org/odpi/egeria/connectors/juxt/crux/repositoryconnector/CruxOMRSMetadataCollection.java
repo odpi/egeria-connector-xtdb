@@ -742,7 +742,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 initialProperties,
                 initialClassifications);
         newEntity.setMetadataCollectionName(metadataCollectionName);
-        // TODO: should we not add the calling user to the 'maintainedBy' list?
 
         if (initialStatus != null) {
             newEntity.setStatus(initialStatus);
@@ -1853,7 +1852,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                         EntityDetail entity) throws
             InvalidParameterException,
             RepositoryErrorException,
-            HomeEntityException,
             EntityConflictException {
 
         final String methodName = "saveEntityReferenceCopy";
@@ -1863,18 +1861,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         parentConnector.validateRepositoryIsActive(methodName);
         repositoryValidator.validateReferenceInstanceHeader(repositoryName, metadataCollectionId, instanceParameterName, entity, methodName);
 
-        // TODO: would have expected the parameter validation above to do things like HomeEntityException (?)
-        if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
-            throw new HomeEntityException(
-                    CruxOMRSErrorCode.ENTITY_HOME_COLLECTION_REFERENCE.getMessageDefinition(
-                            entity.getGUID(), repositoryName
-                    ),
-                    this.getClass().getName(),
-                    methodName
-            );
-        } else {
-            cruxRepositoryConnector.saveReferenceCopy(entity);
-        }
+        // Note: the validation immediately above will throw an InvalidParameterException if this is a non-reference copy,
+        // so HomeEntityException will never actually be thrown
+        cruxRepositoryConnector.saveReferenceCopy(entity);
 
     }
 
@@ -2033,7 +2022,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     public void purgeClassificationReferenceCopy(String userId,
                                                  EntityDetail entity,
                                                  Classification classification) throws
-            TypeErrorException,
             EntityConflictException,
             RepositoryErrorException {
 

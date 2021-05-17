@@ -142,7 +142,6 @@ public class ConditionBuilder {
                         // (not (or-join [e] ... ) )
                         predicatedConditions.add(NOT_OPERATOR);
                         if (allConditions.size() == 1) {
-                            // TODO: something here is not quite working...
                             predicatedConditions.addAll(allConditions.get(0));
                         } else {
                             List<Object> or = new ArrayList<>();

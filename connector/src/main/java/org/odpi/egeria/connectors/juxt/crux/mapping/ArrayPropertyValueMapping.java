@@ -50,11 +50,10 @@ public class ArrayPropertyValueMapping extends InstancePropertyValueMapping {
     public static List<Object> getArrayPropertyValueForComparison(ArrayPropertyValue apv) {
         InstanceProperties values = apv.getArrayValues();
         if (values != null) {
-            // Create a new TreeMap of the values to ensure they are sorted by numeric key
-            // TODO: will this break with more than 10 elements? (ie. "10" as a string will be sorted before "2"?)
-            TreeMap<String, InstancePropertyValue> valueMap = new TreeMap<>(values.getInstanceProperties());
             List<Object> results = new ArrayList<>();
-            for (InstancePropertyValue value : valueMap.values()) {
+            int total = apv.getArrayCount();
+            for (int i = 0; i < total; i++) {
+                InstancePropertyValue value = values.getPropertyValue("" + i);
                 Object toCompare = getValueForComparison(value);
                 if (toCompare != null) {
                     results.add(toCompare);
