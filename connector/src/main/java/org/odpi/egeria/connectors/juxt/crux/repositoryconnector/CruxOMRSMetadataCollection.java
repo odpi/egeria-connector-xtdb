@@ -2069,7 +2069,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 }
 
             } catch (ClassificationErrorException e) {
-                throw new TypeErrorException(e);
+                // Do nothing: this simply means the repository did not have the classification reference copy stored
+                // anyway, so nothing to remove (no-op)
+                log.debug("Entity with GUID {} had no classification {}, nothing to purge.", entity.getGUID(), classification.getName());
             }
         }
 
