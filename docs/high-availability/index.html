@@ -1,0 +1,204 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Crux Repository Connector for Egeria - High Availability</title>
+
+		<meta name="description" content="Configuring the Crux repository connector for Egeria for high availability">
+		<meta name="author" content="Christopher Grote">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<link rel="stylesheet" href="../reveal.js/dist/reset.css">
+		<link rel="stylesheet" href="../reveal.js/dist/reveal.css">
+		<link rel="stylesheet" href="../reveal.js/dist/theme/black.css" id="theme">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="../reveal.js/plugin/highlight/monokai.css" id="highlight-theme">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+
+				<section class="center" data-menu-title="Getting started">
+					<h1>Crux</h1>
+					<h4>Repository Connector for Egeria</h4>
+					<h2>High Availability</h2>
+				</section>
+				<section>
+					<section>
+						<h2 style="text-align: left;">Orientation</h2>
+						<h4 style="text-align: left;">TL;DR?</h4>
+						<p style="font-size: x-large; text-align: left;">
+							Just use the <a href="#" class="navigate-right">right arrow</a> on your keyboard: each slide is one step, with minimal explanation.
+						</p><br>
+						<h4 style="text-align: left;">Need more?</h4>
+						<p style="font-size: x-large; text-align: left;">
+							If at any point you want more of an explanation, use the <a href="#" class="navigate-down">down arrow</a>
+							on your keyboard to drill-down.
+						</p>
+					</section>
+					<section>
+						<h3 style="text-align: left;">Keyboard shortcuts</h3>
+						<p style="font-size: x-large; text-align: left;">
+							Aha, you want more!
+							<br><br>
+							This getting started guide is written using a great web-based presentation framework
+							called <a href="https://revealjs.com" target="reveal">reveal.js</a>. You can use its icons
+							on the slides to move around, or you can use keyboard shortcuts. Try the <code>?</code> key
+							to bring up a cheatsheet of the keyboard shortcuts.
+						</p>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							At any point, you can also press the <code>m</code> key to bring up the menu. From the menu you
+							can quickly jump to any particular topic.
+						</p>
+						<p class="fragment fade-in-then-semi-out" style="font-size: x-large; text-align: left;">
+							Looking for more about how the connector actually works, rather than this primer on keyboard
+							shortcuts? Be sure you've read through the <a href="../getting-started/index.html">Getting Started</a> guide.
+						</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2 style="text-align: left;">The sample</h2>
+						<p style="font-size: x-large; text-align: left;">
+							To walk through how high availability works for the connector, we will walk through how the
+							sample Helm chart provided under <code>cts/charts/ec-ha-crux</code> works.
+						</p>
+						<p style="font-size: x-large; text-align: left;">
+							This chart starts up a number of different elements, and configures them in a specific
+							sequence. Continue downwards for a step-by-step explanation of the startup process.
+						</p>
+					</section>
+					<section data-menu-title="Startup" data-transition="fade">
+						<h4 style="text-align: left;">Startup</h4>
+						<img src="img/startup.png">
+						<p style="font-size: x-large; text-align: left;">
+							When it is first deployed, then Helm chart starts a number of pods and services: for Crux,
+							Kafka, execution of the Performance Test Suite and a pod used for configuration.
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">Startup</h4>
+						<img src="img/waitForStatefulSet.png">
+						<p style="font-size: x-large; text-align: left;">
+							Each Crux pod runs its own separate OMAG Server Platform, in its own JVM, and a script in the
+							<code>init-and-report</code> pod will wait until all three pods' OMAG Server Platforms are
+							running before proceeding to any of the following steps. (The <code>headless</code> service
+							allows each pod to be directly addressed, without load-balancing, to do such a check.)
+						</p>
+					</section>
+					<section data-menu-title="Configure" data-transition="fade">
+						<h4 style="text-align: left;">Configure</h4>
+						<img src="img/bootstrapConfig1.png">
+						<p style="font-size: x-large; text-align: left;">
+							The next script creates a singular configuration document via the <code>pts</code> pod, and
+							deploys this common configuration to each of the pods (again using the <code>headless</code>
+							service to directly address each one individually): each will have a separate <code>crux</code>
+							server configured with the same Crux Plugin Repository Connector (same metadata collection ID).
+						</p>
+					</section>
+					<section data-transition="fade">
+						<h4 style="text-align: left;">Configure</h4>
+						<img src="img/bootstrapConfig2.png">
+						<p style="font-size: x-large; text-align: left;">
+							When the <code>/instance</code> is called against each pod, each will create a local index
+							and instance of the <code>ICruxAPI</code> interface: all pointing to the same golden stores
+							(in the example, Kafka) where all persistence for Crux is handled. All servers will refer
+							to the singular <code>crux</code> load-balancing service as their root URL.
+						</p>
+					</section>
+					<section data-menu-title="Run" data-transition="fade">
+						<h4 style="text-align: left;">Run</h4>
+						<img src="img/startPTS.png">
+						<p style="font-size: x-large; text-align: left;">
+							Now when we start the Performance Test Suite, all traffic to the technology under test is
+							routed via this <code>crux</code> load-balancing service: which will round-robin each request
+							it receives to the underlying pods running the Crux plugin repository connector. Kafka has
+							a similar service, which handles load-balancing across its own pods for all write operations.
+						</p>
+					</section>
+					<section data-menu-title="Outages" data-transition="fade">
+						<h4 style="text-align: left;">Outages</h4>
+						<img src="img/outage.png">
+						<p style="font-size: x-large; text-align: left;">
+							Should there be any outage (in the example above, both a Crux pod and a Kafka pod going down)
+							the Kubernetes services will simply stop routing traffic to those pods and the overall service
+							will continue uninterrupted.
+						</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2 style="text-align: left;">Limitations</h2>
+						<p style="font-size: x-large; text-align: left;">
+							There are a number of limitations to be aware of with the high availability configuration:
+						</p>
+						<ul style="font-size: x-large; text-align: left;">
+							<li>Write operations will only be consistent when using a non-embedded Crux back-end: e.g.
+								Kafka, S3, or JDBC.</li>
+							<li>Since the indexes are local to each pod, read operations will be eventually consistent:
+								the specific pod to which a query is routed may not yet have updated its embedded index
+								with the results of the very latest write operations from some other pod.</li>
+							<li>Currently configuration of Egeria requires making a number of REST API calls, which
+								limits how dynamic we can be in adding or removing pods to an already-running cluster
+								(in particular: <a href="https://github.com/odpi/egeria-connector-crux/issues/127#issuecomment-841678140">we
+									cannot rely on a readiness probe to indicate pod readiness to process actual work,
+									but only its readiness to be configured</a>). We hope to address this soon by
+								allowing configuration and startup to be done without relying on REST calls, at which
+								point we should be able to also support dynamically adding and removing pods from the
+								cluster.</li>
+						</ul>
+					</section>
+				</section>
+
+			</div>
+		</div>
+
+		<script src="../reveal.js/dist/reveal.js"></script>
+		<script src="../reveal.js/plugin/notes/notes.js"></script>
+		<script src="../reveal.js/plugin/markdown/markdown.js"></script>
+		<script src="../reveal.js/plugin/highlight/highlight.js"></script>
+		<script src="../reveal.js/plugin/menu/menu.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				center: false,
+				slideNumber: true,
+				transition: 'slide',
+				backgroundTransition: 'fade',
+				controls: true,
+				controlsTutorial: true,
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMenu ],
+				menu: {
+					side: 'left',
+					width: 'normal',
+					numbers: false,
+					titleSelector: 'h1, h2, h3',
+					useTextContentForMissingTitles: false,
+					hideMissingTitles: true,
+					markers: true,
+					themes: false,
+					themesPath: 'dist/theme/',
+					transitions: false,
+					openButton: true,
+					openSlideNumber: true,
+					keyboard: true,
+					sticky: false,
+					autoOpen: true,
+					delayInit: false,
+					openOnInit: false,
+					loadIcons: true
+				}
+			});
+		</script>
+	</body>
+</html>
