@@ -53,7 +53,7 @@ public class PersistenceLayer {
     /**
      * Check whether the persistence layer for the provided Crux back-end is the latest or not.
      * @param cruxAPI the Crux back-end for which to check the persistence layer version
-     * @return true if it is at the lastest version, otherwise false
+     * @return true if it is at the latest version, otherwise false
      */
     public static boolean isLatestVersion(ICruxAPI cruxAPI) {
         return getVersion(cruxAPI) == LATEST_VERSION;

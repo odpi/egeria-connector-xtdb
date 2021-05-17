@@ -25,7 +25,4 @@ public class Constants {
     // Graph query limits
     public static final int MAX_TRAVERSAL_DEPTH = 40;
 
-    // Cascading limits
-    public static final int CASCADE_DELETES_PAGE_SIZE = 10000;
-
 }

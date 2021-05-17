@@ -4,7 +4,6 @@ package org.odpi.egeria.connectors.juxt.crux.auditlog;
 
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.ExceptionMessageDefinition;
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.ExceptionMessageSet;
-import org.odpi.openmetadata.repositoryservices.auditlog.OMRSAuditLogRecordSeverity;
 
 /**
  * The CruxOMRSErrorCode is used to define first failure data capture (FFDC) for errors that occur when working with
