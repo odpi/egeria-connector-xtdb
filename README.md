@@ -23,6 +23,8 @@ Of particular interest for Egeria is that it has native support for storing hist
 - See the [CTS Results](cts/README.md) for details on its conformance and rough performance numbers.
 - See the [Migration](https://odpi.github.io/egeria-connector-crux/migrating/) guide for upgrading an existing Egeria
   Crux repository to a newer version.
+- See the [High Availability](https://odpi.github.io/egeria-connector-crux/high-availability/) guide for an explanation
+  of how the plugin repository can be configured as a highly-available repository.
 
 ## How it works
 
