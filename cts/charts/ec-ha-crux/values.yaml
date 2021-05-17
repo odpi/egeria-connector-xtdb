@@ -46,27 +46,7 @@ kafka:
   replicaCount: 2
   persistence:
     enabled: false
-  affinity:
-    podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-              - key: app.kubernetes.io/instance
-                operator: In
-                values:
-                  - cha
-          topologyKey: "kubernetes.io/hostname"
   zookeeper:
     persistence:
       enabled: false
-    affinity:
-      podAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-                - key: app.kubernetes.io/instance
-                  operator: In
-                  values:
-                    - cha
-            topologyKey: "kubernetes.io/hostname"
 ...
