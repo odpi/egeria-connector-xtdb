@@ -522,6 +522,22 @@ public class CruxOMRSRepositoryConnectorTest {
             Relationship second = connector.createRelationship(two);
             assertNotNull(second, "Expected a CategoryHierarchyLink relationship to be created.");
 
+            Relationship three = helper.getSkeletonRelationship(MockConnection.SOURCE_NAME,
+                    MockConnection.METADATA_COLLECTION_ID,
+                    MockConnection.METADATA_COLLECTION_NAME,
+                    InstanceProvenanceType.LOCAL_COHORT,
+                    MockConnection.USERNAME,
+                    "CategoryHierarchyLink");
+
+            three.setEntityOneProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category2));
+            three.setEntityTwoProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category1));
+            three.setStatus(InstanceStatus.DELETED);
+
+            Relationship third = connector.createRelationship(three);
+            assertNotNull(third, "Expected a CategoryHierarchyLink relationship to be created.");
+            Relationship retrieved = connector.getRelationship(three.getGUID(), null);
+            assertNotNull(retrieved, "Expected to be able to retrieve the relationship back again.");
+
             List<Relationship> results = connector.findRelationshipsForEntity(category1.getGUID(),
                     null,
                     0,
@@ -537,6 +553,17 @@ public class CruxOMRSRepositoryConnectorTest {
             results = connector.findHomedRelationshipsForEntity(category1, MockConnection.USERNAME);
             assertNotNull(results, "Expected some search results.");
             assertEquals(results.size(), 2, "Expected precisely two search results.");
+
+            results = connector.findActiveRelationshipsForEntity(category1, MockConnection.USERNAME);
+            assertNotNull(results, "Expected some search results.");
+            assertEquals(results.size(), 2, "Expected precisely two search results.");
+
+            Collection<List<?>> otherResults = connector.findEntityRelationships(connector.getCruxAPI().db(),
+                    category1.getGUID(),
+                    MockConnection.USERNAME,
+                    true);
+            assertNotNull(otherResults, "Expected some search results.");
+            assertEquals(otherResults.size(), 3, "Expected precisely three search results.");
 
             results = connector.findRelationshipsForEntity(category1.getGUID(),
                     "71e4b6fb-3412-4193-aff3-a16eccd87e8e",

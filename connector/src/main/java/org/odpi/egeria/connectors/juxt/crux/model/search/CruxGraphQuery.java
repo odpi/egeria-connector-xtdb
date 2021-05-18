@@ -42,17 +42,16 @@ public class CruxGraphQuery extends CruxQuery {
             // [r :type.guids ...]
             conditions.addAll(getTypeCondition(RELATIONSHIP, TypeDefCategory.RELATIONSHIP_DEF, null, relationshipTypeGUIDs));
         }
-        if (limitResultsByStatus != null && !limitResultsByStatus.isEmpty()) {
-            conditions.addAll(getStatusLimiters(RELATIONSHIP, limitResultsByStatus));
-        }
+        addStatusLimiters(limitResultsByStatus, RELATIONSHIP);
     }
 
     /**
      * Add condition(s) to limit the resulting entities by the provided criteria.
      * @param entityTypeGUIDs entity type definitions by which to limit
      * @param limitResultsByClassification entity classifications by which to limit
+     * @param limitResultsByStatus of entity statuses by which to limit the results
      */
-    public void addEntityLimiters(List<String> entityTypeGUIDs, List<String> limitResultsByClassification) {
+    public void addEntityLimiters(List<String> entityTypeGUIDs, List<String> limitResultsByClassification, List<InstanceStatus> limitResultsByStatus) {
         if (entityTypeGUIDs != null && !entityTypeGUIDs.isEmpty()) {
             // [e :type.guids ...]
             conditions.addAll(getTypeCondition(DOC_ID, TypeDefCategory.ENTITY_DEF, null, entityTypeGUIDs));
@@ -62,6 +61,7 @@ public class CruxGraphQuery extends CruxQuery {
             // [e :classifications classification] [(hash-set "..." "..." ...) cf] [(contains? cf classification)]
             conditions.addAll(getClassificationConditions(limitResultsByClassification));
         }
+        addStatusLimiters(limitResultsByStatus, DOC_ID);
     }
 
     /**

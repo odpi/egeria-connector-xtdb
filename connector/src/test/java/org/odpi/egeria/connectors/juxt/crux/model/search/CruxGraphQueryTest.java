@@ -37,8 +37,8 @@ public class CruxGraphQueryTest {
             Object candidate = relation.valAt(where);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are expected to be enclosed in an outer vector.");
             IPersistentVector conditions = (IPersistentVector) candidate;
-            assertEquals(conditions.length(), 2, "Two conditions are expected for limiting by relationships without status or type.");
-            // Expected --> [[r :entityProxies e] [r :entityProxies "e_123"]]
+            assertEquals(conditions.length(), 4, "Four conditions are expected for limiting by relationships without status or type.");
+            // Expected --> [[r :entityProxies e] [r :entityProxies "e_123"] [r :currentStatus r_currentStatus] [(not= r_currentStatus 99)]]
 
             candidate = conditions.nth(0);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
@@ -55,6 +55,30 @@ public class CruxGraphQueryTest {
             assertEquals(condition.nth(0), CruxGraphQuery.RELATIONSHIP, "First element of triple is expected to be the relationship ID symbol.");
             assertEquals(condition.nth(1), Keyword.intern(RelationshipMapping.ENTITY_PROXIES), "Second element of triple is expected to be the keyword :entityProxies.");
             assertEquals(condition.nth(2), ref, "Third element of the triple is expected to be the entity reference to match.");
+
+            Symbol status = Symbol.intern("r_currentStatus");
+
+            candidate = conditions.nth(2);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 3, "Where condition is expected to be a triple.");
+            assertEquals(condition.nth(0), CruxGraphQuery.RELATIONSHIP, "First element of triple is expected to be the relationship ID symbol.");
+            assertEquals(condition.nth(1), Keyword.intern(InstanceHeaderMapping.CURRENT_STATUS), "Second element of triple is expected to be the keyword for the status property.");
+            assertEquals(condition.nth(2), status, "Third element of the triple is expected to be the symbol to capture the status.");
+
+            candidate = conditions.nth(3);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 1, "Where condition is expected to be a single list.");
+            candidate = condition.nth(0);
+            assertTrue(candidate instanceof IPersistentList, "Clause is expected to begin with a list.");
+            IPersistentList clause = (IPersistentList) candidate;
+            assertEquals(clause.count(), 3, "Clause list is expected to contain at least 2 elements.");
+            List<Object> compare = new ArrayList<>();
+            compare.add(ConditionBuilder.NEQ_OPERATOR);
+            compare.add(status);
+            compare.add(99);
+            assertEquals(clause, PersistentList.create(compare), "Clause is expected to check that the set of status is not deleted (99).");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -82,8 +106,8 @@ public class CruxGraphQueryTest {
             Object candidate = relation.valAt(where);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are expected to be enclosed in an outer vector.");
             IPersistentVector conditions = (IPersistentVector) candidate;
-            assertEquals(conditions.length(), 3, "Three conditions are expected for limiting by relationships by type.");
-            // Expected --> [[r :entityProxies e] [r :entityProxies "e_123"] [r :type.guids "e6670973-645f-441a-bec7-6f5570345b92"]]
+            assertEquals(conditions.length(), 5, "Five conditions are expected for limiting by relationships by type.");
+            // Expected --> [[r :entityProxies e] [r :entityProxies "e_123"] [r :type.guids "e6670973-645f-441a-bec7-6f5570345b92"] [r :currentStatus r_currentStatus] [(not= r_currentStatus 99)]]
 
             candidate = conditions.nth(0);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
@@ -108,6 +132,30 @@ public class CruxGraphQueryTest {
             assertEquals(condition.nth(0), CruxGraphQuery.RELATIONSHIP, "First element of triple is expected to be the relationship ID symbol.");
             assertEquals(condition.nth(1), Keyword.intern(InstanceHeaderMapping.TYPE_DEF_GUIDS), "Second element of triple is expected to be the keyword for the typeDef GUIDs.");
             assertEquals(condition.nth(2), types.get(0), "Third element of the triple is expected to be the relationship typeDef GUID to match.");
+
+            Symbol status = Symbol.intern("r_currentStatus");
+
+            candidate = conditions.nth(3);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 3, "Where condition is expected to be a triple.");
+            assertEquals(condition.nth(0), CruxGraphQuery.RELATIONSHIP, "First element of triple is expected to be the relationship ID symbol.");
+            assertEquals(condition.nth(1), Keyword.intern(InstanceHeaderMapping.CURRENT_STATUS), "Second element of triple is expected to be the keyword for the status property.");
+            assertEquals(condition.nth(2), status, "Third element of the triple is expected to be the symbol to capture the status.");
+
+            candidate = conditions.nth(4);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 1, "Where condition is expected to be a single list.");
+            candidate = condition.nth(0);
+            assertTrue(candidate instanceof IPersistentList, "Clause is expected to begin with a list.");
+            IPersistentList clause = (IPersistentList) candidate;
+            assertEquals(clause.count(), 3, "Clause list is expected to contain at least 2 elements.");
+            List<Object> compare = new ArrayList<>();
+            compare.add(ConditionBuilder.NEQ_OPERATOR);
+            compare.add(status);
+            compare.add(99);
+            assertEquals(clause, PersistentList.create(compare), "Clause is expected to check that the set of status is not deleted (99).");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -211,7 +259,7 @@ public class CruxGraphQueryTest {
             types.add("a32316b8-dc8c-48c5-b12b-71c1b2a080bf");
 
             CruxGraphQuery cgq = new CruxGraphQuery();
-            cgq.addEntityLimiters(types, null);
+            cgq.addEntityLimiters(types, null, null);
             IPersistentMap entities = cgq.getQuery();
             assertNotNull(entities);
             assertTrue(entities.containsKey(find));
@@ -220,8 +268,8 @@ public class CruxGraphQueryTest {
             Object candidate = entities.valAt(where);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are expected to be enclosed in an outer vector.");
             IPersistentVector conditions = (IPersistentVector) candidate;
-            assertEquals(conditions.length(), 1, "One condition is expected for limiting entities by a single type.");
-            // Expected --> [[e :type.guids "a32316b8-dc8c-48c5-b12b-71c1b2a080bf"]]
+            assertEquals(conditions.length(), 3, "Three conditions are expected for limiting entities by a single type.");
+            // Expected --> [[e :type.guids "a32316b8-dc8c-48c5-b12b-71c1b2a080bf"] [e :currentStatus e_currentStatus] [(not= e_currentStatus 99)]]
 
             candidate = conditions.nth(0);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
@@ -230,6 +278,30 @@ public class CruxGraphQueryTest {
             assertEquals(condition.nth(0), CruxQuery.DOC_ID, "First element of triple is expected to be the relationship ID symbol.");
             assertEquals(condition.nth(1), Keyword.intern(InstanceHeaderMapping.TYPE_DEF_GUIDS), "Second element of triple is expected to be the keyword for typeDef GUIDs.");
             assertEquals(condition.nth(2), types.get(0), "Third element of the triple is expected to be the value of the typeDef GUID by which to limit.");
+
+            Symbol status = Symbol.intern("e_currentStatus");
+
+            candidate = conditions.nth(1);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 3, "Where condition is expected to be a triple.");
+            assertEquals(condition.nth(0), CruxGraphQuery.DOC_ID, "First element of triple is expected to be the entity ID symbol.");
+            assertEquals(condition.nth(1), Keyword.intern(InstanceHeaderMapping.CURRENT_STATUS), "Second element of triple is expected to be the keyword for the status property.");
+            assertEquals(condition.nth(2), status, "Third element of the triple is expected to be the symbol to capture the status.");
+
+            candidate = conditions.nth(2);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 1, "Where condition is expected to be a single list.");
+            candidate = condition.nth(0);
+            assertTrue(candidate instanceof IPersistentList, "Clause is expected to begin with a list.");
+            IPersistentList clause = (IPersistentList) candidate;
+            assertEquals(clause.count(), 3, "Clause list is expected to contain at least 2 elements.");
+            List<Object> compare = new ArrayList<>();
+            compare.add(ConditionBuilder.NEQ_OPERATOR);
+            compare.add(status);
+            compare.add(99);
+            assertEquals(clause, PersistentList.create(compare), "Clause is expected to check that the set of status is not deleted (99).");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -248,7 +320,7 @@ public class CruxGraphQueryTest {
             Symbol cf = Symbol.intern("cf");
 
             CruxGraphQuery cgq = new CruxGraphQuery();
-            cgq.addEntityLimiters(null, classificationNames);
+            cgq.addEntityLimiters(null, classificationNames, null);
             IPersistentMap entities = cgq.getQuery();
             assertNotNull(entities);
             assertTrue(entities.containsKey(find));
@@ -257,8 +329,8 @@ public class CruxGraphQueryTest {
             Object candidate = entities.valAt(where);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are expected to be enclosed in an outer vector.");
             IPersistentVector conditions = (IPersistentVector) candidate;
-            assertEquals(conditions.length(), 3, "Three condition are expected for limiting entities by multiple classifications.");
-            // Expected --> [[e :classifications classification] [(hash-set "Confidentiality" "MobileAsset") cf] [(contains? cf classification)]]
+            assertEquals(conditions.length(), 5, "Five conditions are expected for limiting entities by multiple classifications.");
+            // Expected --> [[e :classifications classification] [(hash-set "Confidentiality" "MobileAsset") cf] [(contains? cf classification)] [e :currentStatus e_currentStatus] [(not= e_currentStatus 99)]]
 
             candidate = conditions.nth(0);
             assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
@@ -297,6 +369,30 @@ public class CruxGraphQueryTest {
             compare.add(cf);
             compare.add(classification);
             assertEquals(clause, PersistentList.create(compare), "Clause is expected to check that the set of classifications contains the value being searched.");
+
+            Symbol status = Symbol.intern("e_currentStatus");
+
+            candidate = conditions.nth(3);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 3, "Where condition is expected to be a triple.");
+            assertEquals(condition.nth(0), CruxGraphQuery.DOC_ID, "First element of triple is expected to be the entity ID symbol.");
+            assertEquals(condition.nth(1), Keyword.intern(InstanceHeaderMapping.CURRENT_STATUS), "Second element of triple is expected to be the keyword for the status property.");
+            assertEquals(condition.nth(2), status, "Third element of the triple is expected to be the symbol to capture the status.");
+
+            candidate = conditions.nth(4);
+            assertTrue(candidate instanceof IPersistentVector, "Where conditions are are expected to be enclosed in an inner vector.");
+            condition = (IPersistentVector) candidate;
+            assertEquals(condition.length(), 1, "Where condition is expected to be a single list.");
+            candidate = condition.nth(0);
+            assertTrue(candidate instanceof IPersistentList, "Clause is expected to begin with a list.");
+            clause = (IPersistentList) candidate;
+            assertEquals(clause.count(), 3, "Clause list is expected to contain at least 2 elements.");
+            compare = new ArrayList<>();
+            compare.add(ConditionBuilder.NEQ_OPERATOR);
+            compare.add(status);
+            compare.add(99);
+            assertEquals(clause, PersistentList.create(compare), "Clause is expected to check that the set of status is not deleted (99).");
 
         } catch (Exception e) {
             e.printStackTrace();
