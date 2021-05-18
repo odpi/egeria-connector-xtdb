@@ -2,13 +2,10 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
-import clojure.lang.IPersistentMap;
 import crux.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
-import org.odpi.egeria.connectors.juxt.crux.mapping.EntitySummaryMapping;
 import org.odpi.egeria.connectors.juxt.crux.mapping.RelationshipMapping;
-import org.odpi.egeria.connectors.juxt.crux.model.search.CruxQuery;
 import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.OMRSDynamicTypeMetadataCollectionBase;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
@@ -950,16 +947,27 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         Transaction.Builder tx = Transaction.builder();
 
-        // 1. Soft-delete every HOMED relationship in which the entity is involved (note that we are only allowed to
-        //    do this against relationships that are homed in this repository, as a soft-delete can only be done by the
-        //    home repository: it changes the version, modification times, etc)
+        // 1. Remove every relationship in which the entity is involved, to maintain referential integrity within the
+        //    repository
         try {
-            List<Relationship> relationships = cruxRepositoryConnector.findHomedRelationshipsForEntity(entity, userId);
+            List<Relationship> relationships = cruxRepositoryConnector.findRelationshipsForEntity(entity, userId);
             if (relationships != null) {
                 for (Relationship relationship : relationships) {
                     if (relationship != null) {
-                        Relationship toDelete = getDeletedRelationshipRepresentation(relationship, userId);
-                        cruxRepositoryConnector.addUpdateRelationshipStatements(tx, toDelete);
+                        String mcId = relationship.getMetadataCollectionId();
+                        if (metadataCollectionId.equals(mcId)) {
+                            // a. Soft-delete every HOMED relationship in which the entity is involved (note that we are
+                            //    only allowed to do this against relationships that are homed in this repository, as a
+                            //    soft-delete can only be done by the home repository: it changes the version,
+                            //    modification times, etc)
+                            Relationship toDelete = getDeletedRelationshipRepresentation(relationship, userId);
+                            cruxRepositoryConnector.addUpdateRelationshipStatements(tx, toDelete);
+                        } else {
+                            // b. Purge every reference copy relationship in which the entity is involved (note that we
+                            //    are only allowed to do this against relationships that are NOT homed in this repository,
+                            //    as soft-delete can only be done by the home repository)
+                            cruxRepositoryConnector.addPurgeRelationshipStatements(tx, relationship.getGUID());
+                        }
                     }
                 }
             }
@@ -1013,26 +1021,13 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         Transaction.Builder tx = Transaction.builder();
 
-        // 1. Purge EVERY SINGLE relationship in which the entity is involved (note that we should be able to do this
-        //    against both homed and reference copy relationships since purge operations are allowed against both)
+        // 1. Purge EVERY SINGLE relationship in which the entity is involved to ensure referential integrity within
+        //    the repository (note that we should be able to do this against both homed and reference copy relationships
+        //    since purge operations are allowed against both)
         try {
-            CruxQuery query = new CruxQuery();
-            query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(deletedEntityGUID));
-            cruxRepositoryConnector.updateQuery(query,
-                    TypeDefCategory.RELATIONSHIP_DEF,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
+            Collection<List<?>> relationshipRefs = cruxRepositoryConnector.findEntityRelationships(cruxRepositoryConnector.getCruxAPI().db(),
+                    deletedEntityGUID,
                     userId);
-            IPersistentMap q = query.getQuery();
-            log.debug("Querying with: {}", q);
-            Collection<List<?>> results = cruxRepositoryConnector.getCruxAPI().db().query(q);
-            Collection<List<?>> relationshipRefs = cruxRepositoryConnector.deduplicate(results);
             for (List<?> relationshipRef : relationshipRefs) {
                 String docRef = (String) relationshipRef.get(0);
                 String guid = RelationshipMapping.trimGuidFromReference(docRef);

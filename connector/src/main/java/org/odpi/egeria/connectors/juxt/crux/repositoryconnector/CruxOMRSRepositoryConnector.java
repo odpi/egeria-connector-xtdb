@@ -565,6 +565,43 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Find all relationships in this repository for the provided entity.
+     * @param entity for which to find relationships
+     * @param userId of the user running the query
+     * @return {@code List<Relationship>} list of the homed relationships
+     * @throws RepositoryErrorException if any issue closing open Crux resources
+     * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
+     */
+    public List<Relationship> findRelationshipsForEntity(EntityDetail entity,
+                                                         String userId) throws RepositoryErrorException, RepositoryTimeoutException {
+
+        final String methodName = "findRelationshipsForEntity";
+        List<Relationship> results;
+
+        // Since a relationship involves not only the relationship object, but also some details from each proxy,
+        // we will open a database up-front to re-use for multiple queries (try-with to ensure it is closed after).
+        try (ICruxDatasource db = cruxAPI.openDB()) {
+
+            Collection<List<?>> cruxResults = findEntityRelationships(db,
+                    entity.getGUID(),
+                    userId);
+
+            log.debug("Found results: {}", cruxResults);
+            results = resultsToList(db, cruxResults);
+
+        } catch (IOException e) {
+            throw new RepositoryErrorException(CruxOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), methodName, e);
+        } catch (TimeoutException e) {
+            throw new RepositoryTimeoutException(CruxOMRSErrorCode.QUERY_TIMEOUT.getMessageDefinition(repositoryName),
+                    this.getClass().getName(), methodName, e);
+        }
+
+        return results;
+
+    }
+
+    /**
      * Find all relationships homed in this repository for the provided entity.
      * @param entity for which to find relationships
      * @param userId of the user running the query
@@ -2031,6 +2068,41 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         Collection<List<?>> results = db.query(q);
         // Note: we de-duplicate and apply paging here, against the full set of results from Crux
         return deduplicateAndPage(results, fromRelationshipElement, pageSize);
+    }
+
+    /**
+     * Find the relationships that match the provided parameters.
+     * @param db already opened point-in-time view of the database
+     * @param entityGUID for which to find relationships
+     * @param userId of the user running the query
+     * @return {@code Collection<List<?>>} list of the Crux document references that match
+     * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
+     */
+    public Collection<List<?>> findEntityRelationships(ICruxDatasource db,
+                                                       String entityGUID,
+                                                       String userId) throws TimeoutException {
+        CruxQuery query = new CruxQuery();
+        query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
+        try {
+            updateQuery(query,
+                    TypeDefCategory.RELATIONSHIP_DEF,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    userId);
+        } catch (TypeErrorException e) {
+            log.error("Unexpected type error, when no types are being explicitly used.", e);
+        }
+        IPersistentMap q = query.getQuery();
+        log.debug("Querying with: {}", q);
+        Collection<List<?>> results = db.query(q);
+        // Note: we de-duplicate here, against the full set of results from Crux
+        return deduplicate(results);
     }
 
     /**

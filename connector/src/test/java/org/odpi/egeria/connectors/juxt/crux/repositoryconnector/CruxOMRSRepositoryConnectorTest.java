@@ -538,6 +538,10 @@ public class CruxOMRSRepositoryConnectorTest {
             assertNotNull(results, "Expected some search results.");
             assertEquals(results.size(), 2, "Expected precisely two search results.");
 
+            results = connector.findRelationshipsForEntity(category1, MockConnection.USERNAME);
+            assertNotNull(results, "Expected some search results.");
+            assertEquals(results.size(), 2, "Expected precisely two search results.");
+
             results = connector.findRelationshipsForEntity(category1.getGUID(),
                     "71e4b6fb-3412-4193-aff3-a16eccd87e8e",
                     0,
