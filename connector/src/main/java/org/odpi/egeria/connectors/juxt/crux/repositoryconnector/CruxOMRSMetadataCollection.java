@@ -950,7 +950,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         // 1. Remove every relationship in which the entity is involved, to maintain referential integrity within the
         //    repository
         try {
-            List<Relationship> relationships = cruxRepositoryConnector.findRelationshipsForEntity(entity, userId);
+            List<Relationship> relationships = cruxRepositoryConnector.findActiveRelationshipsForEntity(entity, userId);
             if (relationships != null) {
                 for (Relationship relationship : relationships) {
                     if (relationship != null) {
@@ -1027,7 +1027,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         try {
             Collection<List<?>> relationshipRefs = cruxRepositoryConnector.findEntityRelationships(cruxRepositoryConnector.getCruxAPI().db(),
                     deletedEntityGUID,
-                    userId);
+                    userId,
+                    true);
             for (List<?> relationshipRef : relationshipRefs) {
                 String docRef = (String) relationshipRef.get(0);
                 String guid = RelationshipMapping.trimGuidFromReference(docRef);

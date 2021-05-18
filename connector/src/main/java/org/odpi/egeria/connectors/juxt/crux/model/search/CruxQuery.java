@@ -248,19 +248,20 @@ public class CruxQuery {
     /**
      * Add the provided statuses as limiters on which results should be retrieved from the query.
      * @param limitResultsByStatus list of statuses by which to limit results
+     * @param toLimit variable by which to limit by status (e.g. entity or relationship)
      */
-    public void addStatusLimiters(List<InstanceStatus> limitResultsByStatus) {
+    public void addStatusLimiters(List<InstanceStatus> limitResultsByStatus, Symbol toLimit) {
         if (limitResultsByStatus != null && !limitResultsByStatus.isEmpty()) {
-            List<IPersistentCollection> statusConditions = getStatusLimiters(DOC_ID, limitResultsByStatus);
+            List<IPersistentCollection> statusConditions = getStatusLimiters(toLimit, limitResultsByStatus);
             if (statusConditions != null && !statusConditions.isEmpty()) {
                 conditions.addAll(statusConditions);
             }
         } else {
             // If no status limit was specified, retrieve only non-DELETED objects
             Integer deleted = EnumPropertyValueMapping.getOrdinalForInstanceStatus(InstanceStatus.DELETED);
-            Symbol variable = Symbol.intern(InstanceAuditHeaderMapping.CURRENT_STATUS);
+            Symbol variable = Symbol.intern(toLimit.toString() + "_" + InstanceAuditHeaderMapping.CURRENT_STATUS);
             Keyword propertyRef = Keyword.intern(InstanceAuditHeaderMapping.CURRENT_STATUS);
-            conditions.add(PersistentVector.create(DOC_ID, propertyRef, variable));
+            conditions.add(PersistentVector.create(toLimit, propertyRef, variable));
             List<Object> predicateComparison = new ArrayList<>();
             predicateComparison.add(ConditionBuilder.NEQ_OPERATOR);
             predicateComparison.add(variable);

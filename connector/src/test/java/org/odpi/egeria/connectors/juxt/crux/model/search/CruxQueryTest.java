@@ -322,10 +322,10 @@ public class CruxQueryTest {
     void testStatusLimitersDefault() {
         try {
 
-            Symbol currentStatus = Symbol.intern("currentStatus");
+            Symbol currentStatus = Symbol.intern("e_currentStatus");
 
             CruxQuery cq = new CruxQuery();
-            cq.addStatusLimiters(null);
+            cq.addStatusLimiters(null, CruxQuery.DOC_ID);
 
             IPersistentMap limitByStatus = cq.getQuery();
             assertNotNull(limitByStatus);
@@ -377,7 +377,7 @@ public class CruxQueryTest {
             limitBy.add(InstanceStatus.DELETED);
 
             CruxQuery cq = new CruxQuery();
-            cq.addStatusLimiters(limitBy);
+            cq.addStatusLimiters(limitBy, CruxQuery.DOC_ID);
 
             IPersistentMap limitByStatus = cq.getQuery();
             assertNotNull(limitByStatus);

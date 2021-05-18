@@ -565,15 +565,15 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
-     * Find all relationships in this repository for the provided entity.
+     * Find all active (non-deleted) relationships in this repository for the provided entity.
      * @param entity for which to find relationships
      * @param userId of the user running the query
      * @return {@code List<Relationship>} list of the homed relationships
      * @throws RepositoryErrorException if any issue closing open Crux resources
      * @throws RepositoryTimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
-    public List<Relationship> findRelationshipsForEntity(EntityDetail entity,
-                                                         String userId) throws RepositoryErrorException, RepositoryTimeoutException {
+    public List<Relationship> findActiveRelationshipsForEntity(EntityDetail entity,
+                                                               String userId) throws RepositoryErrorException, RepositoryTimeoutException {
 
         final String methodName = "findRelationshipsForEntity";
         List<Relationship> results;
@@ -584,7 +584,8 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
             Collection<List<?>> cruxResults = findEntityRelationships(db,
                     entity.getGUID(),
-                    userId);
+                    userId,
+                    false);
 
             log.debug("Found results: {}", cruxResults);
             results = resultsToList(db, cruxResults);
@@ -2075,26 +2076,32 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @param db already opened point-in-time view of the database
      * @param entityGUID for which to find relationships
      * @param userId of the user running the query
+     * @param includeDeleted if true, include deleted relationships in the results (otherwise exclude them)
      * @return {@code Collection<List<?>>} list of the Crux document references that match
      * @throws TimeoutException if the query runs longer than the defined threshold (default: 30s)
      */
     public Collection<List<?>> findEntityRelationships(ICruxDatasource db,
                                                        String entityGUID,
-                                                       String userId) throws TimeoutException {
+                                                       String userId,
+                                                       boolean includeDeleted) throws TimeoutException {
         CruxQuery query = new CruxQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         try {
-            updateQuery(query,
-                    TypeDefCategory.RELATIONSHIP_DEF,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    userId);
+            if (includeDeleted) {
+                query.addTypeCondition(TypeDefCategory.RELATIONSHIP_DEF, null, null);
+            } else {
+                updateQuery(query,
+                        TypeDefCategory.RELATIONSHIP_DEF,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        userId);
+            }
         } catch (TypeErrorException e) {
             log.error("Unexpected type error, when no types are being explicitly used.", e);
         }
@@ -2171,7 +2178,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                    List<String> limitResultsByClassification) throws TimeoutException {
         CruxGraphQuery query = new CruxGraphQuery();
         query.addRelationshipLimiters(entityGUID, relationshipTypeGUIDs, limitResultsByStatus);
-        query.addEntityLimiters(entityTypeGUIDs, limitResultsByClassification);
+        query.addEntityLimiters(entityTypeGUIDs, limitResultsByClassification, limitResultsByStatus);
         IPersistentMap q = query.getQuery();
         log.debug("Querying with: {}", q);
         return db.query(q);
@@ -2210,7 +2217,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         query.addTypeCondition(category, typeGuid, subtypeGuids);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
-        query.addStatusLimiters(limitResultsByStatus);
+        // Note: we will always limit by 'e', even if the TypeDefCategory indicates this is a relationship as these
+        // operations only ever return a single type of instance (entity or relationship), and 'e' is therefore used
+        // generally to represent either
+        query.addStatusLimiters(limitResultsByStatus, CruxQuery.DOC_ID);
     }
 
     /**
@@ -2248,7 +2258,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         query.addTypeCondition(category, typeGuid, null);
         query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
         query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
-        query.addStatusLimiters(limitResultsByStatus);
+        // Note: we will always limit by 'e', even if the TypeDefCategory indicates this is a relationship as these
+        // operations only ever return a single type of instance (entity or relationship), and 'e' is therefore used
+        // generally to represent either
+        query.addStatusLimiters(limitResultsByStatus, CruxQuery.DOC_ID);
     }
 
     /**
