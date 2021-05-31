@@ -69,8 +69,8 @@
 
     <properties>
         <open-metadata.version>2.10-SNAPSHOT</open-metadata.version>
-        <crux.version>21.04-1.16.0-beta</crux.version>
-        <crux-alpha.version>21.04-1.16.0-alpha</crux-alpha.version>
+        <crux.version>21.05-1.17.0-beta</crux.version>
+        <crux-alpha.version>21.05-1.17.0-alpha</crux-alpha.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.3</jackson.version>
         <lucene.version>8.8.2</lucene.version>
@@ -288,7 +288,7 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>6.1.6</version>
+                    <version>6.2.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
