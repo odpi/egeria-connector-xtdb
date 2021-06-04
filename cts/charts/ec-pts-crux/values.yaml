@@ -25,8 +25,8 @@ image:
     pullPolicy: Always
 
 crux:
-  version: 21.04-1.16.0-beta
-  connectorversion: 2.9
+  version: 21.05-1.17.0-beta
+  connectorversion: "2.10"
   connectorurl: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies"
   proxyserver: crux
 
