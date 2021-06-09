@@ -69,7 +69,7 @@
 
     <properties>
         <open-metadata.version>2.11-SNAPSHOT</open-metadata.version>
-        <crux.version>21.05-1.17.0-beta</crux.version>
+        <crux.version>21.06-1.17.1-beta</crux.version>
         <crux-alpha.version>21.05-1.17.0-alpha</crux-alpha.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.3</jackson.version>
