@@ -34,16 +34,16 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-rocksdb</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-kafka</artifactId>
             <scope>compile</scope>
         </dependency>
@@ -114,8 +114,8 @@
                                 <ignoredUnusedDeclaredDependency>org.odpi.egeria:repository-services-apis:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.odpi.egeria:open-connector-framework:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>com.fasterxml.jackson.core:jackson-databind:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>juxt:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>juxt:crux-kafka:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                         </configuration>
                     </execution>

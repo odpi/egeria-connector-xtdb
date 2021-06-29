@@ -23,11 +23,11 @@
 
     <dependencies>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-metrics</artifactId>
         </dependency>
         <dependency>
@@ -43,11 +43,11 @@
             <artifactId>lucene-analyzers-common</artifactId>
         </dependency>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-rocksdb</artifactId>
         </dependency>
         <dependency>
-            <groupId>juxt</groupId>
+            <groupId>pro.juxt.crux</groupId>
             <artifactId>crux-kafka</artifactId>
         </dependency>
         <dependency>
@@ -123,9 +123,9 @@
                                 <!-- Used with slf4j as default implementation for testing -->
                                 <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
                                 <!-- Ignore these as usage depends on runtime configuration -->
-                                <ignoredUnusedDeclaredDependency>juxt:crux-metrics:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>juxt:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>juxt:crux-kafka:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-core:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-analyzers-common:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
