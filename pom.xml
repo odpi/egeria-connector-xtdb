@@ -69,12 +69,11 @@
 
     <properties>
         <open-metadata.version>2.11-SNAPSHOT</open-metadata.version>
-        <crux.version>21.06-1.17.1-beta</crux.version>
-        <crux-alpha.version>21.06-1.17.1-alpha</crux-alpha.version>
+        <crux.version>1.17.1</crux.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.3</jackson.version>
-        <lucene.version>8.8.2</lucene.version>
-        <slf4j.version>1.7.30</slf4j.version>
+        <lucene.version>8.9.0</lucene.version>
+        <slf4j.version>1.7.31</slf4j.version>
         <logback.version>1.2.3</logback.version>
         <testng.version>7.4.0</testng.version>
         <!-- Platform encoding  -->
@@ -91,17 +90,12 @@
             <id>ossrh-snapshots</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </repository>
-        <repository>
-            <id>clojars</id>
-            <name>Clojars</name>
-            <url>https://clojars.org/repo</url>
-        </repository>
     </repositories>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>juxt</groupId>
+                <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-core</artifactId>
                 <version>${crux.version}</version>
                 <scope>compile</scope>
@@ -132,21 +126,21 @@
             </dependency>
             <!-- Dependencies only required if configured to run with these extras -->
             <dependency>
-                <groupId>juxt</groupId>
+                <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-rocksdb</artifactId>
                 <version>${crux.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>juxt</groupId>
+                <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-kafka</artifactId>
                 <version>${crux.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>juxt</groupId>
+                <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-metrics</artifactId>
-                <version>${crux-alpha.version}</version>
+                <version>${crux.version}</version>
                 <scope>provided</scope>
             </dependency>
             <!-- Dependencies provided by Egeria itself -->
@@ -487,9 +481,9 @@
                                 <!-- Used with slf4j as default implementation for testing -->
                                 <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
                                 <!-- Ignore these as usage depends on runtime configuration -->
-                                <ignoredUnusedDeclaredDependency>juxt:crux-metrics:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>juxt:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>juxt:crux-kafka:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-core:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-analyzers-common:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
