@@ -48,7 +48,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     public static final String TYPE_DEF_CATEGORY = getKeyword(N_TYPE + ".category");
     public static final String VERSION = getKeyword(N_VERSION);
 
-    public static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
+    private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
         Set<String> set = new HashSet<>();
         set.add(N_HEADER_VERSION);
@@ -76,6 +76,15 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
      */
     protected InstanceAuditHeaderMapping(CruxOMRSRepositoryConnector cruxConnector) {
         super(cruxConnector);
+    }
+
+    /**
+     * Check whether the specified property is a known base-level Instance property.
+     * @param property to check
+     * @return boolean
+     */
+    public static boolean isKnownBaseProperty(String property) {
+        return KNOWN_PROPERTIES.contains(property);
     }
 
     /**

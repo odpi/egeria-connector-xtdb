@@ -393,6 +393,7 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                                 log.warn("Unhandled collection type definition category for comparison: {}", cd.getCollectionDefCategory());
                                 break;
                         }
+                        break;
                     case UNKNOWN_DEF:
                     default:
                         log.warn("Unhandled attribute type definition category for comparison: {}", atd.getCategory());

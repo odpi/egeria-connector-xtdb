@@ -46,7 +46,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     public static final String CLASSIFICATION_PROPERTIES_NS = "classificationProperties";
     public static final String N_LAST_CLASSIFICATION_CHANGE = "lastClassificationChange";
 
-    public static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
+    private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
         Set<String> set = new HashSet<>();
         set.add(N_CLASSIFICATION_ORIGIN);
@@ -84,6 +84,15 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
         super(cruxConnector);
         this.cruxDoc = cruxDoc;
         this.namespace = namespace;
+    }
+
+    /**
+     * Check whether the specified property is a known base-level Classification property.
+     * @param property to check
+     * @return boolean
+     */
+    public static boolean isKnownBaseProperty(String property) {
+        return KNOWN_PROPERTIES.contains(property);
     }
 
     /**

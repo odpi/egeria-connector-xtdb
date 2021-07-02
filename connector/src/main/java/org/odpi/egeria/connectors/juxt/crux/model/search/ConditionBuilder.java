@@ -48,7 +48,7 @@ public class ConditionBuilder {
 
     protected static final Map<PropertyComparisonOperator, Symbol> PCO_TO_SYMBOL = createPropertyComparisonOperatorToSymbolMap();
     private static Map<PropertyComparisonOperator, Symbol> createPropertyComparisonOperatorToSymbolMap() {
-        Map<PropertyComparisonOperator, Symbol> map = new HashMap<>();
+        EnumMap<PropertyComparisonOperator, Symbol> map = new EnumMap<>(PropertyComparisonOperator.class);
         map.put(PropertyComparisonOperator.EQ, EQ_OPERATOR);
         map.put(PropertyComparisonOperator.NEQ, NEQ_OPERATOR);
         map.put(PropertyComparisonOperator.GT, GT_OPERATOR);
@@ -61,6 +61,8 @@ public class ConditionBuilder {
         map.put(PropertyComparisonOperator.IN, IN_OPERATOR);
         return map;
     }
+
+    private ConditionBuilder() {}
 
     /**
      * Retrieve a set of translated Crux conditions appropriate to the provided Egeria conditions.
@@ -227,7 +229,7 @@ public class ConditionBuilder {
                 predicateComparison.add(listAsSet);
                 predicateComparison.add(variable);
                 clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
-            } else {
+            } else if (predicate != null) {
                 // For everything else, we need a (predicate variable value) pattern
                 // Setup a predicate comparing that variable to the value (with appropriate comparison operator)
                 // [(predicate variable "value")] - for a non-string predicate
@@ -240,6 +242,9 @@ public class ConditionBuilder {
                     predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
                 }
                 clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
+            } else {
+                log.error("Unable to add condition for unknown comparison operator: {}", comparator);
+                return propertyConditions;
             }
 
             // If we have not short-circuited, we need to translate the property's value into a variable
@@ -293,7 +298,7 @@ public class ConditionBuilder {
             String simpleName = singleCondition.getProperty();
             PropertyComparisonOperator comparator = singleCondition.getOperator();
             InstancePropertyValue value = singleCondition.getValue();
-            if (InstanceAuditHeaderMapping.KNOWN_PROPERTIES.contains(simpleName)) {
+            if (InstanceAuditHeaderMapping.isKnownBaseProperty(simpleName)) {
                 // InstanceAuditHeader properties should neither be namespace-d nor '.value' qualified, as they are not
                 // InstanceValueProperties but simple native types -- so we can simply return their conditions directly
                 Keyword propertyRef = getAuditHeaderPropertyRef(namespace, simpleName);
@@ -316,7 +321,7 @@ public class ConditionBuilder {
                 // list of variations specific to this query before we can proceed.
                 List<IPersistentCollection> allPropertyConditions = null;
                 Set<Keyword> qualifiedSearchProperties;
-                if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS) && !ClassificationMapping.KNOWN_PROPERTIES.contains(simpleName)) {
+                if (namespace.startsWith(EntitySummaryMapping.N_CLASSIFICATIONS) && !ClassificationMapping.isKnownBaseProperty(simpleName)) {
                     // If they are classification-specific instance properties, they need further qualification
                     String classificationNamespace = namespace + "." + ClassificationMapping.CLASSIFICATION_PROPERTIES_NS;
                     // Given the namespace qualification places into classificationProperties, we should ONLY need to

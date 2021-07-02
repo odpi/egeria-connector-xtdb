@@ -21,6 +21,8 @@ import java.util.TreeMap;
  */
 public class InstancePropertiesMapping {
 
+    private InstancePropertiesMapping() {}
+
     /**
      * Retrieve the instance property values from the provided Crux document.
      * NOTE: whether empty or null, the instance properties will always be returned back from the Crux representation

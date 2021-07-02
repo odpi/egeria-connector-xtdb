@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.auditlog;
 
+import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.AuditLogMessageDefinition;
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.AuditLogMessageSet;
 import org.odpi.openmetadata.repositoryservices.auditlog.OMRSAuditLogRecordSeverity;
@@ -25,27 +26,27 @@ public enum CruxOMRSAuditCode implements AuditLogMessageSet {
             OMRSAuditLogRecordSeverity.STARTUP,
             "The Crux repository is starting a new server instance",
             "The local server has started up a new instance of Crux.",
-            "No action is required.  This is part of the normal operation of the service."),
+            Constants.NO_ACTION),
     REPOSITORY_SERVICE_STARTING_WITH_CONFIG("OMRS-CRUX-REPOSITORY-0002",
             OMRSAuditLogRecordSeverity.STARTUP,
             "The Crux repository is starting a new instance with the provided configuration",
             "The local server is starting a new instance based on the configuration provided through the configurationProperties.",
-            "No action is required.  This is part of the normal operation of the service."),
+            Constants.NO_ACTION),
     REPOSITORY_SERVICE_STARTING_NO_CONFIG("OMRS-CRUX-REPOSITORY-0003",
             OMRSAuditLogRecordSeverity.STARTUP,
             "The Crux repository is starting a new in-memory instance",
             "The local server is starting a new in-memory instance, as no configuration was provided through configurationProperties.",
-            "No action is required.  This is part of the normal operation of the service."),
+            Constants.NO_ACTION),
     REPOSITORY_SERVICE_STARTED("OMRS-CRUX-REPOSITORY-0004",
             OMRSAuditLogRecordSeverity.STARTUP,
             "The Crux repository has started a new instance for server {0}, detected Crux version {1}",
             "The local server has completed startup of a new instance.",
-            "No action is required.  This is part of the normal operation of the service."),
+            Constants.NO_ACTION),
     REPOSITORY_SERVICE_SHUTDOWN("OMRS-CRUX-REPOSITORY-0005",
             OMRSAuditLogRecordSeverity.SHUTDOWN,
             "The Crux repository has shutdown its instance for server {0}",
             "The local server has requested shut down of a Crux repository instance.",
-            "No action is required.  This is part of the normal operation of the service."),
+            Constants.NO_ACTION),
     FAILED_RELATIONSHIP_DELETE_CASCADE("OMRS-CRUX-REPOSITORY-0006",
             OMRSAuditLogRecordSeverity.EXCEPTION,
             "The Crux connector failed to cascade deletions of all relationships for entity {0}",
