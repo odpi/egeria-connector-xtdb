@@ -3,7 +3,7 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
-import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.classic.QueryParserBase;
 import org.odpi.egeria.connectors.juxt.crux.mapping.InstancePropertyValueMapping;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
@@ -46,6 +46,8 @@ public class TextConditionBuilder {
     protected static final Symbol STR_OPERATOR = Symbol.intern("str");
 
     private static final Pattern ESCAPE_SPACES = Pattern.compile("(\\s)");
+
+    private TextConditionBuilder() {}
 
     /**
      * Add conditions to the search to find any text field that matches the supplied criteria (without a separate Lucene
@@ -108,12 +110,12 @@ public class TextConditionBuilder {
             for (Keyword propertyRef : stringProperties) {
                 List<Object> and = new ArrayList<>();
                 and.add(ConditionBuilder.AND_OPERATOR);
-                Symbol var = Symbol.intern("v");
+                Symbol variable = Symbol.intern("v");
                 List<IPersistentCollection> propertyConditions = ConditionBuilder.buildConditionForPropertyRef(
                         propertyRef,
                         PropertyComparisonOperator.LIKE,
                         string,
-                        var,
+                        variable,
                         repositoryHelper,
                         luceneEnabled,
                         luceneRegexes
@@ -124,12 +126,12 @@ public class TextConditionBuilder {
             conditions.add(PersistentList.create(or));
         } else {
             for (Keyword propertyRef : stringProperties) {
-                Symbol var = Symbol.intern("v");
+                Symbol variable = Symbol.intern("v");
                 List<IPersistentCollection> propertyConditions = ConditionBuilder.buildConditionForPropertyRef(
                         propertyRef,
                         PropertyComparisonOperator.LIKE,
                         string,
-                        var,
+                        variable,
                         repositoryHelper,
                         luceneEnabled,
                         luceneRegexes
@@ -464,7 +466,7 @@ public class TextConditionBuilder {
      */
     private static String escapeLucenePhrase(String phrase) {
         if (phrase != null) {
-            String escaped = QueryParser.escape(phrase);
+            String escaped = QueryParserBase.escape(phrase);
             // In addition to escaping special characters, we need to also escape spaces to avoid
             // the query parser interpreting a phrase as multiple words that each need to be matched as
             // anchored terms (which will likely always fail given a KeywordAnalyzer) -- for the sake of completeness

@@ -18,6 +18,8 @@ public class PersistenceLayer {
     private static final String PERSISTENCE_DOC = "egeria-connector-crux/persistence-layer";
     private static final String VERSION = "egeria-connector-crux/persistence-layer.version";
 
+    private PersistenceLayer() {}
+
     /**
      * Retrieve the version of the persistence layer for the provided Crux back-end.
      * @param cruxAPI the Crux back-end for which to retrieve the persistence layer version

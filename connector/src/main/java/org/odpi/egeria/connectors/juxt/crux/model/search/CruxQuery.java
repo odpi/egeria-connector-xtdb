@@ -91,43 +91,43 @@ public class CruxQuery {
      * @return {@code List<IPersistentCollection>} of the conditions
      */
     protected List<IPersistentCollection> getTypeCondition(Symbol variable, TypeDefCategory category, String typeGuid, List<String> subtypeLimits) {
-        List<IPersistentCollection> conditions = new ArrayList<>();
+        List<IPersistentCollection> typeConditions = new ArrayList<>();
         if (subtypeLimits != null && !subtypeLimits.isEmpty()) {
             // If subtypes were specified, search only for those (explicitly)
             if (subtypeLimits.size() == 1) {
                 // If there is only one, set a condition against that directly
-                conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), subtypeLimits.get(0)));
+                typeConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), subtypeLimits.get(0)));
             } else {
 
                 // If there are multiple, build a hash-set against which to compare
                 Symbol setVar = Symbol.intern("tf");
                 Symbol typeVar = Symbol.intern("types");
                 // [e :type.guids types]
-                conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), typeVar));
+                typeConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), typeVar));
 
                 List<Object> set = new ArrayList<>();
                 set.add(ConditionBuilder.SET_OPERATOR);
                 set.addAll(subtypeLimits);
                 // [(hash-set "..." "..." ...) tf]
-                conditions.add(PersistentVector.create(PersistentList.create(set), setVar));
+                typeConditions.add(PersistentVector.create(PersistentList.create(set), setVar));
 
                 List<Object> contains = new ArrayList<>();
                 contains.add(Symbol.intern("contains?"));
                 contains.add(setVar);
                 contains.add(typeVar);
                 // [(contains? tf types)]
-                conditions.add(PersistentVector.create(PersistentList.create(contains)));
+                typeConditions.add(PersistentVector.create(PersistentList.create(contains)));
 
             }
         } else if (typeGuid != null) {
             // Otherwise, if there is a typeGuid, search for any matches against the typeGuid exactly or where it is a supertype
-            conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), typeGuid));
+            typeConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_GUIDS), typeGuid));
         } else {
             // If a type GUID has not even been provided, then fallback to only limiting based on whether we want
             // instances of entities or relationships (but leave out if we have type GUIDs, as this is otherwise redundant)
-            conditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
+            typeConditions.add(PersistentVector.create(variable, Keyword.intern(InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY), category.getOrdinal()));
         }
-        return conditions;
+        return typeConditions;
     }
 
     /**

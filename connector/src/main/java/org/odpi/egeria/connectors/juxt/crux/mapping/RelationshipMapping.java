@@ -8,7 +8,6 @@ import crux.api.CruxDocument;
 import crux.api.ICruxDatasource;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,34 +87,32 @@ public class RelationshipMapping extends InstanceHeaderMapping {
     @Override
     protected void fromDoc() {
         super.fromDoc();
-        try {
-            Object proxies = cruxDoc.get(ENTITY_PROXIES);
-            if (proxies instanceof IPersistentVector) {
-                IPersistentVector v = (IPersistentVector) proxies;
-                if (v.length() == 2) {
-                    EntityProxy one = getEntityProxyFromRef((String) v.nth(0));
-                    EntityProxy two = getEntityProxyFromRef((String) v.nth(1));
-                    if (one != null && two != null) {
-                        ((Relationship) instanceHeader).setEntityOneProxy(one);
-                        ((Relationship) instanceHeader).setEntityTwoProxy(two);
-                    }
+        Object proxies = cruxDoc.get(ENTITY_PROXIES);
+        if (proxies instanceof IPersistentVector) {
+            IPersistentVector v = (IPersistentVector) proxies;
+            if (v.length() == 2) {
+                EntityProxy one = getEntityProxyFromRef((String) v.nth(0));
+                EntityProxy two = getEntityProxyFromRef((String) v.nth(1));
+                if (one != null && two != null) {
+                    ((Relationship) instanceHeader).setEntityOneProxy(one);
+                    ((Relationship) instanceHeader).setEntityTwoProxy(two);
+                } else {
+                    log.error("Unable to retrieve entity proxy, nullifying the relationship.");
+                    instanceHeader = null;
+                    return;
                 }
             }
-            InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, RELATIONSHIP_PROPERTIES_NS);
-            ((Relationship) instanceHeader).setProperties(ip);
-        } catch (RepositoryErrorException e) {
-            log.error("Unable to retrieve entity proxy, nullifying the relationship.", e);
-            instanceHeader = null;
         }
+        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, RELATIONSHIP_PROPERTIES_NS);
+        ((Relationship) instanceHeader).setProperties(ip);
     }
 
     /**
      * Retrieve the entity proxy details from the provided reference.
      * @param ref to the entity proxy
      * @return EntityProxy
-     * @throws RepositoryErrorException logic error in the repository with corrupted entity proxy
      */
-    private EntityProxy getEntityProxyFromRef(String ref) throws RepositoryErrorException {
+    private EntityProxy getEntityProxyFromRef(String ref) {
         CruxDocument epDoc = cruxConnector.getCruxObjectByReference(db, ref);
         return EntityProxyMapping.getFromDoc(cruxConnector, epDoc);
     }

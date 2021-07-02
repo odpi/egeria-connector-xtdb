@@ -5,7 +5,8 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 import crux.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSErrorCode;
-import org.odpi.egeria.connectors.juxt.crux.mapping.RelationshipMapping;
+import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
+import org.odpi.egeria.connectors.juxt.crux.mapping.InstanceHeaderMapping;
 import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.OMRSDynamicTypeMetadataCollectionBase;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
@@ -596,7 +597,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException {
 
         final String methodName = "getEntityNeighborhood";
-        final String entityGUIDParameterName = "entityGUID";
         final String entityTypeGUIDParameterName = "entityTypeGUIDs";
         final String relationshipTypeGUIDParameterName = "relationshipTypeGUIDs";
         final String limitedResultsByClassificationParameterName = "limitResultsByClassification";
@@ -606,7 +606,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         parentConnector.validateRepositoryIsActive(methodName);
 
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
-        repositoryValidator.validateGUID(repositoryName, entityGUIDParameterName, entityGUID, methodName);
+        repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
         repositoryValidator.validateAsOfTime(repositoryName, asOfTimeParameter, asOfTime, methodName);
 
         if (entityTypeGUIDs != null) {
@@ -805,6 +805,39 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     }
 
     /**
+     * Ensure that the entity exists and is able to be updated.
+     * @param entityGUID of entity to be updated
+     * @param methodName of update
+     * @return EntityDetail to be updated
+     * @throws InvalidParameterException one of hte parameters is invalid or null.
+     * @throws RepositoryErrorException there is a problem communicating with the metadata repository where
+     *                                  the metadata collection is stored.
+     * @throws EntityNotKnownException the entity identified by the guid is not found in the metadata collection.
+     */
+    private EntityDetail validateEntityToUpdate(String entityGUID,
+                                                String methodName)  throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException {
+
+        EntityDetail entity;
+        try {
+            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
+        } catch (EntityProxyOnlyException e) {
+            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
+                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
+        }
+
+        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
+        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
+        repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
+        repositoryValidator.validateInstanceType(repositoryName, entity);
+
+        return entity;
+
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -821,21 +854,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         this.updateInstanceStatusParameterValidation(userId, entityGUID, newStatus, methodName);
 
-        EntityDetail entity;
-        try {
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-        repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, entity);
-
+        EntityDetail entity = validateEntityToUpdate(entityGUID, methodName);
         TypeDef typeDef = super.getTypeDefForInstance(entity, methodName);
-
         repositoryValidator.validateNewStatus(repositoryName, statusParameterName, newStatus, typeDef, methodName);
 
         EntityDetail updatedEntity = new EntityDetail(entity);
@@ -863,23 +883,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         this.updateInstancePropertiesPropertyValidation(userId, entityGUID, properties, methodName);
 
-        EntityDetail entity;
-        try {
-            // Note that properties only exist on EntityDetail (not EntityProxy), so we will ensure that we have
-            // a full entity and not only a proxy
-            entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-        repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, entity);
-
+        EntityDetail entity = validateEntityToUpdate(entityGUID, methodName);
         TypeDef typeDef = super.getTypeDefForInstance(entity, methodName);
-
         repositoryValidator.validateNewPropertiesForType(repositoryName, propertiesParameterName, typeDef, properties, methodName);
 
         EntityDetail updatedEntity = new EntityDetail(entity);
@@ -901,9 +906,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
 
         final String methodName = "undoEntityUpdate";
-        final String parameterName = "entityGUID";
 
-        super.manageInstanceParameterValidation(userId, entityGUID, parameterName, methodName);
+        super.manageInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, methodName);
 
         EntityDetail restoredEntity = cruxRepositoryConnector.restorePreviousVersionOfEntity(userId, entityGUID);
 
@@ -1031,7 +1035,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                     true);
             for (List<?> relationshipRef : relationshipRefs) {
                 String docRef = (String) relationshipRef.get(0);
-                String guid = RelationshipMapping.trimGuidFromReference(docRef);
+                String guid = InstanceHeaderMapping.trimGuidFromReference(docRef);
                 cruxRepositoryConnector.addPurgeRelationshipStatements(tx, guid);
             }
         } catch (Exception e) {
@@ -1126,7 +1130,6 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException {
 
         final String methodName = "classifyEntity";
-        final String entityGUIDParameterName = "entityGUID";
         final String classificationParameterName = "classificationName";
         final String propertiesParameterName = "classificationProperties";
 
@@ -1134,7 +1137,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         parentConnector.validateRepositoryIsActive(methodName);
 
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
-        repositoryValidator.validateGUID(repositoryName, entityGUIDParameterName, entityGUID, methodName);
+        repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
 
         EntityDetail entity;
         try {
@@ -1450,9 +1453,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RelationshipNotKnownException {
 
         final String methodName = "undoRelationshipUpdate";
-        final String parameterName = "relationshipGUID";
 
-        this.manageInstanceParameterValidation(userId, relationshipGUID, parameterName, methodName);
+        this.manageInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, methodName);
 
         Relationship restoredRelationship = cruxRepositoryConnector.restorePreviousVersionOfRelationship(userId, relationshipGUID);
 
@@ -1573,10 +1575,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         final String methodName = "reIdentifyEntity";
-        final String instanceParameterName = "entityGUID";
         final String newInstanceParameterName = "newEntityGUID";
 
-        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, entityGUID, instanceParameterName, newEntityGUID, newInstanceParameterName, methodName);
+        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, entityGUID, Constants.ENTITY_GUID, newEntityGUID, newInstanceParameterName, methodName);
 
         EntityDetail entity;
         try {
@@ -1642,11 +1643,10 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
 
         final String methodName = "reTypeEntity";
-        final String entityParameterName = "entityGUID";
         final String currentTypeDefParameterName = "currentTypeDefSummary";
         final String newTypeDefParameterName = "newTypeDefSummary";
 
-        super.reTypeInstanceParameterValidation(userId, entityGUID, entityParameterName, TypeDefCategory.ENTITY_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
+        super.reTypeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, TypeDefCategory.ENTITY_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
 
         EntityDetail entity;
         try {
@@ -1660,7 +1660,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
         repositoryValidator.validateInstanceType(repositoryName, entity, currentTypeDefParameterName, currentTypeDefParameterName, currentTypeDefSummary.getGUID(), currentTypeDefSummary.getName());
         repositoryValidator.validatePropertiesForType(repositoryName, newTypeDefParameterName, newTypeDefSummary, entity.getProperties(), methodName);
-        repositoryValidator.validateClassificationList(repositoryName, entityParameterName, entity.getClassifications(), newTypeDefSummary.getName(), methodName);
+        repositoryValidator.validateClassificationList(repositoryName, Constants.ENTITY_GUID, entity.getClassifications(), newTypeDefSummary.getName(), methodName);
 
         EntityDetail updatedEntity = new EntityDetail(entity);
         InstanceType newInstanceType = repositoryHelper.getNewInstanceType(repositoryName, newTypeDefSummary);
@@ -1687,9 +1687,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
 
         final String methodName = "reHomeEntity";
-        final String entityParameterName = "entityGUID";
 
-        super.reHomeInstanceParameterValidation(userId, entityGUID, entityParameterName, typeDefGUID, typeDefName, homeMetadataCollectionId, newHomeMetadataCollectionId, methodName);
+        super.reHomeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, typeDefGUID, typeDefName, homeMetadataCollectionId, newHomeMetadataCollectionId, methodName);
 
         EntityDetail entity;
         try {
@@ -1727,10 +1726,9 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         final String methodName = "reIdentifyRelationship";
-        final String instanceParameterName = "relationshipGUID";
         final String newInstanceParameterName = "newRelationshipGUID";
 
-        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, relationshipGUID, instanceParameterName, newRelationshipGUID, newInstanceParameterName, methodName);
+        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, relationshipGUID, Constants.RELATIONSHIP_GUID, newRelationshipGUID, newInstanceParameterName, methodName);
 
         Relationship relationship = this.getRelationship(userId, relationshipGUID);
 
@@ -1774,11 +1772,10 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RelationshipNotKnownException {
 
         final String methodName = "reTypeRelationship";
-        final String relationshipParameterName = "relationshipGUID";
         final String currentTypeDefParameterName = "currentTypeDefSummary";
         final String newTypeDefParameterName = "newTypeDefSummary";
 
-        super.reTypeInstanceParameterValidation(userId, relationshipGUID, relationshipParameterName, TypeDefCategory.RELATIONSHIP_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
+        super.reTypeInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, TypeDefCategory.RELATIONSHIP_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
 
         Relationship relationship = this.getRelationship(userId, relationshipGUID);
 
@@ -1813,17 +1810,15 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "reHomeRelationship";
         final String guidParameterName = "typeDefGUID";
         final String nameParameterName = "typeDefName";
-        final String relationshipParameterName = "relationshipGUID";
-        final String homeParameterName = "homeMetadataCollectionId";
         final String newHomeParameterName = "newHomeMetadataCollectionId";
 
         this.validateRepositoryConnector(methodName);
         parentConnector.validateRepositoryIsActive(methodName);
 
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
-        repositoryValidator.validateGUID(repositoryName, relationshipParameterName, relationshipGUID, methodName);
+        repositoryValidator.validateGUID(repositoryName, Constants.RELATIONSHIP_GUID, relationshipGUID, methodName);
         repositoryValidator.validateTypeDefIds(repositoryName, guidParameterName, nameParameterName, typeDefGUID, typeDefName, methodName);
-        repositoryValidator.validateHomeMetadataGUID(repositoryName, homeParameterName, homeMetadataCollectionId, methodName);
+        repositoryValidator.validateHomeMetadataGUID(repositoryName, Constants.HOME_METADATA_COLLECTION_ID, homeMetadataCollectionId, methodName);
         repositoryValidator.validateHomeMetadataGUID(repositoryName, newHomeParameterName, newHomeMetadataCollectionId, methodName);
 
         Relationship relationship = this.getRelationship(userId, relationshipGUID);
@@ -1874,13 +1869,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
 
         final String methodName = "getHomeClassifications";
-        final String guidParameterName = "entityGUID";
 
         this.validateRepositoryConnector(methodName);
         parentConnector.validateRepositoryIsActive(methodName);
 
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
-        repositoryValidator.validateGUID(repositoryName, guidParameterName, entityGUID, methodName);
+        repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
 
         EntitySummary retrievedEntity = null;
         try {
@@ -1926,16 +1920,18 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         final String methodName = "purgeEntityReferenceCopy";
-        final String entityParameterName = "entityGUID";
-        final String homeParameterName = "homeMetadataCollectionId";
 
-        this.manageReferenceInstanceParameterValidation(userId, entityGUID, typeDefGUID, typeDefName, entityParameterName, homeMetadataCollectionId, homeParameterName, methodName);
+        this.manageReferenceInstanceParameterValidation(userId, entityGUID, typeDefGUID, typeDefName, Constants.ENTITY_GUID, homeMetadataCollectionId, Constants.HOME_METADATA_COLLECTION_ID, methodName);
 
         EntityDetail entity;
         try {
             entity = cruxRepositoryConnector.getEntity(entityGUID, null, false);
         } catch (EntityProxyOnlyException e) {
-            log.error("Attempted to purgeEntityReferenceCopy on an EntityProxy -- should this actually work?", e);
+            // If all we have is an EntityProxy, do not remove it and respond that we have no such entity
+            // (Purging the EntityProxy would mean invalidating any relationships that use that EntityProxy: if such
+            // relationship removal is intended, it should come through from the same source that has purged the entity,
+            // otherwise this may simply be a cleanup of the locally-cached reference copy, but not an actual purge of
+            // the entity from the home repository -- in which case we may still want to retain relationships.)
             throw new EntityNotKnownException(CruxOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
                     entityGUID, repositoryName), this.getClass().getName(), methodName, e);
         }
@@ -1945,6 +1941,37 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         } else {
             super.reportEntityNotKnown(entityGUID, methodName);
         }
+
+    }
+
+    /**
+     * Ensure that the entity to be classified already exists, or is a reference copy.
+     * @param entity to be validated
+     * @param methodName of reference copy action
+     * @return EntityDetail to be handled as a reference copy
+     * @throws RepositoryErrorException there is a problem communicating with the metadata repository where
+     *                                  the metadata collection is stored.
+     */
+    private EntityDetail validateEntityToClassify(EntityDetail entity,
+                                                  String methodName) throws
+            RepositoryErrorException {
+
+        this.validateRepositoryConnector(methodName);
+        parentConnector.validateRepositoryIsActive(methodName);
+
+        EntityDetail retrievedEntity = null;
+        try {
+            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, false);
+        } catch (EntityProxyOnlyException e) {
+            log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
+        }
+
+        if ((retrievedEntity == null) && (!metadataCollectionId.equals(entity.getMetadataCollectionId()))) {
+            // If the entity is a reference copy then it can be stored in the repository.
+            retrievedEntity = entity;
+        }
+
+        return retrievedEntity;
 
     }
 
@@ -1965,21 +1992,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String classificationParameterName = "classification";
         final String propertiesParameterName = "classification.getProperties()";
 
-        this.validateRepositoryConnector(methodName);
-        parentConnector.validateRepositoryIsActive(methodName);
-
-        EntityDetail retrievedEntity = null;
-        try {
-            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, false);
-        } catch (EntityProxyOnlyException e) {
-            log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
-        }
-
-        if ((retrievedEntity == null) && (!metadataCollectionId.equals(entity.getMetadataCollectionId()))) {
-             // If the entity is a reference copy then it can be stored in the repository.
-            retrievedEntity = entity;
-        }
-
+        EntityDetail retrievedEntity = validateEntityToClassify(entity, methodName);
         if (retrievedEntity != null) {
             try {
                 repositoryValidator.validateEntityFromStore(repositoryName, entity.getGUID(), retrievedEntity, methodName);
@@ -2023,21 +2036,7 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         final String methodName = "purgeClassificationReferenceCopy";
 
-        this.validateRepositoryConnector(methodName);
-        parentConnector.validateRepositoryIsActive(methodName);
-
-        EntityDetail retrievedEntity = null;
-        try {
-            retrievedEntity = cruxRepositoryConnector.getEntity(entity.getGUID(), null, false);
-        } catch (EntityProxyOnlyException e) {
-            log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
-        }
-
-        if ((retrievedEntity == null) && (!metadataCollectionId.equals(entity.getMetadataCollectionId()))) {
-             // If the entity is a reference copy then it can be stored in the repository.
-            retrievedEntity = entity;
-        }
-
+        EntityDetail retrievedEntity = validateEntityToClassify(entity, methodName);
         if (retrievedEntity != null) {
             try {
                 EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName,
@@ -2122,10 +2121,8 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
 
         final String methodName = "purgeRelationshipReferenceCopy";
-        final String relationshipParameterName = "relationshipGUID";
-        final String homeParameterName = "homeMetadataCollectionId";
 
-        this.manageReferenceInstanceParameterValidation(userId, relationshipGUID, typeDefGUID, typeDefName, relationshipParameterName, homeMetadataCollectionId, homeParameterName, methodName);
+        this.manageReferenceInstanceParameterValidation(userId, relationshipGUID, typeDefGUID, typeDefName, Constants.RELATIONSHIP_GUID, homeMetadataCollectionId, Constants.HOME_METADATA_COLLECTION_ID, methodName);
 
         Relationship relationship = cruxRepositoryConnector.getRelationship(relationshipGUID, null);
         if (relationship != null) {
