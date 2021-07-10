@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: CC-BY-4.0
+// Copyright Contributors to the ODPi Egeria project.
+
+:root {
+    --md-primary-fg-color: #48ABB8;
+    //--md-primary-fg-color--light: #888888;
+    //--md-primary-fg-color--dark: #000000;
+    --md-accent-fg-color: #1A3961;
+}
