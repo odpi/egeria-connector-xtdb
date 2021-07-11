@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: CC-BY-4.0
 # Copyright Contributors to the ODPi Egeria project.
 
-site_name: Crux Plugin Repository Connector
+site_name: Crux Connector
 site_description: Pluggable repository for Egeria, with native support for historical metadata.
 copyright: "License: <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>, &copy; 2018-2021 contributors to the Egeria project."
 repo_name: odpi/egeria-connector-crux
