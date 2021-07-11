@@ -3,7 +3,7 @@
 
 # How it works
 
-## Integrating with [Egeria](https://egeria.ai)
+## Integrating with Egeria
 
 ![Integrating with Egeria](assets/images/overview1.png)
 

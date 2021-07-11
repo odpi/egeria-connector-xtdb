@@ -3,8 +3,16 @@
 
 :root {
     --goreleaser-primary-color:   #3b5672;
-    --md-primary-fg-color:        #48abb8;
-    --md-primary-fg-color--light: #48abb8;
-    --md-primary-fg-color--dark:  #48abb8;
-    --md-accent-fg-color:         #1a3961;
+    --md-primary-fg-color:        rgb(0, 174, 185);
+    --md-primary-fg-color--light: rgb(0, 174, 185);
+    --md-primary-fg-color--dark:  rgb(0, 174, 185);
+}
+
+.md-announce {
+    height: 20px;
+}
+
+.md-announce__inner {
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
