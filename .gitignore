@@ -92,5 +92,3 @@ settings.xml
 # ignore Helm chart dependencies
 cts/charts/**/charts/
 
-# ignore the MkDocs about page: cannot have any heading to work as intended
-site/docs/index.md
