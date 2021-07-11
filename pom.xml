@@ -393,7 +393,7 @@
                         <exclude>cts/results/**/*.deployment</exclude>
                         <exclude>cts/results/**/configmap.yaml</exclude>
                         <exclude>cts/results/**/*.registrystore</exclude>
-                        <exclude>docs/reveal.js/**</exclude>
+                        <exclude>site/docs/index.md</exclude>
                     </excludes>
                     <licenseFamilies>
                         <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
