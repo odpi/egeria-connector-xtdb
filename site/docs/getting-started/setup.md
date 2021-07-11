@@ -6,18 +6,26 @@
 ## 1. Obtain connector
 
 Start by downloading the Crux repository connector:
-[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies)
-[![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/)
+
+=== "Latest release"
+    [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies)
+
+=== "Latest snapshot"
+    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/)
 
 The connector is: `egeria-connector-crux-{version}-jar-with-dependencies.jar`
 
 ## 2. Obtain server chassis
 
 Download Egeria's server chassis:
-[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=server-chassis-spring&v=RELEASE)
-[![Development](https://img.shields.io/nexus/s/org.odpi.egeria/server-chassis-spring?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/)
 
-!!! tip "The connector version matches the minimum required Egeria version"
+=== "Latest release"
+    [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=server-chassis-spring&v=RELEASE)
+
+=== "Latest snapshot"
+    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/server-chassis-spring?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/)
+
+!!! tip "The connector version indicates the minimum required Egeria version"
 
 The server chassis is: `server-chassis-spring-{version}.jar`
 

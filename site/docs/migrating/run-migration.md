@@ -6,8 +6,12 @@
 ## 1. Obtain migrator
 
 Start by downloading the Crux repository migrator:
-[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux-migrator?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux-migrator&v=RELEASE&c=jar-with-dependencies)
-[![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux-migrator?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux-migrator/)
+
+=== "Latest release"
+    [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux-migrator?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux-migrator&v=RELEASE&c=jar-with-dependencies)
+
+=== "Latest snapshot"
+    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux-migrator?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux-migrator/)
 
 The migrator is `egeria-connector-crux-migrator-{version}-jar-with-dependencies.jar`
 
