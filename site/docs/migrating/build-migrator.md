@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the ODPi Egeria project. -->
 
-# Build it yourself
+# Build migrator
 
 You may also want to build the migrator yourself, particularly if you are extending it or helping
 to develop new capabilities within it.
@@ -14,7 +14,7 @@ Begin by cloning this repository to your build machine.
 $ git clone https://github.com/odpi/egeria-connector-crux.git
 ```
 
-??? example "Example clone output"
+??? success "Clone output"
     ```text
     Cloning into 'egeria-connector-crux'...
     remote: Enumerating objects: 531, done.
@@ -36,7 +36,7 @@ Run the build through Maven.
 mvn clean install
 ```
 
-??? example "Example build output"
+??? success "Build output"
     ```text
     [INFO] Scanning for projects...
     [INFO] ------------------------------------------------------------------------
@@ -233,4 +233,4 @@ mvn clean install
 The build creates the file `.../egeria-connector-crux-migrator/target/egeria-connector-crux-migrator-{version}-jar-with-dependencies.jar`.
 This is the migrator, which you can use just as if you had downloaded it in the first step of the Migration instructions.
 
-You can now proceed with the migration [from step 2](../migration/#2-configure-repository) onwards using this build migrator.
+You can now proceed with the migration [from step 2](../run-migration/#2-configure-repository) onwards using this build migrator.

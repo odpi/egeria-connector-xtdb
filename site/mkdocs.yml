@@ -12,7 +12,8 @@ edit_uri: ""
 nav:
   - About: index.md
   - Getting started:
-      - getting-started/getting-started.md
+      - getting-started/setup.md
+      - getting-started/explore.md
   - How it works: how-it-works.md
   - Conformance:
       - cts/testing-overview.md
@@ -21,9 +22,12 @@ nav:
       - cts/2.9/2.9.md
       - cts/2.8/2.8.md
   - Migration:
-      - migrating/migration.md
-      - migrating/build-it-yourself.md
-  - High availability: ha.md
+      - migrating/how-migration-works.md
+      - migrating/run-migration.md
+      - migrating/build-migrator.md
+  - High availability:
+      - high-availability/sample.md
+      - high-availability/limitations.md
 
 theme:
   name: material

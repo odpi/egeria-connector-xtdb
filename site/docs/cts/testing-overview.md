@@ -19,7 +19,7 @@ and the individual runtimes of each execution (in milliseconds) of the various m
 methods that are only currently implemented by the Crux repository connector, or only return in a sufficiently timely
 manner to be included in the tests): -->
 
-??? note "Details on the performance metrics"
+??? info "Details on the performance metrics"
     The _median_ of all results for that method across all executions for a given set of volume parameters is given
     (all times in milliseconds) to give an idea of the "typical" result, while limiting potential skew from significant
     outliers.
