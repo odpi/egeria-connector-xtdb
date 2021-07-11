@@ -26,7 +26,7 @@ image:
 
 crux:
   version: 1.17.1
-  connectorversion: "2.10"
+  connectorversion: "2.11"
   connectorurl: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies"
   proxyserver: crux
 

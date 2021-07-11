@@ -16,39 +16,9 @@ on a pluggable architecture supporting a variety of underlying storage back-ends
 Of particular interest for Egeria is that it has native support for storing historical information and temporal queries
 -- making it one of the first repositories to support the use of the `asOfTime` parameter across all metadata.
 
-## Quick links
+## [Documentation](https://odpi.github.io/egeria-connector-crux/)
 
-- See the [Getting Started](https://odpi.github.io/egeria-connector-crux/getting-started/) guide for step-by-step
-  instructions on using this connector as an Egeria repository.
-- See the [CTS Results](cts/README.md) for details on its conformance and rough performance numbers.
-- See the [Migration](https://odpi.github.io/egeria-connector-crux/migrating/) guide for upgrading an existing Egeria
-  Crux repository to a newer version.
-- See the [High Availability](https://odpi.github.io/egeria-connector-crux/high-availability/) guide for an explanation
-  of how the plugin repository can be configured as a highly-available repository.
-
-## How it works
-
-The connector itself is implemented as a plugin repository connector: providing an option for an alternative metadata
-repository for Egeria. Primarily this is a matter of integrating into the Open Connector Framework (OCF) and implementing
-repository-level methods that adhere to those required by a Metadata Collection. These then communicate with Crux via
-Crux's own API to read and write information to the underlying Crux node.
-
-Crux itself is started as an embedded process within the connector. It can be configured to use any of the various
-pluggable persistence layers supported by Crux itself, and communication between the Java code of the connector and
-Crux itself (which is implemented in Clojure) occurs through the Crux Java API (not via REST).
-
-![Overview](docs/overview.png)
-
-> Overview of the connector implementation
-
-Crux itself handles write transactions and persistence guarantees via these APIs, ensuring that all data is at least
-recorded into the transaction log and document store prior to any write method returning.
-
-By default, the repository connector further awaits confirmation that any write has been indexed (and is therefore
-available for read operations) prior to returning. However, it is also possible to configure the connector in an
-"ingest-optimized" mode that allows the indexing to occur asynchronously, and can therefore improve the speed of
-write operations significantly (e.g. potentially useful for bulk ingest). This mode can be enabled by setting the
-`syncIndex` configuration option to `false` as part of the connector's configuration.
+[https://odpi.github.io/egeria-connector-crux/](https://odpi.github.io/egeria-connector-crux/)
 
 ----
 License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),

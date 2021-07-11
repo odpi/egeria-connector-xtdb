@@ -1,0 +1,26 @@
+apiVersion: v1
+data:
+  EGERIA_COHORT: coco
+  EGERIA_SERVER: myserver
+  EGERIA_USER: myuser
+  GRAPH_ENDPOINT: https://g10-5-graph-service:9443
+  KAFKA_ENDPOINT: g10-5-kafka:9092
+  LOGGING_LEVEL_ROOT: INFO
+  PTS_REPORT_NAME: g10-5
+  STRICT_SSL: "false"
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: g10-5
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2021-07-02T08:08:06Z"
+  labels:
+    app.kubernetes.io/instance: g10-5
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ec-pts-graph
+    helm.sh/chart: ec-pts-graph-0.1
+  name: g10-5-configmap
+  namespace: default
+  resourceVersion: "32320840"
+  selfLink: /api/v1/namespaces/default/configmaps/g10-5-configmap
+  uid: 10a5686f-7b74-42d0-8963-9ef4acc4795a

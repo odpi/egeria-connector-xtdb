@@ -1,0 +1,33 @@
+apiVersion: v1
+data:
+  CONNECTOR_JAR: egeria-connector-crux-2.11-jar-with-dependencies.jar
+  CONNECTOR_URL: http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies
+  CRUX_ROCKS_JAR_URL: https://repo1.maven.org/maven2/pro/juxt/crux/crux-rocksdb/1.17.1/crux-rocksdb-1.17.1.jar
+  CRUX_SERVER: crux
+  CRUXPROXY_ENDPOINT: https://cts5-crux-service:9443
+  CTS_FACTOR: "5"
+  CTS_REPORT_NAME: cts5
+  EGERIA_COHORT: coco
+  EGERIA_SERVER: myserver
+  EGERIA_USER: myuser
+  JNR_JAR_URL: https://repo1.maven.org/maven2/com/github/jnr/jnr-ffi/2.2.1/jnr-ffi-2.2.1.jar
+  KAFKA_ENDPOINT: cts5-kafka:9092
+  LOGGING_LEVEL_ROOT: INFO
+  ROCKS_JAR_URL: https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/6.15.2/rocksdbjni-6.15.2.jar
+  STRICT_SSL: "false"
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: cts5
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2021-07-02T15:53:12Z"
+  labels:
+    app.kubernetes.io/instance: cts5
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ec-cts-crux
+    helm.sh/chart: ec-cts-crux-0.1
+  name: cts5-configmap
+  namespace: default
+  resourceVersion: "32397660"
+  selfLink: /api/v1/namespaces/default/configmaps/cts5-configmap
+  uid: 6ec46be1-7466-461b-a256-1980c4ba2001
