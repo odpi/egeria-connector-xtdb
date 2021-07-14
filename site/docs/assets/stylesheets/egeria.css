@@ -2,7 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 
 :root {
-    --goreleaser-primary-color:   #3b5672;
+    --goreleaser-primary-color:   #f7951c;
     --md-primary-fg-color:        rgb(0, 174, 185);
     --md-primary-fg-color--light: rgb(0, 174, 185);
     --md-primary-fg-color--dark:  rgb(0, 174, 185);
