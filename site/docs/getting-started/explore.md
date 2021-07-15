@@ -486,3 +486,5 @@ underlying API to the Crux storage layer is as simple as passing a date (for a v
 point-in-time) or not passing a date (for the current view). The "view" itself applies
 against the entire database: so _everything_ we retrieve from that point-in-time is
 referentially-intact per that point-in-time.
+
+--8<-- "snippets/abbr.md"

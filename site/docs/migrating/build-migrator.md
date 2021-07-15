@@ -234,3 +234,5 @@ The build creates the file `.../egeria-connector-crux-migrator/target/egeria-con
 This is the migrator, which you can use just as if you had downloaded it in the first step of the Migration instructions.
 
 You can now proceed with the migration [from step 2](../run-migration/#2-configure-repository) onwards using this build migrator.
+
+--8<-- "snippets/abbr.md"

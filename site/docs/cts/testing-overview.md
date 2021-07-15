@@ -90,3 +90,5 @@ you will find the following details:
     - `calculate-medians.ipynb` - used to calculate the medians displayed in the table further below
     - (to run either of these notebooks, you will need to first extract the `pd.tar.gz` file to have the JSON results
       files for analysis)
+
+--8<-- "snippets/abbr.md"

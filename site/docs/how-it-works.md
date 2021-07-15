@@ -35,3 +35,5 @@ recorded into the transaction log and document store prior to any write method r
     available for read operations) prior to returning. However, it is also possible to [configure the connector in an
     "ingest-optimized" mode](../getting-started/setup/#connector-options) that allows the indexing to occur asynchronously,
     and can therefore improve the speed of write operations significantly.
+
+--8<-- "snippets/abbr.md"

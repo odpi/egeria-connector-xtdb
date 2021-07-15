@@ -45,3 +45,5 @@ the storage layer in the specified release:
   information into a single vector (for improved search performance)
 - `RelationshipMapping` no longer has separate properties for each entity proxy, but stores them as a vector:
   this retains their ordering, but allows relationships to be more efficiently searched from either related entity
+
+--8<-- "snippets/abbr.md"
