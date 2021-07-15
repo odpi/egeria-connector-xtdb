@@ -17,7 +17,9 @@ There are a number of limitations to be aware of with the high availability conf
     Currently configuration of Egeria requires making a number of REST API calls, which limits how dynamic
     we can be in adding or removing pods to an already-running cluster (in particular:
     [we cannot rely on a readiness probe to indicate pod readiness to process actual work, but only its
-    readiness to be configured](https://github.com/odpi/egeria-connector-crux/issues/127#issuecomment-841678140)).
+    readiness to be configured](https://github.com/odpi/egeria-connector-crux/issues/127#issuecomment-841678140){ target=issue }).
     We hope to address this soon by allowing configuration and startup to be done without relying on REST
     calls, at which point we should be able to also support dynamically adding and removing pods from
     the cluster.
+
+--8<-- "snippets/abbr.md"

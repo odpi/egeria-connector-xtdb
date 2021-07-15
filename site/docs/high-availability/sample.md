@@ -50,3 +50,5 @@ a similar service, which handles load-balancing across its own pods for all writ
 Should there be any outage (in the example above, both a Crux pod and a Kafka pod going down)
 the Kubernetes services will simply stop routing traffic to those pods and the overall service
 will continue uninterrupted.
+
+--8<-- "snippets/abbr.md"

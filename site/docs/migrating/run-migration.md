@@ -11,14 +11,14 @@ Start by downloading the Crux repository migrator:
     [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux-migrator?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux-migrator&v=RELEASE&c=jar-with-dependencies)
 
 === "Latest snapshot"
-    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux-migrator?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux-migrator/)
+    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux-migrator?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux-migrator/){ target=dl }
 
 The migrator is `egeria-connector-crux-migrator-{version}-jar-with-dependencies.jar`
 
 ## 2. Configure repository
 
 Before running the migrator, define the configuration of your repository.
-The configuration must be defined in a JSON file, following [Crux's JSON configuration format](https://opencrux.com/reference/configuration.html).
+The configuration must be defined in a JSON file, following [Crux's JSON configuration format](https://opencrux.com/reference/configuration.html){ target=crux }.
 
 ??? tip "Take Crux configuration from Egeria connector configuration"
     The simplest way to ensure this matches the configuration used by your connector is to copy the
@@ -135,3 +135,5 @@ the in-place upgrade sequentially applies the necessary migrations step-by-step.
 
 Once the previous (in-place upgrade) command completes, you should now be able to start your
 connector. See the [Getting started](../getting-started/setup.md) section for more details.
+
+--8<-- "snippets/abbr.md"

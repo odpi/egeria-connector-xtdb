@@ -11,7 +11,7 @@ Start by downloading the Crux repository connector:
     [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies)
 
 === "Latest snapshot"
-    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/)
+    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/){ target=dl }
 
 The connector is: `egeria-connector-crux-{version}-jar-with-dependencies.jar`
 
@@ -23,7 +23,7 @@ Download Egeria's server chassis:
     [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=server-chassis-spring&v=RELEASE)
 
 === "Latest snapshot"
-    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/server-chassis-spring?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/)
+    [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/server-chassis-spring?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/){ target=dl }
 
 !!! tip "The connector version indicates the minimum required Egeria version"
 
@@ -267,10 +267,10 @@ curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/admin
 There are many options for configuring Crux itself.
 
 A list of overall persistence modules and deeper configuration options for each can be found
-through [Crux's own documentation](https://opencrux.com/reference/configuration.html).
+through [Crux's own documentation](https://opencrux.com/reference/configuration.html){ target=crux }.
 
 To enable persistence, send in the JSON document configuration outlined in
-[Crux's own documentation](https://opencrux.com/reference/configuration.html)
+[Crux's own documentation](https://opencrux.com/reference/configuration.html){ target=crux }
 directly to the `cruxConfig` key of the `configurationProperties`
 property of Egeria's connector configuration:
 
@@ -325,13 +325,13 @@ property of Egeria's connector configuration:
 
     For example, when using RocksDB you will need the following:
 
-    - [pro.juxt.crux:crux-rocksdb](https://search.maven.org/artifact/pro.juxt.crux/crux-rocksdb)
-    - [org.rocksdb:rocksdbjni](https://search.maven.org/artifact/org.rocksdb/rocksdbjni)
-    - [com.github.jnr:jnr-ffi](https://search.maven.org/artifact/com.github.jnr/jnr-ffi)
+    - [pro.juxt.crux:crux-rocksdb](https://search.maven.org/artifact/pro.juxt.crux/crux-rocksdb){ target=dl }
+    - [org.rocksdb:rocksdbjni](https://search.maven.org/artifact/org.rocksdb/rocksdbjni){ target=dl }
+    - [com.github.jnr:jnr-ffi](https://search.maven.org/artifact/com.github.jnr/jnr-ffi){ target=dl }
 
     You can generally determine the additional dependencies you will need by looking at the
     `project.clj` file of relevant Crux module -- specifically its `:dependencies`
-    section. For example, sticking with RocksDB, here is the [project.clj](https://github.com/juxt/crux/blob/master/crux-rocksdb/project.clj):
+    section. For example, sticking with RocksDB, here is the [project.clj](https://github.com/juxt/crux/blob/master/crux-rocksdb/project.clj){ target=crux }:
 
     ```clojure linenums="1" hl_lines="1 13-14"
     (defproject pro.juxt.crux/crux-rocksdb "crux-git-version"
@@ -379,3 +379,5 @@ There are currently two configuration options for the connector itself:
       }
     }
     ```
+
+--8<-- "snippets/abbr.md"
