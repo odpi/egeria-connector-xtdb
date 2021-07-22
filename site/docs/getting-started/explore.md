@@ -4,8 +4,14 @@
 # Explore
 
 Once a connector instance is up and running, you should now be able to start interacting with the repository.
-Without any additional dependencies, this is most easily illustrated using direct REST API interactions with the
-server chassis's repository services.
+For very basic verification, you can use direct REST API interactions with the metadata server's repository
+services.
+
+!!! warning "These are not really public interfaces"
+    The metadata server's REST API is not intended to be a public interface, so these should be treated
+    as purely a validation mechanism. For more in-depth exploration, refer to the [Egeria tutorials](https://egeria.odpi.org/open-metadata-resources/open-metadata-tutorials/)
+    and simply replace the steps therefore configuring the metadata server with the steps under
+    [Setup](./setup/).
 
 ## Create a new entity
 

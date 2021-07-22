@@ -15,9 +15,9 @@ Start by downloading the Crux repository connector:
 
 The connector is: `egeria-connector-crux-{version}-jar-with-dependencies.jar`
 
-## 2. Obtain server chassis
+## 2. Obtain OMAG Server Platform
 
-Download Egeria's server chassis:
+Download Egeria's OMAG Server Platform:
 
 === "Latest release"
     [![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=server-chassis-spring&v=RELEASE)
@@ -27,7 +27,7 @@ Download Egeria's server chassis:
 
 !!! tip "The connector version indicates the minimum required Egeria version"
 
-The server chassis is: `server-chassis-spring-{version}.jar`
+The OMAG Server Platform is: `server-chassis-spring-{version}.jar`
 
 ## 3. Configure security
 
@@ -37,10 +37,10 @@ file from: [https://github.com/odpi/egeria/raw/master/truststore.p12](https://gi
 ??? question "Transport-level security"
     The [truststore.p12](https://github.com/odpi/egeria/raw/master/truststore.p12)
     file provides a local truststore for Java. This allows the self-signed certificate embedded
-    within the server chassis (by default) to be trusted.
+    within the OMAG Server Platform (by default) to be trusted.
 
-    Without this trust, interactions with the server chassis (such as the REST calls that are made
-    through Java to handle interaction between the chassis and the connector) will result in an
+    Without this trust, interactions with the OMAG Server Platform (such as the REST calls that are made
+    through Java to handle interaction between the Platform and the connector) will result in an
     `SSLHandshakeException`.
 
     While this `truststore.p12` file allows SSL-encrypted communication, the fact that
@@ -50,7 +50,7 @@ file from: [https://github.com/odpi/egeria/raw/master/truststore.p12](https://gi
 
     Additional details on TLS for Egeria can be found in [the Egeria documentation](https://egeria.ai/open-metadata-implementation/admin-services/docs/user/omag-server-platform-transport-level-security.html).
 
-## 4. Start the server chassis
+## 4. Start the OMAG Server Platform
 
 Ensure the 3 files are in the same directory, and run:
 
@@ -59,12 +59,12 @@ java -Dloader.path=. -jar server-chassis-spring-*.jar
 ```
 
 ??? question "Explanation of the command"
-    The `-Dloader.path=.` indicates that the server chassis should look for any
+    The `-Dloader.path=.` indicates that the OMAG Server Platform should look for any
     connectors in the current directory. If you wanted to instead place the connector in a
     separate location (for example `/lib`), you could change the `.` to
     point to that other location (`-Dloader.path=/lib`).
 
-??? success "Output for server chassis startup"
+??? success "Output for OMAG Server Platform startup"
     ```text
      ODPi Egeria
         ____   __  ___ ___    ______   _____                                 ____   _         _     ___
@@ -88,13 +88,13 @@ java -Dloader.path=. -jar server-chassis-spring-*.jar
     {timestamp} OMAG server platform ready for more configuration
     ```
 
-    These final two lines of output indicate that the server chassis has completed starting up
+    These final two lines of output indicate that the OMAG Server Platform has completed starting up
     and is now ready to be configured.
 
-    Any attempt to configure the server chassis before these lines are output is likely to
+    Any attempt to configure the OMAG Server Platform before these lines are output is likely to
     result in failures.
 
-## 5. Configure the connector
+## 5. Configure the metadata server
 
 ### a. Configure the event bus
 
@@ -140,7 +140,7 @@ curl -k -X POST \
     {"class":"VoidResponse","relatedHTTPCode":200}
     ```
 
-### c. Configure Crux connector
+### c. Configure Crux as the metadata server repository
 
 ```shell
 curl -k -X POST -H "Content-Type: application/json" \
@@ -151,16 +151,16 @@ curl -k -X POST -H "Content-Type: application/json" \
 ??? question "Detailed explanation"
     This final call to the API configures the behavior of the Crux repository itself.
 
-    The URL to which we post indicates that we will use the Egeria server chassis's built-in
-    repository plugin capability to access the Crux repository connector.
+    The URL to which we post indicates that we will use the Egeria OMAG Server Platform's built-in
+    repository plugin capability to enable Crux as the metadata server's repository.
 
     The JSON payload's contents define how this plugin itself should be configured: specifically,
     which Java class should be used for the repository connection. Here we can see the payload
     refers to the `CruxOMRSRepositoryConnectorProvider`, which therefore tells the
-    plugin to use this class -- specific to the Crux repository connector -- in order to configure
+    plugin to use this class -- specific to the Crux repository plugin -- in order to configure
     its repository connection.
 
-??? success "Response from connector configuration"
+??? success "Response from metadata server configuration"
     ```json
     {"class":"VoidResponse","relatedHTTPCode":200}
     ```
@@ -168,7 +168,7 @@ curl -k -X POST -H "Content-Type: application/json" \
 !!! attention "The default configuration is for an in-memory (non-persistent) repository"
     The default configuration used in this example will startup the Crux repository in
     a completely embedded, in-memory-only mode. No data will be persisted, so if you stop or
-    restart the server chassis all data will be lost.
+    restart the OMAG Server Platform all data will be lost.
 
     While this is actually beneficial for quick experimentation and testing purposes, it is
     naturally not desirable for a "real" repository: you'd want your metadata to stick around
@@ -177,19 +177,19 @@ curl -k -X POST -H "Content-Type: application/json" \
     [Additional options for configuring Crux](#options-for-configuring-crux), including with
     persistence, can be found at the end of this page.
 
-## 6. Start the connector instance
+## 6. Start the metadata server
 
 ```shell
 curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/instance"
 ```
 
 ??? question "Detailed explanation"
-    Up to this point we have only configured the connector, but have not actually started it.
+    Up to this point we have only configured the metadata server, but have not actually started it.
 
-    This final API call tells Egeria to start the connector, based on the configuration the previous
+    This final API call tells Egeria to start the metadata server, based on the configuration the previous
     API calls defined.
 
-??? success "Response from connector instance startup"
+??? success "Response from metadata server startup"
     ```json
     {
       "class": "SuccessMessageResponse",
@@ -199,10 +199,10 @@ curl -k -X POST "https://localhost:9443/open-metadata/admin-services/users/admin
     ```
 
     It may take 10-15 seconds to complete, but the example response above indicates that the
-    connector instance is now running.
+    metadata server is now running.
 
 ??? info "Other startup information of potential interest"
-    Back in the console where the server chassis is running, you should see the audit log
+    Back in the console where the OMAG Server Platform is running, you should see the audit log
     printing out a large amount of information as the startup is running. Most of this is
     related to the registration of type definition details with the repository.
 
