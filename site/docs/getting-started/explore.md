@@ -9,9 +9,9 @@ services.
 
 !!! warning "These are not really public interfaces"
     The metadata server's REST API is not intended to be a public interface, so these should be treated
-    as purely a validation mechanism. For more in-depth exploration, refer to the [Egeria tutorials](https://egeria.odpi.org/open-metadata-resources/open-metadata-tutorials/)
-    and simply replace the steps therefore configuring the metadata server with the steps under
-    [Setup](./setup/).
+    as purely a validation mechanism. For more in-depth exploration, refer to the [Egeria tutorials](https://egeria.odpi.org/open-metadata-resources/open-metadata-tutorials/){ target=docs }
+    and simply replace the steps there for configuring the metadata server with the steps under
+    [Setup](../setup/).
 
 ## Create a new entity
 
