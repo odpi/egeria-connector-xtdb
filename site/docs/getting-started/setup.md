@@ -29,6 +29,11 @@ Download Egeria's OMAG Server Platform:
 
 The OMAG Server Platform is: `server-chassis-spring-{version}.jar`
 
+??? question "OMAG Server Platform"
+    The [OMAG Server Platform](https://egeria.ai/open-metadata-implementation/admin-services/docs/concepts/omag-server-platform.html){ target=core }
+    is a runtime process for Open Metadata and Governance services like the metadata server that we will configure and
+    run through the steps below.
+
 ## 3. Configure security
 
 To get an initial environment up-and-running just download the `truststore.p12`
@@ -96,52 +101,6 @@ java -Dloader.path=. -jar server-chassis-spring-*.jar
 
 ## 5. Configure the metadata server
 
-### a. Configure the event bus
-
-```shell
-curl -k -X POST -H "Content-Type: application/json" \
-  --data '{"producer":{"bootstrap.servers":"localhost:9092"},"consumer":{"bootstrap.servers":"localhost:9092"}}' \
-  "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/event-bus?connectorProvider=org.odpi.openmetadata.adapters.eventbus.topic.kafka.KafkaOpenMetadataTopicProvider"
-```
-
-??? question "Detailed explanation"
-    The event bus is how Egeria coordinates communication amongst its various servers and
-    repositories: for example, ensuring that any new type definitions are registered with each
-    repository capable of handling them, notifying other repositories when the metadata in one
-    repository changes, etc.
-
-    The URL parameter `connectorProvider` defines the type of event bus to use (in
-	this case Apache Kafka).
-
-    The JSON payload gives details about how to connect to Apache Kafka, in this case assuming
-    it is running on local machine (`localhost`) on its default port (`9092`).
-
-??? success "Response from event bus configuration"
-    ```json
-    {"class":"VoidResponse","relatedHTTPCode":200}
-    ```
-
-### b. Configure the cohort
-
-```shell
-curl -k -X POST \
-  "https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/cohorts/mycohort"
-```
-
-??? question "Detailed explanation"
-    The cohort is a network of interacting metadata servers, which could be some subset of the
-    overall Egeria landscape.
-
-    We only need to supply a name for the cohort, which forms part of the URL itself: in this
-    example using `mycohort`.
-
-??? success "Response from cohort configuration"
-    ```json
-    {"class":"VoidResponse","relatedHTTPCode":200}
-    ```
-
-### c. Configure Crux as the metadata server repository
-
 ```shell
 curl -k -X POST -H "Content-Type: application/json" \
   --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"}}' \
@@ -149,7 +108,11 @@ curl -k -X POST -H "Content-Type: application/json" \
 ```
 
 ??? question "Detailed explanation"
-    This final call to the API configures the behavior of the Crux repository itself.
+    A [metadata server](https://egeria.ai/open-metadata-implementation/admin-services/docs/concepts/metadata-server.html){ target=core }
+    is an OMAG server that hosts a metadata repository with native support for open metadata types and
+    instances.
+
+    This API call configures Crux as the repository for the metadata server.
 
     The URL to which we post indicates that we will use the Egeria OMAG Server Platform's built-in
     repository plugin capability to enable Crux as the metadata server's repository.
