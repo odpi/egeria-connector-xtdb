@@ -55,7 +55,7 @@ The configuration must be defined in a JSON file, following [Crux's JSON configu
               "db-dir": "data/servers/crux/rdb-tx"
             }
           },
-          "egeria.crux.lucene/lucene-store": {
+          "crux.lucene/lucene-store": {
             "db-dir": "data/servers/crux/lucene"
           }
         }

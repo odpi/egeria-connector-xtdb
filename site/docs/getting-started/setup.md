@@ -247,7 +247,7 @@ property of Egeria's connector configuration:
       },
       "configurationProperties": {
         "cruxConfig": {
-          "egeria.crux.lucene/lucene-store": {
+          "crux.lucene/lucene-store": {
             "db-dir": "data/servers/crux/lucene"
           },
           "crux/index-store": {
@@ -273,11 +273,16 @@ property of Egeria's connector configuration:
     }
     ```
 
-    The one exception to simply using Crux's JSON configuration as-is are the lines 9-11
-    above: these configure a Lucene index built and maintained directly as part of the connector's
-	code-base, and therefore in a separate namespace from Crux's own configuration. It is highly
-	recommended to use this Lucene index as it offers significant performance improvements for
-	any text-based queries.
+    !!! attention "Some of the Lucene configuration will be automatically injected"
+        In the example above, lines 9-11 configure Crux's built-in Lucene index. You should be aware
+        that some additional entries will be automatically injected by Egeria: specifically the `indexer`
+        and `analyzer` entries used to configure the Lucene index optimally for the OMRS-level search
+        interfaces that Egeria defines. If you have defined your own `analyzer` or `indexer` in the
+        configuration, these will be overridden by the connector's injection process -- in other words,
+        any custom configuration you attempt for `analyzer` or `indexer` will be ignored.
+
+    It is highly recommended to include the Lucene entry like that above as it offers significant performance
+    improvements for any text-based queries.
 
     The remainder of the configuration in this example defines RocksDB to act as the persistence
     layer for Crux's index and document stores, as well as its transaction log.
