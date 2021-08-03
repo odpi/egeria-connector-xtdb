@@ -161,10 +161,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 Files.delete(Paths.get(configFile.getCanonicalPath()));
             }
             Map<Keyword, ?> details = cruxAPI.status();
-            log.debug(" ... node: {}", details);
-            log.debug(" ... luceneConfigured? {}", luceneConfigured);
-            log.debug(" ... luceneRegexes?    {}", luceneRegexes);
-            log.debug(" ... synchronousIndex? {}", synchronousIndex);
+            log.info("crux config-- node: {}", details);
+            log.info("crux config -- luceneConfigured? {}", luceneConfigured);
+            log.info("crux config -- luceneRegexes?    {}", luceneRegexes);
+            log.info("crux config -- synchronousIndex? {}", synchronousIndex);
             Object version = details.get(Constants.CRUX_VERSION);
             long persistenceVersion = PersistenceLayer.getVersion(cruxAPI);
             boolean emptyDataStore = isDataStoreEmpty();
