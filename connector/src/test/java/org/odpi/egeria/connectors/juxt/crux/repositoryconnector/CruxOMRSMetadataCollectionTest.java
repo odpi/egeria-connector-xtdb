@@ -844,6 +844,32 @@ public class CruxOMRSMetadataCollectionTest {
             assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
             assertEquals(results.size(), 3, "Expected precisely three search results.");
 
+            results = mc.findEntitiesByPropertyValue(username,
+                    referenceableGuid,
+                    helper.getContainsRegex("-mc-"),
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100);
+            assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
+            assertEquals(results.size(), 5, "Expected precisely five search results.");
+
+            results = mc.findEntitiesByPropertyValue(username,
+                    referenceableGuid,
+                    helper.getStartsWithRegex("oMrS-mc-", true),
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100);
+            assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
+            assertEquals(results.size(), 3, "Expected precisely three search results.");
+
         } catch (Exception e) {
             e.printStackTrace();
             assertNull(e);

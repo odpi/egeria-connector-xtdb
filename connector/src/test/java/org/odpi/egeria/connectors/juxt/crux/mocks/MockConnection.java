@@ -2,7 +2,9 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mocks;
 
+import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
+import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider;
 import org.odpi.openmetadata.adapters.repositoryservices.ConnectorConfigurationFactory;
 import org.odpi.openmetadata.frameworks.connectors.Connector;
 import org.odpi.openmetadata.frameworks.connectors.ConnectorBroker;
@@ -23,7 +25,9 @@ import org.odpi.openmetadata.repositoryservices.localrepository.repositoryconten
 import org.odpi.openmetadata.repositoryservices.localrepository.repositorycontentmanager.OMRSRepositoryContentValidator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -63,7 +67,18 @@ public class MockConnection extends Connection {
      */
     private synchronized static void startConnector() {
 
+        Map<String, String> luceneConfig = new HashMap<>();
+
+        Map<String, Object> cruxConfig = new HashMap<>();
+        cruxConfig.put(Constants.CRUX_LUCENE, luceneConfig);
+
+        Map<String, Object> config = new HashMap<>();
+        config.put(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG, cruxConfig);
+        config.put(CruxOMRSRepositoryConnectorProvider.LUCENE_REGEXES, true);
+        config.put(CruxOMRSRepositoryConnectorProvider.SYNCHRONOUS_INDEX, true);
+
         Connection mock = new MockConnection();
+        mock.setConfigurationProperties(config);
         ConnectorConfigurationFactory connectorConfigurationFactory = new ConnectorConfigurationFactory();
         ConnectorBroker broker = new ConnectorBroker();
 
@@ -78,7 +93,7 @@ public class MockConnection extends Connection {
 
         List<OMRSAuditLogStore> auditLogDestinations = new ArrayList<>();
         auditLogDestinations.add((OMRSAuditLogStore)auditLogConnector);
-        OMRSAuditLogDestination destination = new OMRSAuditLogDestination("CruxTest", "Crux", "ODPi", auditLogDestinations);
+        OMRSAuditLogDestination destination = new OMRSAuditLogDestination("MockCrux", "Crux", "ODPi", auditLogDestinations);
         OMRSAuditLog auditLog = new OMRSAuditLog(destination, -1, "ConnectorTest", "Testing of the connector", null);
         contentManager = new OMRSRepositoryContentManager(USERNAME, auditLog);
 
