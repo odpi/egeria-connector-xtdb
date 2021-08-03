@@ -94,7 +94,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         super.start();
         final String methodName = "start";
 
-        auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTING.getMessageDefinition());
+        auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_NODE_STARTING.getMessageDefinition());
 
         // Retrieve the configuration from the configurationProperties, and serialise it directly into a .json file
         File configFile = null;
@@ -130,6 +130,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         mapper.writeValue(configFile, cruxConfig);
                     }
                 } catch (IOException e) {
+                    auditLog.logException(methodName, CruxOMRSAuditCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(e.getClass().getName()), e);
                     throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
                             this.getClass().getName(), methodName, e);
                 }
@@ -152,19 +153,16 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
             if (configFile == null) {
                 // If no configuration options were specified, we will start an in-memory node
-                auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTING_NO_CONFIG.getMessageDefinition());
+                auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_NODE_STARTING_NO_CONFIG.getMessageDefinition());
                 cruxAPI = Crux.startNode();
             } else {
                 // Otherwise we will use the configuration options to start the server
-                auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTING_WITH_CONFIG.getMessageDefinition());
+                auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_NODE_STARTING_WITH_CONFIG.getMessageDefinition());
                 cruxAPI = Crux.startNode(configFile);
                 Files.delete(Paths.get(configFile.getCanonicalPath()));
             }
             Map<Keyword, ?> details = cruxAPI.status();
-            log.info("crux config-- node: {}", details);
-            log.info("crux config -- luceneConfigured? {}", luceneConfigured);
-            log.info("crux config -- luceneRegexes?    {}", luceneRegexes);
-            log.info("crux config -- synchronousIndex? {}", synchronousIndex);
+            log.info("crux config details: {}", details);
             Object version = details.get(Constants.CRUX_VERSION);
             long persistenceVersion = PersistenceLayer.getVersion(cruxAPI);
             boolean emptyDataStore = isDataStoreEmpty();
@@ -179,11 +177,19 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 throw new ConnectorCheckedException(CruxOMRSErrorCode.PERSISTENCE_LAYER_MISMATCH.getMessageDefinition("" + persistenceVersion, "" + PersistenceLayer.LATEST_VERSION),
                         this.getClass().getName(), methodName);
             }
-            auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(getServerName(), version == null ? "<null>" : version.toString()));
+            List<String> opts = new ArrayList<>();
+            opts.add(synchronousIndex ? "synchronous indexing" : "asynchronous indexing");
+            if (luceneConfigured) {
+                opts.add("Lucene text index");
+                if (luceneRegexes)
+                    opts.add("Lucene regexes");
+            }
+            auditLog.logMessage(methodName,
+                    CruxOMRSAuditCode.REPOSITORY_SERVICE_STARTED.getMessageDefinition(
+                            version == null ? "<null>" : version.toString(),
+                            String.join(", ", opts)));
         } catch (Exception e) {
-            log.error("Unable to start the repository based on the provided configuration.", e);
-            // Note: unfortunately the audit log swallows this exception's stack trace, and therefore is insufficient
-            // for someone attempting to understand why their configuration did not work -- hence logging an error above
+            auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_REPOSITORY_STARTUP.getMessageDefinition(e.getClass().getName()), e);
             throw new ConnectorCheckedException(CruxOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
                     this.getClass().getName(), methodName, e);
         }
@@ -203,17 +209,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         try {
             this.cruxAPI.close();
         } catch (IOException e) {
-            log.error("Fatal error when attempting to close Crux repository.", e);
-            // Note: unfortunately the audit log swallows this exception's stack trace, and therefore is insufficient
-            // for someone attempting to understand why their configuration did not work -- hence logging an error above
+            if (auditLog != null)
+                auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_REPOSITORY_SHUTDOWN.getMessageDefinition(e.getClass().getName()), e);
             throw new ConnectorCheckedException(CruxOMRSErrorCode.FAILED_DISCONNECT.getMessageDefinition(),
                     this.getClass().getName(), methodName, e);
         }
-        if (auditLog != null) {
+        if (auditLog != null)
             auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_SERVICE_SHUTDOWN.getMessageDefinition(getServerName()));
-        } else {
-            log.info("Crux repository connector has shutdown.");
-        }
 
     }
 

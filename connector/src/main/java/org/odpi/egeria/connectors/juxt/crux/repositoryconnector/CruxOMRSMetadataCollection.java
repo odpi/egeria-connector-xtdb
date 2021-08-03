@@ -953,10 +953,16 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         // 1. Remove every relationship in which the entity is involved, to maintain referential integrity within the
         //    repository
+        List<Relationship> relationships = null;
         try {
-            List<Relationship> relationships = cruxRepositoryConnector.findActiveRelationshipsForEntity(entity, userId);
-            if (relationships != null) {
-                for (Relationship relationship : relationships) {
+            relationships = cruxRepositoryConnector.findActiveRelationshipsForEntity(entity, userId);
+        } catch (Exception e) {
+            auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(obsoleteEntityGUID, e.getClass().getName()), e);
+        }
+
+        if (relationships != null) {
+            for (Relationship relationship : relationships) {
+                try {
                     if (relationship != null) {
                         String mcId = relationship.getMetadataCollectionId();
                         if (metadataCollectionId.equals(mcId)) {
@@ -973,10 +979,10 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                             cruxRepositoryConnector.addPurgeRelationshipStatements(tx, relationship.getGUID());
                         }
                     }
+                } catch (Exception e) {
+                    auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE.getMessageDefinition(relationship.getGUID(), obsoleteEntityGUID, e.getClass().getName()), e);
                 }
             }
-        } catch (Exception e) {
-            auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(obsoleteEntityGUID), e);
         }
 
         // 2. Update the entity itself
@@ -1028,18 +1034,25 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         // 1. Purge EVERY SINGLE relationship in which the entity is involved to ensure referential integrity within
         //    the repository (note that we should be able to do this against both homed and reference copy relationships
         //    since purge operations are allowed against both)
+        Collection<List<?>> relationshipRefs = null;
         try {
-            Collection<List<?>> relationshipRefs = cruxRepositoryConnector.findEntityRelationships(cruxRepositoryConnector.getCruxAPI().db(),
+            relationshipRefs = cruxRepositoryConnector.findEntityRelationships(cruxRepositoryConnector.getCruxAPI().db(),
                     deletedEntityGUID,
                     userId,
                     true);
-            for (List<?> relationshipRef : relationshipRefs) {
-                String docRef = (String) relationshipRef.get(0);
-                String guid = InstanceHeaderMapping.trimGuidFromReference(docRef);
-                cruxRepositoryConnector.addPurgeRelationshipStatements(tx, guid);
-            }
         } catch (Exception e) {
-            auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(deletedEntityGUID), e);
+            auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE_CASCADE.getMessageDefinition(deletedEntityGUID, e.getClass().getName()), e);
+        }
+        if (relationshipRefs != null) {
+            for (List<?> relationshipRef : relationshipRefs) {
+                String guid = (String) relationshipRef.get(0);
+                try {
+                    guid = InstanceHeaderMapping.trimGuidFromReference(guid);
+                    cruxRepositoryConnector.addPurgeRelationshipStatements(tx, guid);
+                } catch (Exception e) {
+                    auditLog.logException(methodName, CruxOMRSAuditCode.FAILED_RELATIONSHIP_DELETE.getMessageDefinition(guid, deletedEntityGUID, e.getClass().getName()), e);
+                }
+            }
         }
 
         // 2. Purge the entity itself
