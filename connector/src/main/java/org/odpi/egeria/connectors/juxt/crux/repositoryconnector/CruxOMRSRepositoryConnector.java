@@ -88,6 +88,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * {@inheritDoc}
      */
     @Override
+    @SuppressWarnings("unchecked")
     public synchronized void start() throws ConnectorCheckedException {
 
         super.start();
@@ -105,13 +106,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     configFile = File.createTempFile("crux", ".json", new File("./"));
                     Object cruxCfg = configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG);
                     if (cruxCfg instanceof Map) {
-                        Map<?, ?> cruxConfig = (Map<?, ?>) cruxCfg;
+                        Map<String, Object> cruxConfig = (Map<String, Object>) cruxCfg;
+                        // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
+                        // the configurationProperties
+                        luceneConfigured = cruxConfig.containsKey(Constants.CRUX_LUCENE);
+                        // If Lucene is configured, inject the custom analyzers and indexers required by Egeria
+                        if (luceneConfigured) {
+                            Object luceneCfg = cruxConfig.get(Constants.CRUX_LUCENE);
+                            if (luceneCfg instanceof Map) {
+                                Map<String, Object> luceneConfig = (Map<String, Object>) luceneCfg;
+                                Map<String, String> indexer = new HashMap<>();
+                                indexer.put("crux/module", "crux.lucene.egeria/->egeria-indexer");
+                                luceneConfig.put("indexer", indexer);
+                                Map<String, String> analyzer = new HashMap<>();
+                                analyzer.put("crux/module", "crux.lucene.egeria/->ci-analyzer");
+                                luceneConfig.put("analyzer", analyzer);
+                                // Override the Lucene configuration with these injected customizations
+                                cruxConfig.put(Constants.CRUX_LUCENE, luceneConfig);
+                            }
+                        }
                         if (log.isDebugEnabled())
                             log.debug("Writing configuration to: {}", configFile.getCanonicalPath());
                         mapper.writeValue(configFile, cruxConfig);
-                        // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
-                        // the configurationProperties
-                        luceneConfigured = cruxConfig.containsKey(Constants.EGERIA_LUCENE);
                     }
                 } catch (IOException e) {
                     throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),

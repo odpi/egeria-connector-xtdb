@@ -24,7 +24,7 @@ public class Constants {
 
     // Config details
     public static final Keyword CRUX_VERSION = Keyword.intern("crux.version", "version");
-    public static final String EGERIA_LUCENE = "egeria.crux.lucene/lucene-store";
+    public static final String CRUX_LUCENE = "crux.lucene/lucene-store";
 
     // Shared properties
     public static final Keyword CRUX_PK = Keyword.intern(CRUX_DB, "id");

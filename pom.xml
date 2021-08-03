@@ -69,12 +69,12 @@
 
     <properties>
         <open-metadata.version>3.0-SNAPSHOT</open-metadata.version>
-        <crux.version>1.17.1</crux.version>
+        <crux.version>1.18.0</crux.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.4</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.32</slf4j.version>
-        <logback.version>1.2.4-groovyless</logback.version>
+        <logback.version>1.2.5</logback.version>
         <testng.version>7.4.0</testng.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -97,6 +97,12 @@
             <dependency>
                 <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-core</artifactId>
+                <version>${crux.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>pro.juxt.crux</groupId>
+                <artifactId>crux-lucene</artifactId>
                 <version>${crux.version}</version>
                 <scope>compile</scope>
             </dependency>
@@ -232,7 +238,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <version>3.0.0-M3</version>
+                    <version>3.0.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
@@ -289,7 +295,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.0.0-M5</version>
                     <configuration>
-                        <forkCount>3</forkCount>
+                        <forkCount>1</forkCount>
                         <reuseForks>true</reuseForks>
                         <includes>
                             <include>**/*Test.java</include>
@@ -480,6 +486,7 @@
                                 <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-lucene:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-core:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-analyzers-common:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>

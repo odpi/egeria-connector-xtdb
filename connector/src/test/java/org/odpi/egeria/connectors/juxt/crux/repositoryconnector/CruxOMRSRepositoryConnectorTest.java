@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import clojure.lang.IPersistentVector;
 import crux.api.tx.Transaction;
+import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.crux.mocks.MockConnection;
 import org.odpi.openmetadata.adapters.repositoryservices.ConnectorConfigurationFactory;
 import org.odpi.openmetadata.frameworks.connectors.Connector;
@@ -51,7 +52,7 @@ public class CruxOMRSRepositoryConnectorTest {
         }
 
         Map<String, Object> cruxConfig = new HashMap<>();
-        cruxConfig.put("egeria.crux.lucene/lucene-store", luceneConfig);
+        cruxConfig.put(Constants.CRUX_LUCENE, luceneConfig);
 
         Map<String, Object> config = new HashMap<>();
         config.put(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG, cruxConfig);
@@ -80,7 +81,7 @@ public class CruxOMRSRepositoryConnectorTest {
 
         List<OMRSAuditLogStore> auditLogDestinations = new ArrayList<>();
         auditLogDestinations.add((OMRSAuditLogStore)auditLogConnector);
-        OMRSAuditLogDestination destination = new OMRSAuditLogDestination("CruxTest", "Crux", "ODPi", auditLogDestinations);
+        OMRSAuditLogDestination destination = new OMRSAuditLogDestination("ConnectorTest", "Crux", "ODPi", auditLogDestinations);
         OMRSAuditLog auditLog = new OMRSAuditLog(destination, -1, "ConnectorTest", "Testing of the connector", null);
         OMRSRepositoryContentManager contentManager = new OMRSRepositoryContentManager(MockConnection.USERNAME, auditLog);
 
@@ -619,6 +620,8 @@ public class CruxOMRSRepositoryConnectorTest {
             assertNotNull(results, "Expected some search results.");
             assertTrue(results.size() >= 2, "Expected at least two search results.");
 
+            // Note that this should not return any results, as there are no properties (let alone
+            // any string properties) on the CategoryAnchor relationship type being searched.
             results = connector.findRelationshipsByText("c628938e-815e-47db-8d1c-59bb2e84e028",
                     helper.getStartsWithRegex("some"),
                     0,
@@ -628,8 +631,8 @@ public class CruxOMRSRepositoryConnectorTest {
                     null,
                     100,
                     MockConnection.USERNAME);
-            assertNotNull(results, "Expected some search results.");
-            assertEquals(results.size(), 1, "Expected precisely one search result.");
+            assertNotNull(results, "Expected non-null search results.");
+            assertEquals(results.size(), 0, "Expected precisely zero search results.");
 
             InstanceGraph graph = connector.findNeighborhood(glossary.getGUID(),
                     null,
