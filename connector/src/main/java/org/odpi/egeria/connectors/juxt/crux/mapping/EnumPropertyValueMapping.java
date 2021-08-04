@@ -3,10 +3,9 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import crux.api.CruxDocument;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Maps singular EnumPropertyValues between persistence and objects.
@@ -23,8 +22,6 @@ import org.slf4j.LoggerFactory;
  * </code>
  */
 public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
-
-    private static final Logger log = LoggerFactory.getLogger(EnumPropertyValueMapping.class);
 
     /**
      * Add the provided enum value to the Crux document.
@@ -55,17 +52,24 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
 
     /**
      * Convert the provided ordinal into its InstanceProvenanceType.
+     * @param cruxConnector connectivity to the repository
      * @param ordinal to convert
      * @return InstanceProvenanceType
      */
-    public static InstanceProvenanceType getInstanceProvenanceTypeFromOrdinal(Integer ordinal) {
+    public static InstanceProvenanceType getInstanceProvenanceTypeFromOrdinal(CruxOMRSRepositoryConnector cruxConnector, Integer ordinal) {
+        final String methodName = "getInstanceProvenanceTypeFromOrdinal";
         if (ordinal != null) {
             for (InstanceProvenanceType b : InstanceProvenanceType.values()) {
                 if (b.getOrdinal() == ordinal) {
                     return b;
                 }
             }
-            log.warn("Non-existent InstanceProvenanceType ordinal -- returning null: {}", ordinal);
+            cruxConnector.logProblem(EnumPropertyValueMapping.class.getName(),
+                    methodName,
+                    CruxOMRSAuditCode.NON_EXISTENT_ENUM,
+                    null,
+                    "InstanceProvenanceType",
+                    ordinal.toString());
         }
         return null;
     }
@@ -81,17 +85,24 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
 
     /**
      * Convert the provided ordinal into its InstanceStatus.
+     * @param cruxConnector connectivity to the repository
      * @param ordinal to convert
      * @return InstanceStatus
      */
-    public static InstanceStatus getInstanceStatusFromOrdinal(Integer ordinal) {
+    public static InstanceStatus getInstanceStatusFromOrdinal(CruxOMRSRepositoryConnector cruxConnector, Integer ordinal) {
+        final String methodName = "getInstanceStatusFromOrdinal";
         if (ordinal != null) {
             for (InstanceStatus b : InstanceStatus.values()) {
                 if (b.getOrdinal() == ordinal) {
                     return b;
                 }
             }
-            log.warn("Non-existent InstanceStatus ordinal -- returning null: {}", ordinal);
+            cruxConnector.logProblem(EnumPropertyValueMapping.class.getName(),
+                    methodName,
+                    CruxOMRSAuditCode.NON_EXISTENT_ENUM,
+                    null,
+                    "InstanceStatus",
+                    ordinal.toString());
         }
         return null;
     }

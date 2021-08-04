@@ -39,15 +39,16 @@ public class StructPropertyValueMapping extends InstancePropertyValueMapping {
                                                    String propertyName,
                                                    String namespace,
                                                    StructPropertyValue value) {
-        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getStructPropertyValueForComparison(value));
+        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getStructPropertyValueForComparison(cruxConnector, value));
     }
 
     /**
      * Convert the provided struct property value into a Crux comparable form.
+     * @param cruxConnector connectivity to the repository
      * @param spv Egeria value to translate to Crux-comparable value
      * @return {@code Map<String, Object>} value that Crux can compare
      */
-    public static Map<String, Object> getStructPropertyValueForComparison(StructPropertyValue spv) {
+    public static Map<String, Object> getStructPropertyValueForComparison(CruxOMRSRepositoryConnector cruxConnector, StructPropertyValue spv) {
         InstanceProperties values = spv.getAttributes();
         if (values != null && values.getInstanceProperties() != null) {
             // Create a new TreeMap of the values to ensure they are sorted by key (for consistency)
@@ -55,7 +56,7 @@ public class StructPropertyValueMapping extends InstancePropertyValueMapping {
             for (Map.Entry<String, InstancePropertyValue> entry : values.getInstanceProperties().entrySet()) {
                 String key = entry.getKey();
                 InstancePropertyValue value = entry.getValue();
-                Object toCompare = getValueForComparison(value);
+                Object toCompare = getValueForComparison(cruxConnector, value);
                 if (toCompare != null) {
                     results.put(key, toCompare);
                 }

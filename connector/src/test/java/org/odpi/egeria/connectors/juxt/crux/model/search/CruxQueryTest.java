@@ -246,8 +246,7 @@ public class CruxQueryTest {
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
 
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     propertiesNamespace,
                     classificationTypeNames,
@@ -280,8 +279,7 @@ public class CruxQueryTest {
             CruxQuery cq = new CruxQuery();
             cq.addClassificationConditions(searchClassifications,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -448,8 +446,7 @@ public class CruxQueryTest {
                     null,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             IPersistentMap sequencing = cq.getQuery();
             assertNotNull(sequencing);
@@ -488,8 +485,7 @@ public class CruxQueryTest {
                     null,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             IPersistentMap sequencing = cq.getQuery();
             assertNotNull(sequencing);
@@ -519,8 +515,7 @@ public class CruxQueryTest {
                     null,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             sequencing = cq.getQuery();
             assertNotNull(sequencing);
@@ -563,8 +558,7 @@ public class CruxQueryTest {
                     null,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             IPersistentMap sequencing = cq.getQuery();
             assertNotNull(sequencing);
@@ -594,8 +588,7 @@ public class CruxQueryTest {
                     null,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             sequencing = cq.getQuery();
             assertNotNull(sequencing);
@@ -633,8 +626,7 @@ public class CruxQueryTest {
             Set<String> typeNames = new HashSet<>();
             typeNames.add("Referenceable");
             String propertyName = "qualifiedName";
-            Set<Keyword> qualifiedPropertyNames = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    connector.getRepositoryHelper(),
+            Set<Keyword> qualifiedPropertyNames = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -650,8 +642,7 @@ public class CruxQueryTest {
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             IPersistentMap sequencing = cq.getQuery();
             assertNotNull(sequencing);
@@ -681,8 +672,7 @@ public class CruxQueryTest {
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName());
+                    connector);
 
             sequencing = cq.getQuery();
             assertNotNull(sequencing);

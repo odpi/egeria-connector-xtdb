@@ -220,6 +220,28 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
+     * Log a problem with the connector, preferring the audit log so long as it is available and only falling
+     * back to debug-level logging if it is not.
+     * @param className where the problem occurred
+     * @param methodName where the problem occurred
+     * @param code describing the problem
+     * @param cause the exception that triggered the problem (if any)
+     * @param params providing additional details about the problem
+     */
+    public void logProblem(String className, String methodName, CruxOMRSAuditCode code, Throwable cause, String... params) {
+        String location = className + "::" + methodName;
+        if (auditLog != null) {
+            if (cause != null) {
+                auditLog.logException(location, code.getMessageDefinition(params), cause);
+            } else {
+                auditLog.logMessage(location, code.getMessageDefinition(params));
+            }
+        } else {
+            log.error("No audit log available -- problem during {}: {}", location, code.getMessageDefinition(params), cause);
+        }
+    }
+
+    /**
      * Checks whether the data store is currently empty.
      * @return true of the data store is empty (has no metadata stored), otherwise false
      */
@@ -507,6 +529,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @return {@code List<EntityDetail>} list of Egeria representation of the results
      */
     private List<EntityDetail> translateEntityResults(Collection<List<?>> cruxResults, Date asOfTime) {
+        final String methodName = "translateEntityResults";
         List<EntityDetail> results = null;
         if (cruxResults != null) {
             results = new ArrayList<>();
@@ -514,14 +537,26 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 String docRef = (String) cruxResult.get(0);
                 CruxDocument cruxDoc = getCruxObjectByReference(docRef, asOfTime);
                 if (cruxDoc == null) {
-                    log.warn("Unable to resolve search result into full doc: {}", cruxResult);
+                    logProblem(this.getClass().getName(),
+                            methodName,
+                            CruxOMRSAuditCode.MAPPING_FAILURE,
+                            null,
+                            "entity",
+                            docRef,
+                            "cannot be retrieved from Crux");
                 } else {
                     EntityDetailMapping edm = new EntityDetailMapping(this, cruxDoc);
                     EntityDetail ed = edm.toEgeria();
                     if (ed != null) {
                         results.add(ed);
                     } else {
-                        log.warn("Unable to translate Crux result into EntityDetail: {}", cruxDoc);
+                        logProblem(this.getClass().getName(),
+                                methodName,
+                                CruxOMRSAuditCode.MAPPING_FAILURE,
+                                null,
+                                "entity",
+                                docRef,
+                                "cannot be mapped to EntityDetail");
                     }
                 }
             }
@@ -960,6 +995,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                          Set<String> relationshipGUIDsVisited,
                                          boolean includeRelationships) {
 
+        final String methodName = "resultsToGraph";
         InstanceGraph results = null;
 
         if (startingEntity != null) {
@@ -981,7 +1017,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         EntityDetail entity = getEntityByRef(db, entityRef);
                         entityGUIDsVisited.add(entityGuid);
                         if (entity == null) {
-                            log.warn("Unable to resolve search result into entity: {}", cruxResult);
+                            logProblem(this.getClass().getName(),
+                                    methodName,
+                                    CruxOMRSAuditCode.MAPPING_FAILURE,
+                                    null,
+                                    "entity",
+                                    entityRef,
+                                    "cannot be translated to EntityDetail");
                         } else {
                             entities.add(entity);
                         }
@@ -993,7 +1035,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                             Relationship relationship = getRelationshipByRef(db, relationshipRef);
                             relationshipGUIDsVisited.add(relationshipGuid);
                             if (relationship == null) {
-                                log.warn("Unable to resolve search result into relationship: {}", cruxResult);
+                                logProblem(this.getClass().getName(),
+                                        methodName,
+                                        CruxOMRSAuditCode.MAPPING_FAILURE,
+                                        null,
+                                        "relationship",
+                                        relationshipRef,
+                                        "cannot be translated to Relationship");
                             } else {
                                 relationships.add(relationship);
                             }
@@ -1185,6 +1233,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * @see #findEntityRelationships(ICruxDatasource, String, String, int, List, String, SequencingOrder, int, String)
      */
     private List<Relationship> resultsToList(ICruxDatasource db, Collection<List<?>> cruxResults) {
+        final String methodName = "resultsToList";
         List<Relationship> results = null;
         if (cruxResults != null) {
             results = new ArrayList<>();
@@ -1192,7 +1241,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 String docRef = (String) cruxResult.get(0);
                 Relationship relationship = getRelationshipByRef(db, docRef);
                 if (relationship == null) {
-                    log.warn("Unable to translate Crux result into Relationship: {}", cruxResult);
+                    logProblem(this.getClass().getName(),
+                            methodName,
+                            CruxOMRSAuditCode.MAPPING_FAILURE,
+                            null,
+                            "relationship",
+                            docRef,
+                            "cannot be translated to Relationship");
                 } else {
                     results.add(relationship);
                 }
@@ -2095,6 +2150,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                                                        String entityGUID,
                                                        String userId,
                                                        boolean includeDeleted) throws TimeoutException {
+        final String methodName = "findEntityRelationships";
         CruxQuery query = new CruxQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         try {
@@ -2114,7 +2170,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         userId);
             }
         } catch (TypeErrorException e) {
-            log.error("Unexpected type error, when no types are being explicitly used.", e);
+            logProblem(this.getClass().getName(),
+                    methodName,
+                    CruxOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
+                    e,
+                    "unexpected type error when no types are explicitly used",
+                    e.getClass().getName());
         }
         IPersistentMap q = query.getQuery();
         log.debug(Constants.QUERY_WITH, q);
@@ -2134,6 +2195,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
     public Collection<List<?>> findHomedEntityRelationships(ICruxDatasource db,
                                                             EntityDetail entity,
                                                             String userId) throws TimeoutException {
+        final String methodName = "findHomedEntityRelationships";
         CruxQuery query = new CruxQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entity.getGUID()));
         SearchProperties matchProperties = new SearchProperties();
@@ -2161,7 +2223,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     null,
                     userId);
         } catch (TypeErrorException e) {
-            log.error("Unexpected type error, when no types are being explicitly used.", e);
+            logProblem(this.getClass().getName(),
+                    methodName,
+                    CruxOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
+                    e,
+                    "unexpected type error when no types are explicitly used",
+                    e.getClass().getName());
         }
         IPersistentMap q = query.getQuery();
         log.debug(Constants.QUERY_WITH, q);
@@ -2224,10 +2291,10 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // Note that we will put the property search criteria first to optimise the search, which can more than double
         // the speed for very broad scenarios (where no type limiter is specified, or only Referenceable)
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, typeGuid, subtypeGuids, namespace);
-        query.addPropertyConditions(matchProperties, namespace, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
+        query.addPropertyConditions(matchProperties, namespace, completeTypeSet, this, luceneConfigured, luceneRegexes);
         query.addTypeCondition(category, typeGuid, subtypeGuids);
-        query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
-        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
+        query.addClassificationConditions(matchClassifications, completeTypeSet, this, luceneConfigured, luceneRegexes);
+        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, this);
         // Note: we will always limit by 'e', even if the TypeDefCategory indicates this is a relationship as these
         // operations only ever return a single type of instance (entity or relationship), and 'e' is therefore used
         // generally to represent either
@@ -2262,13 +2329,13 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // the speed for very broad scenarios (where no type limiter is specified, or only Referenceable)
         Set<String> completeTypeSet = getCompleteSetOfTypeNamesForSearch(userId, typeGuid, null, namespace);
         if (luceneConfigured) {
-            query.addConditions(TextConditionBuilder.buildWildcardLuceneCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, luceneRegexes));
+            query.addConditions(TextConditionBuilder.buildWildcardLuceneCondition(searchCriteria, this, completeTypeSet, namespace, luceneRegexes));
         } else {
-            query.addConditions(TextConditionBuilder.buildWildcardTextCondition(searchCriteria, repositoryHelper, repositoryName, completeTypeSet, namespace, false, luceneRegexes));
+            query.addConditions(TextConditionBuilder.buildWildcardTextCondition(searchCriteria, this, completeTypeSet, namespace, false, luceneRegexes));
         }
         query.addTypeCondition(category, typeGuid, null);
-        query.addClassificationConditions(matchClassifications, completeTypeSet, repositoryHelper, repositoryName, luceneConfigured, luceneRegexes);
-        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, repositoryHelper, repositoryName);
+        query.addClassificationConditions(matchClassifications, completeTypeSet, this, luceneConfigured, luceneRegexes);
+        query.addSequencing(sequencingOrder, sequencingProperty, namespace, completeTypeSet, this);
         // Note: we will always limit by 'e', even if the TypeDefCategory indicates this is a relationship as these
         // operations only ever return a single type of instance (entity or relationship), and 'e' is therefore used
         // generally to represent either
@@ -2315,7 +2382,12 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                             }
                         }
                     } catch (InvalidParameterException | RepositoryErrorException | UserNotAuthorizedException e) {
-                        log.error("Unable to retrieve all relationship typedefs.", e);
+                        logProblem(this.getClass().getName(),
+                                methodName,
+                                CruxOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
+                                e,
+                                "unable to retrieve relationship typedefs",
+                                e.getClass().getName());
                     }
                 } else {
                     // Otherwise we need all entity types

@@ -98,7 +98,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         try {
             summary = cruxRepositoryConnector.getEntity(guid, null, true);
         } catch (EntityProxyOnlyException e) {
-            log.error("Caught exception that should never be thrown given 'true' on acceptProxies.", e);
+            cruxRepositoryConnector.logProblem(this.getClass().getName(),
+                    methodName,
+                    CruxOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
+                    e,
+                    "exception raised for proxy despite allowing proxies",
+                    e.getClass().getName());
         }
         repositoryValidator.validateEntityFromStore(repositoryName, guid, summary, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, summary, methodName);
@@ -1893,8 +1898,12 @@ public class CruxOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         try {
             retrievedEntity = cruxRepositoryConnector.getEntity(entityGUID, null, true);
         } catch (EntityProxyOnlyException e) {
-            // Should never reach this point
-            log.warn("Received an EntityProxyOnlyException despite allowing proxies.", e);
+            cruxRepositoryConnector.logProblem(this.getClass().getName(),
+                    methodName,
+                    CruxOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
+                    e,
+                    "exception raised for proxy despite allowing proxies",
+                    e.getClass().getName());
         }
 
         List<Classification> homeClassifications = new ArrayList<>();

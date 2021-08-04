@@ -41,7 +41,7 @@ public class ArrayPropertyValueMappingTest {
             InstancePropertyValue ipv = properties.getPropertyValue("property");
             apv.setArrayValue(i, ipv);
         }
-        List<Object> comparison = ArrayPropertyValueMapping.getArrayPropertyValueForComparison(apv);
+        List<Object> comparison = ArrayPropertyValueMapping.getArrayPropertyValueForComparison(connector, apv);
         assertEquals(comparison, values, "Array property value is expected to match the original List after conversion.");
 
     }
@@ -49,7 +49,7 @@ public class ArrayPropertyValueMappingTest {
     @Test
     void testEmpty() {
         ArrayPropertyValue apv = new ArrayPropertyValue();
-        List<Object> comparison = ArrayPropertyValueMapping.getArrayPropertyValueForComparison(apv);
+        List<Object> comparison = ArrayPropertyValueMapping.getArrayPropertyValueForComparison(connector, apv);
         assertNull(comparison, "Empty array property value is expected to be null after conversion.");
     }
 

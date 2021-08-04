@@ -3,15 +3,14 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.*;
+import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -19,8 +18,6 @@ import java.util.*;
  * Captures the structure of a query against Crux.
  */
 public class CruxQuery {
-
-    private static final Logger log = LoggerFactory.getLogger(CruxQuery.class);
 
     // Variable names (for sorting)
     public static final Symbol DOC_ID = Symbol.intern("e");
@@ -145,16 +142,14 @@ public class CruxQuery {
      * @param searchProperties to translate
      * @param namespace by which to qualify properties
      * @param typeNames of all of the types we are including in the search
-     * @param repositoryHelper through which we can lookup type information and properties
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      */
     public void addPropertyConditions(SearchProperties searchProperties,
                                       String namespace,
                                       Set<String> typeNames,
-                                      OMRSRepositoryHelper repositoryHelper,
-                                      String repositoryName,
+                                      CruxOMRSRepositoryConnector cruxConnector,
                                       boolean luceneEnabled,
                                       boolean luceneRegexes) {
         List<IPersistentCollection> cruxConditions = ConditionBuilder.buildPropertyConditions(
@@ -162,8 +157,7 @@ public class CruxQuery {
                 namespace,
                 false,
                 typeNames,
-                repositoryHelper,
-                repositoryName,
+                cruxConnector,
                 luceneEnabled,
                 luceneRegexes
         );
@@ -174,22 +168,19 @@ public class CruxQuery {
      * Retrieve the set of conditions appropriate to Crux for the provided Egeria conditions.
      * @param searchClassifications to translate
      * @param typeNames of all of the types we are including in the search
-     * @param repositoryHelper through which we can lookup type information and properties
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      */
     public void addClassificationConditions(SearchClassifications searchClassifications,
                                             Set<String> typeNames,
-                                            OMRSRepositoryHelper repositoryHelper,
-                                            String repositoryName,
+                                            CruxOMRSRepositoryConnector cruxConnector,
                                             boolean luceneEnabled,
                                             boolean luceneRegexes) {
         List<IPersistentCollection> cruxConditions = getClassificationConditions(
                 searchClassifications,
                 typeNames,
-                repositoryHelper,
-                repositoryName,
+                cruxConnector,
                 luceneEnabled,
                 luceneRegexes
         );
@@ -200,16 +191,14 @@ public class CruxQuery {
      * Retrieve a set of translated Crux conditions appropriate to the provided Egeria conditions.
      * @param searchClassifications to translate
      * @param typeNames of all of the types we are including in the search
-     * @param repositoryHelper through which we can lookup type information and properties
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>}
      */
     protected List<IPersistentCollection> getClassificationConditions(SearchClassifications searchClassifications,
                                                                       Set<String> typeNames,
-                                                                      OMRSRepositoryHelper repositoryHelper,
-                                                                      String repositoryName,
+                                                                      CruxOMRSRepositoryConnector cruxConnector,
                                                                       boolean luceneEnabled,
                                                                       boolean luceneRegexes) {
         if (searchClassifications != null) {
@@ -230,8 +219,7 @@ public class CruxQuery {
                             qualifiedNamespace,
                             matchCriteria.equals(MatchCriteria.ANY),
                             typeNames,
-                            repositoryHelper,
-                            repositoryName,
+                            cruxConnector,
                             luceneEnabled,
                             luceneRegexes
                     );
@@ -325,20 +313,19 @@ public class CruxQuery {
      * @param sequencingProperty by which to sequence the results (required if sorting by property, otherwise ignored)
      * @param namespace by which to qualify the sorting property (required if sorting by property, otherwise ignored)
      * @param typeNames of all of the types we are including in the search (required if sorting by property, otherwise ignored)
-     * @param repositoryHelper through which we can lookup type information and properties (required if sorting by property, otherwise ignored)
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      */
     public void addSequencing(SequencingOrder sequencingOrder,
                               String sequencingProperty,
                               String namespace,
                               Set<String> typeNames,
-                              OMRSRepositoryHelper repositoryHelper,
-                              String repositoryName) {
+                              CruxOMRSRepositoryConnector cruxConnector) {
+        final String methodName = "addSequencing";
         Set<Keyword> qualifiedSortProperties = null;
         if (sequencingProperty != null) {
             // Translate the provided sequencingProperty name into all of its possible appropriate property name
             // references (depends on the type limiting used for the search)
-            qualifiedSortProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName, repositoryHelper, sequencingProperty, namespace, typeNames, null);
+            qualifiedSortProperties = InstancePropertyValueMapping.getKeywordsForProperty(cruxConnector, sequencingProperty, namespace, typeNames, null);
         }
         if (sequencingOrder == null) {
             // Default to sorting by GUID, if no sorting is defined (for consistent result ordering, paging, etc)
@@ -370,14 +357,24 @@ public class CruxQuery {
                 break;
             case PROPERTY_ASCENDING:
                 if (qualifiedSortProperties == null || qualifiedSortProperties.isEmpty()) {
-                    log.warn("Requested sort by property, but no valid property was provided ({}) given type limiters ({}) -- skipping sort.", sequencingProperty, typeNames);
+                    cruxConnector.logProblem(this.getClass().getName(),
+                            methodName,
+                            CruxOMRSAuditCode.NO_SORT_PROPERTY,
+                            null,
+                            sequencingProperty,
+                            typeNames == null ? "<null>" : typeNames.toString());
                 } else {
                     addPropertyBasedSorting(qualifiedSortProperties, SORT_ASCENDING);
                 }
                 break;
             case PROPERTY_DESCENDING:
                 if (qualifiedSortProperties == null || qualifiedSortProperties.isEmpty()) {
-                    log.warn("Requested sort by property, but no valid property was provided ({}) given type limiters ({}) -- skipping sort.", sequencingProperty, typeNames);
+                    cruxConnector.logProblem(this.getClass().getName(),
+                            methodName,
+                            CruxOMRSAuditCode.NO_SORT_PROPERTY,
+                            null,
+                            sequencingProperty,
+                            typeNames == null ? "<null>" : typeNames.toString());
                 } else {
                     addPropertyBasedSorting(qualifiedSortProperties, SORT_DESCENDING);
                 }

@@ -39,7 +39,7 @@ public class InstancePropertyValueMappingTest {
                     this.getClass().getName());
 
             InstancePropertyValue ipv = properties.getPropertyValue(propertyName);
-            Object comparison = InstancePropertyValueMapping.getValueForComparison(ipv);
+            Object comparison = InstancePropertyValueMapping.getValueForComparison(connector, ipv);
 
             assertTrue(comparison instanceof Date);
             assertEquals(comparison, now, "Dates are expected to be identical after conversion.");
@@ -53,7 +53,8 @@ public class InstancePropertyValueMappingTest {
                     namespace,
                     ipv);
 
-            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(builder.build(),
+            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
+                    builder.build(),
                     namespace,
                     propertyName);
 
@@ -84,7 +85,7 @@ public class InstancePropertyValueMappingTest {
                     this.getClass().getName());
 
             InstancePropertyValue ipv = properties.getPropertyValue(propertyName);
-            Object comparison = InstancePropertyValueMapping.getValueForComparison(ipv);
+            Object comparison = InstancePropertyValueMapping.getValueForComparison(connector, ipv);
 
             assertTrue(comparison instanceof Integer);
             assertEquals(comparison, value, "Enum ordinals are expected to be identical after conversion.");
@@ -98,7 +99,8 @@ public class InstancePropertyValueMappingTest {
                     namespace,
                     ipv);
 
-            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(builder.build(),
+            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
+                    builder.build(),
                     namespace,
                     propertyName);
 
@@ -135,7 +137,7 @@ public class InstancePropertyValueMappingTest {
                 apv.setArrayValue(i, ipv);
             }
 
-            Object comparison = InstancePropertyValueMapping.getValueForComparison(apv);
+            Object comparison = InstancePropertyValueMapping.getValueForComparison(connector, apv);
             assertTrue(comparison instanceof List);
             assertEquals(comparison, values, "Array values are expected to be identical after conversion.");
 
@@ -148,7 +150,8 @@ public class InstancePropertyValueMappingTest {
                     namespace,
                     apv);
 
-            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(builder.build(),
+            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
+                    builder.build(),
                     namespace,
                     propertyName);
 
@@ -185,7 +188,7 @@ public class InstancePropertyValueMappingTest {
                 mpv.setMapValue(key, ipv);
             }
 
-            Object comparison = InstancePropertyValueMapping.getValueForComparison(mpv);
+            Object comparison = InstancePropertyValueMapping.getValueForComparison(connector, mpv);
             assertTrue(comparison instanceof Map);
             assertEquals(comparison, map, "Map values are expected to be identical after conversion.");
 
@@ -198,7 +201,8 @@ public class InstancePropertyValueMappingTest {
                     namespace,
                     mpv);
 
-            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(builder.build(),
+            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
+                    builder.build(),
                     namespace,
                     propertyName);
 
@@ -232,7 +236,7 @@ public class InstancePropertyValueMappingTest {
             }
             spv.setAttributes(properties);
 
-            Object comparison = InstancePropertyValueMapping.getValueForComparison(spv);
+            Object comparison = InstancePropertyValueMapping.getValueForComparison(connector, spv);
             assertTrue(comparison instanceof Map);
             assertEquals(comparison, map, "Struct values are expected to be identical after conversion.");
 
@@ -263,7 +267,8 @@ public class InstancePropertyValueMappingTest {
                     namespace,
                     null);
 
-            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(builder.build(),
+            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
+                    builder.build(),
                     namespace,
                     propertyName);
 

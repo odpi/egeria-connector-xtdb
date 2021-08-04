@@ -3,10 +3,9 @@
 package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.crux.mapping.ClassificationMapping;
-import org.odpi.egeria.connectors.juxt.crux.mapping.EntitySummaryMapping;
-import org.odpi.egeria.connectors.juxt.crux.mapping.InstanceAuditHeaderMapping;
-import org.odpi.egeria.connectors.juxt.crux.mapping.InstancePropertyValueMapping;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
+import org.odpi.egeria.connectors.juxt.crux.mapping.*;
+import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyCategory;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
@@ -15,9 +14,6 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.PropertyCondition;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchProperties;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.PrimitiveDefCategory;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,8 +22,6 @@ import java.util.stream.Collectors;
  * Methods for building up complex conditions used by the queries.
  */
 public class ConditionBuilder {
-
-    private static final Logger log = LoggerFactory.getLogger(ConditionBuilder.class);
 
     // Predicates (for comparisons)
     public static final Symbol OR_OPERATOR = Symbol.intern("or");
@@ -70,8 +64,7 @@ public class ConditionBuilder {
      * @param namespace by which to qualify properties
      * @param orNested true iff searchProperties is a set of conditions nested inside an OR (match criteria = ANY)
      * @param typeNames of all of the types we are including in the search
-     * @param repositoryHelper through which we can lookup type information and properties
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>}
@@ -80,10 +73,10 @@ public class ConditionBuilder {
                                                                       String namespace,
                                                                       boolean orNested,
                                                                       Set<String> typeNames,
-                                                                      OMRSRepositoryHelper repositoryHelper,
-                                                                      String repositoryName,
+                                                                      CruxOMRSRepositoryConnector cruxConnector,
                                                                       boolean luceneEnabled,
                                                                       boolean luceneRegexes) {
+        final String methodName = "buildPropertyConditions";
         if (searchProperties != null) {
             List<PropertyCondition> propertyConditions = searchProperties.getConditions();
             MatchCriteria matchCriteria = searchProperties.getMatchCriteria();
@@ -95,8 +88,7 @@ public class ConditionBuilder {
                             condition,
                             namespace,
                             typeNames,
-                            repositoryHelper,
-                            repositoryName,
+                            cruxConnector,
                             luceneEnabled,
                             luceneRegexes
                     );
@@ -163,7 +155,11 @@ public class ConditionBuilder {
                         }
                         break;
                     default:
-                        log.warn("Unmapped match criteria: {}", matchCriteria);
+                        cruxConnector.logProblem(ConditionBuilder.class.getName(),
+                                methodName,
+                                CruxOMRSAuditCode.UNMAPPED_MATCH_CRITERIA,
+                            null,
+                            matchCriteria.name());
                         break;
                 }
                 if (!predicatedConditions.isEmpty()) {
@@ -182,7 +178,7 @@ public class ConditionBuilder {
      * @param comparator comparison to carry out
      * @param value against which to compare
      * @param variable to which to compare
-     * @param repositoryHelper through which we can introspect regular expressions
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} of the conditions
@@ -191,29 +187,30 @@ public class ConditionBuilder {
                                                                     PropertyComparisonOperator comparator,
                                                                     InstancePropertyValue value,
                                                                     Symbol variable,
-                                                                    OMRSRepositoryHelper repositoryHelper,
+                                                                    CruxOMRSRepositoryConnector cruxConnector,
                                                                     boolean luceneEnabled,
                                                                     boolean luceneRegexes) {
 
+        final String methodName = "buildConditionForPropertyRef";
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
         List<IPersistentCollection> clauseConditions = new ArrayList<>();
 
         if (comparator.equals(PropertyComparisonOperator.EQ)) {
             // For equality we can compare directly to the value and short-circuit any additional processing
-            propertyConditions.add(getEqualsConditions(propertyRef, value));
+            propertyConditions.add(getEqualsConditions(cruxConnector, propertyRef, value));
             return propertyConditions;
         } else {
-            Symbol predicate = getPredicateForOperator(comparator);
+            Symbol predicate = getPredicateForOperator(cruxConnector, comparator);
             if (REGEX_OPERATOR.equals(predicate)) {
                 // This method already handles wrapping, if needed, so we can return its results directly
-                return TextConditionBuilder.buildRegexConditions(propertyRef, value, variable, repositoryHelper, luceneEnabled, luceneRegexes);
+                return TextConditionBuilder.buildRegexConditions(propertyRef, value, variable, cruxConnector, luceneEnabled, luceneRegexes);
             } else if (IN_OPERATOR.equals(predicate)) {
                 // For the IN comparison, we need an extra condition to setup the set to compare against
                 // [(hash-set 1 2 3) las]    - needed for lists, to ensure the list is a unique set of keys to check against
                 Symbol listAsSet = Symbol.intern("las");
                 List<Object> forceSet = new ArrayList<>();
                 forceSet.add(SET_OPERATOR);
-                Object toCompare = InstancePropertyValueMapping.getValueForComparison(value);
+                Object toCompare = InstancePropertyValueMapping.getValueForComparison(cruxConnector, value);
                 if (toCompare instanceof List) {
                     // add all elements of the array to the list
                     forceSet.addAll((List<?>)toCompare);
@@ -239,11 +236,15 @@ public class ConditionBuilder {
                 // The null predicates only expect a single argument, so do not bother attempting to add
                 // this third argument if the predicate is null-related
                 if (!predicate.equals(IS_NULL_OPERATOR) && !predicate.equals(NOT_NULL_OPERATOR)) {
-                    predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(value));
+                    predicateComparison.add(InstancePropertyValueMapping.getValueForComparison(cruxConnector, value));
                 }
                 clauseConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             } else {
-                log.error("Unable to add condition for unknown comparison operator: {}", comparator);
+                cruxConnector.logProblem(ConditionBuilder.class.getName(),
+                        methodName,
+                        CruxOMRSAuditCode.UNKNOWN_COMPARISON_OPERATOR,
+                        null,
+                        comparator.name());
                 return propertyConditions;
             }
 
@@ -265,20 +266,19 @@ public class ConditionBuilder {
      * @param singleCondition to translate (should not contain nested condition)
      * @param namespace by which to qualify the properties in the condition
      * @param typeNames of all of the types we are including in the search
-     * @param repositoryHelper through which we can lookup type information and properties
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} giving the appropriate Crux query condition(s)
-     * @see #buildPropertyConditions(SearchProperties, String, boolean, Set, OMRSRepositoryHelper, String, boolean, boolean)
+     * @see #buildPropertyConditions(SearchProperties, String, boolean, Set, CruxOMRSRepositoryConnector, boolean, boolean)
      */
     private static List<IPersistentCollection> getSinglePropertyCondition(PropertyCondition singleCondition,
                                                                           String namespace,
                                                                           Set<String> typeNames,
-                                                                          OMRSRepositoryHelper repositoryHelper,
-                                                                          String repositoryName,
+                                                                          CruxOMRSRepositoryConnector cruxConnector,
                                                                           boolean luceneEnabled,
                                                                           boolean luceneRegexes) {
+        final String methodName = "getSinglePropertyCondition";
         SearchProperties nestedConditions = singleCondition.getNestedConditions();
         if (nestedConditions != null) {
             // If the conditions are nested, simply recurse back on getPropertyConditions
@@ -288,8 +288,7 @@ public class ConditionBuilder {
                     namespace,
                     matchCriteria.equals(MatchCriteria.ANY),
                     typeNames,
-                    repositoryHelper,
-                    repositoryName,
+                    cruxConnector,
                     luceneEnabled,
                     luceneRegexes
             );
@@ -307,7 +306,7 @@ public class ConditionBuilder {
                         comparator,
                         value,
                         Symbol.intern(simpleName),
-                        repositoryHelper,
+                        cruxConnector,
                         luceneEnabled,
                         luceneRegexes
                 );
@@ -329,15 +328,13 @@ public class ConditionBuilder {
                     Set<String> classificationTypes = new HashSet<>();
                     String classificationTypeName = ClassificationMapping.getClassificationNameFromNamespace(EntitySummaryMapping.N_CLASSIFICATIONS, namespace);
                     classificationTypes.add(classificationTypeName);
-                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
-                            repositoryHelper,
+                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(cruxConnector,
                             simpleName,
                             classificationNamespace,
                             classificationTypes,
                             value);
                 } else {
-                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
-                            repositoryHelper,
+                    qualifiedSearchProperties = InstancePropertyValueMapping.getKeywordsForProperty(cruxConnector,
                             simpleName,
                             namespace,
                             typeNames,
@@ -346,7 +343,12 @@ public class ConditionBuilder {
                 if (qualifiedSearchProperties.isEmpty()) {
                     // If there are NO valid combinations of this property given the type limiters used for the search,
                     // then we should ensure that no results are returned whatsoever by the query.
-                    log.warn("The provided property '{}' (as {}) did not match any of the type definition restrictions: {} -- forcing no results.", simpleName, value, typeNames);
+                    cruxConnector.logProblem(ConditionBuilder.class.getName(),
+                            methodName,
+                            CruxOMRSAuditCode.INVALID_PROPERTY,
+                            null,
+                            simpleName,
+                            typeNames == null ? "<null>" : typeNames.toString());
                     allPropertyConditions = new ArrayList<>(getNoResultsCondition());
                 } else if (qualifiedSearchProperties.size() == 1) {
                     // If there is only a SINGLE valid property variation, then we can do a direct term-based lookup
@@ -359,7 +361,7 @@ public class ConditionBuilder {
                                 comparator,
                                 value,
                                 Symbol.intern(simpleName),
-                                repositoryHelper,
+                                cruxConnector,
                                 luceneEnabled,
                                 luceneRegexes
                         );
@@ -376,7 +378,7 @@ public class ConditionBuilder {
                                 simpleName,
                                 comparator,
                                 value,
-                                repositoryHelper,
+                                cruxConnector,
                                 luceneRegexes
                         );
                     }
@@ -395,7 +397,7 @@ public class ConditionBuilder {
                             comparator,
                             value,
                             qualifiedSearchProperties,
-                            repositoryHelper,
+                            cruxConnector,
                             luceneEnabled,
                             luceneRegexes
                     );
@@ -439,7 +441,7 @@ public class ConditionBuilder {
      * @param comparator used to compare the property's value
      * @param value of the property
      * @param qualifiedSearchProperties the set of unique type-qualified property names as keywords
-     * @param repositoryHelper through which we can lookup type information and properties
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<List<IPersistentCollection>>} giving the appropriate Crux query condition(s)
@@ -448,7 +450,7 @@ public class ConditionBuilder {
                                                                            PropertyComparisonOperator comparator,
                                                                            InstancePropertyValue value,
                                                                            Set<Keyword> qualifiedSearchProperties,
-                                                                           OMRSRepositoryHelper repositoryHelper,
+                                                                           CruxOMRSRepositoryConnector cruxConnector,
                                                                            boolean luceneEnabled,
                                                                            boolean luceneRegexes) {
 
@@ -467,7 +469,7 @@ public class ConditionBuilder {
                     comparator,
                     value,
                     symbolForVariable,
-                    repositoryHelper,
+                    cruxConnector,
                     luceneEnabled,
                     luceneRegexes
             );
@@ -480,23 +482,30 @@ public class ConditionBuilder {
 
     /**
      * Retrieve conditions to match where the provided property's value equals the provided value.
+     * @param cruxConnector connectivity to the repository
      * @param propertyRef whose value should be compared
      * @param value to compare against
      * @return IPersistentCollection giving the conditions
      */
-    private static IPersistentCollection getEqualsConditions(Keyword propertyRef, InstancePropertyValue value) {
-        return PersistentVector.create(CruxQuery.DOC_ID, propertyRef, InstancePropertyValueMapping.getValueForComparison(value));
+    private static IPersistentCollection getEqualsConditions(CruxOMRSRepositoryConnector cruxConnector, Keyword propertyRef, InstancePropertyValue value) {
+        return PersistentVector.create(CruxQuery.DOC_ID, propertyRef, InstancePropertyValueMapping.getValueForComparison(cruxConnector, value));
     }
 
     /**
      * Retrieve the Crux predicate for the provided comparison operation.
+     * @param cruxConnector connectivity to the repository
      * @param comparator to translate into a Crux predicate
      * @return Symbol giving the appropriate Crux predicate
      */
-    private static Symbol getPredicateForOperator(PropertyComparisonOperator comparator) {
+    private static Symbol getPredicateForOperator(CruxOMRSRepositoryConnector cruxConnector, PropertyComparisonOperator comparator) {
+        final String methodName = "getPredicateForOperator";
         Symbol toUse = PCO_TO_SYMBOL.getOrDefault(comparator, null);
         if (toUse == null) {
-            log.warn("Unmapped comparison operator: {}", comparator);
+            cruxConnector.logProblem(ConditionBuilder.class.getName(),
+                    methodName,
+                    CruxOMRSAuditCode.UNKNOWN_COMPARISON_OPERATOR,
+                    null,
+                    comparator.name());
         }
         return toUse;
     }

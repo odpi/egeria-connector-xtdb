@@ -66,11 +66,11 @@ public class ClassificationMappingTest {
 
             String namespaceForClassification = ClassificationMapping.getNamespaceForClassification(EntitySummaryMapping.N_CLASSIFICATIONS, classificationName);
             String propertiesNamespace = ClassificationMapping.getNamespaceForProperties(namespaceForClassification);
-            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(doc, propertiesNamespace, propertyName);
+            InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector, doc, propertiesNamespace, propertyName);
             assertNotNull(retrieved);
             assertEquals(retrieved, properties.getPropertyValue(propertyName));
 
-            candidate = InstancePropertyValueMapping.getValueForComparison(retrieved);
+            candidate = InstancePropertyValueMapping.getValueForComparison(connector, retrieved);
             assertTrue(candidate instanceof String);
             assertEquals(candidate, propertyValue);
 
@@ -85,7 +85,7 @@ public class ClassificationMappingTest {
 
     @Test
     void testClassificationOrigin() {
-        assertNull(ClassificationMapping.getClassificationOriginFromSymbolicName("non-existent"), "Expected a non-existent classification origin to return null.");
+        assertNull(ClassificationMapping.getClassificationOriginFromSymbolicName(connector, "non-existent"), "Expected a non-existent classification origin to return null.");
     }
 
 }

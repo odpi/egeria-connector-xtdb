@@ -2,7 +2,6 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.auditlog;
 
-import org.odpi.egeria.connectors.juxt.crux.mapping.Constants;
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.AuditLogMessageDefinition;
 import org.odpi.openmetadata.frameworks.auditlog.messagesets.AuditLogMessageSet;
 import org.odpi.openmetadata.repositoryservices.auditlog.OMRSAuditLogRecordSeverity;
@@ -91,6 +90,128 @@ public enum CruxOMRSAuditCode implements AuditLogMessageSet {
             "Unable to read the configuration for the Crux repository node due to {0}.",
             "The local server was unable to parse the provided configuration for the Crux server.",
             "Investigate the logs for additional information, and correct the configurationProperties sent to the connector."),
+    FAILED_RETRIEVAL("OMRS-CRUX-REPOSITORY-0011",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "Unable to retrieve an instance of kind {0} with GUID {1}: {2}.",
+            "The local server was unable to retrieve details of the specified instance and has therefore returned null.",
+            "Use the provided instance details to manually search your Crux repository for the information to confirm " +
+                    "that it is not present. If it is, please raise an issue on GitHub with any further details you can provide. If not, " +
+                    "investigate why this retrieval was attempted and correct the calling code to not attempt to retrieve non-existent " +
+                    "information."),
+    UNMAPPED_TYPE("OMRS-CRUX-REPOSITORY-0012",
+            OMRSAuditLogRecordSeverity.TYPES,
+            "The specified type {0} is not mapped in this repository.",
+            "The local server is unable to store or retrieve information of the specified type.",
+            "Typically this should only occur types that are explicitly unknown in Egeria; however, if you see " +
+                    "this message for a type that you need to use please raise an issue on GitHub with any further information " +
+                    "to see whether mappings of this type can be added to the connector."),
+    DUPLICATE_PROPERTIES("OMRS-CRUX-REPOSITORY-0013",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "Found more than one property in the instanceType {0} with the name {1}: {2}",
+            "The local server is unable to uniquely determine the property to use for persistence, and will use the last one in the list given.",
+            "This message indicates that there is a uniqueness issue in either the Egeria types or in the mapping " +
+                    "to those types within the Crux repository. If you see this message, please raise a GitHub issue so that the " +
+                    "duplication can be investigated and resolved in the connector / Egeria codebase."),
+    UNMAPPED_MATCH_CRITERIA("OMRS-CRUX-REPOSITORY-0014",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "The specified search criteria for matching is not mapped: {0}.",
+            "The local server is unable to use the provided matching criteria as part of its search operations.",
+            "This message indicates that there is some new match criteria in Egeria which this connector does not yet " +
+                    "support for searching. If you see this message, please raise a GitHub issue so that the " +
+                    "match criteria can be investigated and resolved in the connector."),
+    UNKNOWN_COMPARISON_OPERATOR("OMRS-CRUX-REPOSITORY-0015",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "The specified comparison operator is not mapped: {0}.",
+            "The local server is unable to use the provided comparison operator as part of its search operations.",
+            "This message indicates that there is some new comparison operator in Egeria which this connector does not yet " +
+                    "support for searching. If you see this message, please raise a GitHub issue so that the " +
+                    "comparison operator can be investigated and resolved in the connector."),
+    INVALID_PROPERTY("OMRS-CRUX-REPOSITORY-0016",
+            OMRSAuditLogRecordSeverity.INFO,
+            "A search was requested for property {0} which does not match any of the type restrictions: {1}.",
+            "The requested search is for a property which does not exist on any of the types for which the search is restricted, and therefore no results will be returned.",
+            "This message is provided for informational purposes, should a user expect some results to their search " +
+                    "but find that there are none. Correct the calling code to either fix the property being searched, or " +
+                    "change the type restrictions such that some type that actually has this property is included in the search."),
+    INVALID_STRING_COMPARISON("OMRS-CRUX-REPOSITORY-0017",
+            OMRSAuditLogRecordSeverity.INFO,
+            "A search was requested for property {0} using an invalid comparison operator: {1}.",
+            "The requested search is for a string property, which only supports a limited set of comparison operators and specifically does not support the comparison requested.",
+            "This message is provided for informational purposes, should a user expect some particular results to their search " +
+                    "but find that there are either none or more than they expected. Correct the calling code to either fix the property being searched, or " +
+                    "change the comparison operator to one that is valid for string properties. Alternatively, raise a GitHub issue " +
+                    "explaining the comparison operator that is not supported and your expected behavior of this operator " +
+                    "when comparing strings to see if this could be added to the connector."),
+    SERIALIZATION_FAILURE("OMRS-CRUX-REPOSITORY-0018",
+            OMRSAuditLogRecordSeverity.EXCEPTION,
+            "Unable to serialize a value for {0} in type {1} due to: {2}.",
+            "The local server was unable to serialize a value into JSON for persistence.",
+            "This exception and stacktrace indicate the reason why a value could not be serialized into JSON " +
+                    "for persistence. You will need to manually investigate the cause of the error and determine how to " +
+                    "correct the calling code to ensure values are JSON-encode-able. Should the calling code be part of " +
+                    "the connector itself, please raise an issue on GitHub with the details of the error for guidance and " +
+                    "assistance."),
+    DESERIALIZATION_FAILURE("OMRS-CRUX-REPOSITORY-0019",
+            OMRSAuditLogRecordSeverity.EXCEPTION,
+            "Unable to deserialize a value for {0} in type {1} into {2} due to: {3}.",
+            "The local server was unable to deserialize a value from persisted JSON form.",
+            "This exception and stacktrace indicate the reason why a value could not be deserialized from JSON " +
+                    "persistence. You will need to manually investigate the cause of the error and determine how to " +
+                    "correct the calling code to ensure values are JSON-decode-able. Should the calling code be part of " +
+                    "the connector itself, please raise an issue on GitHub with the details of the error for guidance and " +
+                    "assistance."),
+    UNEXPECTED_RUNTIME_ERROR("OMRS-CRUX-REPOSITORY-0020",
+            OMRSAuditLogRecordSeverity.EXCEPTION,
+            "An unexpected runtime error occurred caused by {1}: {0}",
+            "The system was unable to complete processing of a given action due to an unexpected problem.",
+            "Check the system logs for the full stacktrace of the given exception and diagnose or report the problem."),
+    MAPPING_FAILURE("OMRS-CRUX-REPOSITORY-0021",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "Unable to map the retrieved {0} instance with Crux reference {1} into an Egeria object: {2}.",
+            "A search result was found matching the criteria but the system is unable to map it into an Egeria object.",
+            "This message is provided for informational purposes, should a user expect some particular results to their search " +
+                    "but find that there are either none or less than they expected. You will need to manually retrieve the " +
+                    "Crux document (by the provided reference) to diagnose why it cannot be mapped into an Egeria object. " +
+                    "Please raise an issue on GitHub with the details of the error for guidance and assistance."),
+    NON_EXISTENT_ENUM("OMRS-CRUX-REPOSITORY-0022",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "The requested {0} enumeration with ordinal or symbolic name {1} does not exist.",
+            "An enumerated value was requested using an ordinal or symbolic name that does not actually exist, so null will be returned.",
+            "Investigate the calling code to determine why an invalid (non-existent) enumeration value is being " +
+                    "requested, and correct accordingly. Should the calling code be part of the connector itself, please " +
+                    "raise an issue on GitHub with the details of the error so that it can be investigated and resolved in " +
+                    "the connector."),
+    UNMAPPED_PROPERTY("OMRS-CRUX-REPOSITORY-0023",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "Unable to map the property {0} as part of {1}.",
+            "A property was found that cannot be mapped as part of the specified type.",
+            "Please raise an issue on GitHub with the details of the error so that the mapping can be investigated " +
+                    "and resolved in the connector."),
+    NON_INSTANCE_RETRIEVAL("OMRS-CRUX-REPOSITORY-0024",
+            OMRSAuditLogRecordSeverity.ERROR,
+            "Unable to retrieve by GUID when the instance type has no GUID: {0}.",
+            "An attempt was made to retrieve an instance type which has no GUID, so null will be returned.",
+            "Investigate the calling code to determine why an instance retrieval is being attempted for a type " +
+                    "that has no GUID by which it can be retrieved. Should the calling code be part of the connector itself, " +
+                    "please raise an issue on GitHub with the details of the error so that the mapping can be investigated " +
+                    "and resolved in the connector."),
+    NO_REGEX("OMRS-CRUX-REPOSITORY-0025",
+            OMRSAuditLogRecordSeverity.INFO,
+            "A non-string value was provided for a regex search: {0}.",
+            "An attempt was made to search for strings that match a non-string regex criteria, so the condition will be ignored.",
+            "This message is provided for informational purposes, should a user expect some particular results to their search " +
+                    "but find that there are either none or more than they expected. Correct the calling code to either fix the criteria being searched, or " +
+                    "the manner in which the search is being run (to not match string properties but others). Alternatively, raise a GitHub issue " +
+                    "explaining the non-string search criteria and your expected behavior of this when comparing strings as if " +
+                    "the provided criteria were a regular expression to match against."),
+    NO_SORT_PROPERTY("OMRS-CRUX-REPOSITORY-0026",
+            OMRSAuditLogRecordSeverity.INFO,
+            "Cannot sort by property {0} on types: {1}.",
+            "An attempt was made to sort search results by property, but no valid property name by which to do the sorting was provided given the type restrictions.",
+            "This message is provided for informational purposes, should a user expect some particular sorting of results to their search " +
+                    "but find that they are not sorted as expected. Correct the calling code to either provide a valid name of the property " +
+                    "by which results should be sorted, change the type restrictions so that the property is valid for those types, or change " +
+                    "the sorting approach to one that is not based on properties."),
     ;
 
     private final String logMessageId;

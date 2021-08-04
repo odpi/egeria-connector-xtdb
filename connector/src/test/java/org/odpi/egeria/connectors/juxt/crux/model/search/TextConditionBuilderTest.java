@@ -45,8 +45,7 @@ public class TextConditionBuilderTest {
                     regex,
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -58,8 +57,7 @@ public class TextConditionBuilderTest {
             }
 
             List<IPersistentCollection> conditions = TextConditionBuilder.buildWildcardTextCondition(regex,
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
@@ -73,8 +71,7 @@ public class TextConditionBuilderTest {
             propertyName = "displayName";
 
             conditions = TextConditionBuilder.buildWildcardTextCondition(regex,
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
@@ -104,8 +101,7 @@ public class TextConditionBuilderTest {
             assertTrue(piece instanceof IPersistentVector, "Fourth element of list is expected to be a condition.");
             nestedConditions.add((IPersistentVector) piece);
 
-            propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -177,8 +173,7 @@ public class TextConditionBuilderTest {
 
             List<IPersistentCollection> conditions = TextConditionBuilder.buildWildcardLuceneCondition(
                     helper.getExactMatchRegex(base),
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false);
@@ -188,8 +183,7 @@ public class TextConditionBuilderTest {
 
             conditions = TextConditionBuilder.buildWildcardLuceneCondition(
                     helper.getContainsRegex(base),
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     true);
@@ -199,8 +193,7 @@ public class TextConditionBuilderTest {
 
             conditions = TextConditionBuilder.buildWildcardLuceneCondition(
                     helper.getStartsWithRegex(base),
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     true);
@@ -210,8 +203,7 @@ public class TextConditionBuilderTest {
 
             conditions = TextConditionBuilder.buildWildcardLuceneCondition(
                     helper.getEndsWithRegex(base),
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     true);
@@ -221,8 +213,7 @@ public class TextConditionBuilderTest {
 
             conditions = TextConditionBuilder.buildWildcardLuceneCondition(
                     "/" + base + "/",
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     true);
@@ -232,8 +223,7 @@ public class TextConditionBuilderTest {
 
             conditions = TextConditionBuilder.buildWildcardLuceneCondition(
                     base,
-                    helper,
-                    connector.getRepositoryName(),
+                    connector,
                     typeNames,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     true);
@@ -299,7 +289,7 @@ public class TextConditionBuilderTest {
                     propertyName,
                     PropertyComparisonOperator.NEQ,
                     ipv,
-                    helper,
+                    connector,
                     true);
 
             // Expected --> [(not [(wildcard-text-search-cs "name") [[e v qualifiedName _]]] [(str qualifiedName) sv_qualifiedName] [(clojure.string/ends-with? sv_qualifiedName ".qualifiedName.value")])]
@@ -324,7 +314,7 @@ public class TextConditionBuilderTest {
                     propertyName,
                     PropertyComparisonOperator.LIKE,
                     ipv,
-                    helper,
+                    connector,
                     true);
 
             // Expected --> [[(wildcard-text-search-cs "/name/") [[e v qualifiedName _]]], [(str qualifiedName) sv_qualifiedName], [(clojure.string/ends-with? sv_qualifiedName ".qualifiedName.value")]]
@@ -417,8 +407,7 @@ public class TextConditionBuilderTest {
                     helper.getExactMatchRegex(base),
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -433,7 +422,7 @@ public class TextConditionBuilderTest {
                     propertyKeyword,
                     ipv,
                     variable,
-                    helper,
+                    connector,
                     false,
                     true);
 
@@ -459,7 +448,7 @@ public class TextConditionBuilderTest {
                     propertyKeyword,
                     ipv,
                     variable,
-                    helper,
+                    connector,
                     false,
                     true);
 
@@ -507,7 +496,7 @@ public class TextConditionBuilderTest {
                     propertyKeyword,
                     ipv,
                     variable,
-                    helper,
+                    connector,
                     false,
                     true);
 
@@ -555,7 +544,7 @@ public class TextConditionBuilderTest {
                     propertyKeyword,
                     ipv,
                     variable,
-                    helper,
+                    connector,
                     false,
                     false);
 
@@ -604,7 +593,7 @@ public class TextConditionBuilderTest {
                     propertyKeyword,
                     ipv,
                     variable,
-                    helper,
+                    connector,
                     false,
                     false);
 
@@ -653,7 +642,7 @@ public class TextConditionBuilderTest {
                     propertyKeyword,
                     ipv,
                     variable,
-                    helper,
+                    connector,
                     true,
                     true);
 
@@ -690,7 +679,5 @@ public class TextConditionBuilderTest {
             assertNull(e);
         }
     }
-
-
 
 }

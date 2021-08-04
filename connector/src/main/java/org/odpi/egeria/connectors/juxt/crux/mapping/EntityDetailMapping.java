@@ -69,7 +69,7 @@ public class EntityDetailMapping extends EntitySummaryMapping {
     @Override
     protected void fromDoc() {
         super.fromDoc();
-        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, ENTITY_PROPERTIES_NS);
+        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(cruxConnector, instanceHeader.getType(), cruxDoc, ENTITY_PROPERTIES_NS);
         ((EntityDetail) instanceHeader).setProperties(ip);
     }
 

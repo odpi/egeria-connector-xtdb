@@ -27,12 +27,14 @@ public class InstancePropertiesMapping {
      * Retrieve the instance property values from the provided Crux document.
      * NOTE: whether empty or null, the instance properties will always be returned back from the Crux representation
      * as an empty set of properties (not null).
+     * @param cruxConnector connectivity to the repository
      * @param type of the Egeria instance from which we are retrieving the values
      * @param cruxDoc from which to retrieve the values
      * @param namespace by which the properties to retrieve are qualified
      * @return InstanceProperties
      */
-    public static InstanceProperties getFromDoc(InstanceType type,
+    public static InstanceProperties getFromDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                                InstanceType type,
                                                 CruxDocument cruxDoc,
                                                 String namespace) {
 
@@ -42,7 +44,7 @@ public class InstancePropertiesMapping {
         if (validProperties != null && !validProperties.isEmpty()) {
             Map<String, InstancePropertyValue> values = new TreeMap<>();
             for (String propertyName : validProperties) {
-                InstancePropertyValue value = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(cruxDoc, namespace, propertyName);
+                InstancePropertyValue value = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(cruxConnector, cruxDoc, namespace, propertyName);
                 if (value != null) {
                     values.put(propertyName, value);
                 }

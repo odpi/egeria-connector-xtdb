@@ -3,11 +3,10 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import crux.api.CruxDocument;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceHeader;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,7 +18,7 @@ import java.util.Set;
  */
 public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(InstanceHeaderMapping.class);
+    private static final String INSTANCE_HEADER = "InstanceHeader";
 
     private static final String INSTANCE_URL = "instanceURL";
     private static final String RE_IDENTIFIED_FROM_GUID = "reIdentifiedFromGUID";
@@ -74,7 +73,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
      * @return CruxDocument.Builder from which to build the document
      */
     protected CruxDocument.Builder toDoc() {
-        CruxDocument.Builder builder = CruxDocument.builder(getGuidReference(instanceHeader));
+        CruxDocument.Builder builder = CruxDocument.builder(getGuidReference(cruxConnector, instanceHeader));
         super.buildDoc(builder, instanceHeader);
         builder.put(INSTANCE_URL, instanceHeader.getInstanceURL());
         builder.put(RE_IDENTIFIED_FROM_GUID, instanceHeader.getReIdentifiedFromGUID());
@@ -86,6 +85,7 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
      */
     protected void fromDoc() {
         super.fromDoc(instanceHeader, cruxDoc);
+        final String methodName = "fromDoc";
         String guid = (String) cruxDoc.getId();
         instanceHeader.setGUID(guid == null ? null : trimGuidFromReference(guid));
         for (String property : KNOWN_PROPERTIES) {
@@ -96,24 +96,35 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
             } else if (RE_IDENTIFIED_FROM_GUID.equals(property)) {
                 instanceHeader.setReIdentifiedFromGUID(value);
             } else {
-                log.warn("Unmapped InstanceHeader property ({}): {}", property, objValue);
+                cruxConnector.logProblem(this.getClass().getName(),
+                        methodName,
+                        CruxOMRSAuditCode.UNMAPPED_PROPERTY,
+                        null,
+                        property,
+                        INSTANCE_HEADER);
             }
         }
     }
 
     /**
      * Translate the provided InstanceHeader information into a Crux reference to the GUID of the instance.
+     * @param cruxConnector connectivity to the repository
      * @param ih to translate
      * @return String for the Crux reference
      */
-    public static String getGuidReference(InstanceHeader ih) {
+    public static String getGuidReference(CruxOMRSRepositoryConnector cruxConnector, InstanceHeader ih) {
+        final String methodName = "getGuidReference";
         TypeDefCategory type = ih.getType().getTypeDefCategory();
         if (type.equals(TypeDefCategory.ENTITY_DEF)) {
             return getReference(EntitySummaryMapping.INSTANCE_REF_PREFIX, ih.getGUID());
         } else if (type.equals(TypeDefCategory.RELATIONSHIP_DEF)) {
             return getReference(RelationshipMapping.INSTANCE_REF_PREFIX, ih.getGUID());
         } else {
-            log.warn("Attempted to retrieve a GUID reference to a non-reference-able type -- returning null: {}", ih);
+            cruxConnector.logProblem(InstanceHeaderMapping.class.getName(),
+                    methodName,
+                    CruxOMRSAuditCode.NON_INSTANCE_RETRIEVAL,
+                    null,
+                    type.name());
             return null;
         }
     }

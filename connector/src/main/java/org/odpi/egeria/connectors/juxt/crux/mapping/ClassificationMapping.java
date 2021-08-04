@@ -6,10 +6,9 @@ import clojure.lang.IPersistentMap;
 import clojure.lang.IPersistentVector;
 import clojure.lang.PersistentVector;
 import crux.api.CruxDocument;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -38,8 +37,9 @@ import java.util.*;
  */
 public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(ClassificationMapping.class);
+    private static final String CLASSIFICATION = "classification";
 
+    private static final String N_CLASSIFICATION_TYPE = "type";
     private static final String N_CLASSIFICATION_ORIGIN = "classificationOrigin";
     private static final String N_CLASSIFICATION_ORIGIN_GUID = "classificationOriginGUID";
 
@@ -164,11 +164,11 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
                 // Retrieve its embedded type details (doing this rather than going to TypeDef from repositoryHelper,
                 // since these could change over history of the document)
-                IPersistentMap embeddedType = (IPersistentMap) cruxDoc.get(getKeyword(namespaceForClassification, "type"));
-                InstanceType classificationType = getDeserializedValue(embeddedType, mapper.getTypeFactory().constructType(InstanceType.class));
+                IPersistentMap embeddedType = (IPersistentMap) cruxDoc.get(getKeyword(namespaceForClassification, N_CLASSIFICATION_TYPE));
+                InstanceType classificationType = getDeserializedValue(cruxConnector, CLASSIFICATION, N_CLASSIFICATION_TYPE, embeddedType, mapper.getTypeFactory().constructType(InstanceType.class));
 
                 // And use these to retrieve the property mappings for this classification (only)
-                InstanceProperties ip = InstancePropertiesMapping.getFromDoc(classificationType, cruxDoc, namespaceForClassification + "." + CLASSIFICATION_PROPERTIES_NS);
+                InstanceProperties ip = InstancePropertiesMapping.getFromDoc(cruxConnector, classificationType, cruxDoc, namespaceForClassification + "." + CLASSIFICATION_PROPERTIES_NS);
 
                 if (ip != null) {
                     classification.setProperties(ip);
@@ -177,7 +177,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                 String originGuid = (String) cruxDoc.get(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN_GUID));
                 classification.setClassificationOriginGUID(originGuid);
                 String originSymbolicName = (String) cruxDoc.get(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN));
-                ClassificationOrigin classificationOrigin = getClassificationOriginFromSymbolicName(originSymbolicName);
+                ClassificationOrigin classificationOrigin = getClassificationOriginFromSymbolicName(cruxConnector, originSymbolicName);
                 classification.setClassificationOrigin(classificationOrigin);
 
                 list.add(classification);
@@ -226,16 +226,23 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
     /**
      * Convert the provided symbolic name into its ClassificationOrigin.
+     * @param cruxConnector connectivity to the repository
      * @param symbolicName to convert
      * @return ClassificationOrigin
      */
-    public static ClassificationOrigin getClassificationOriginFromSymbolicName(String symbolicName) {
+    public static ClassificationOrigin getClassificationOriginFromSymbolicName(CruxOMRSRepositoryConnector cruxConnector, String symbolicName) {
+        final String methodName = "getClassificationOriginFromSymbolicName";
         for (ClassificationOrigin b : ClassificationOrigin.values()) {
             if (b.getName().equals(symbolicName)) {
                 return b;
             }
         }
-        log.warn("Non-existent ClassificationOrigin symbolicName -- returning null: {}", symbolicName);
+        cruxConnector.logProblem(ClassificationMapping.class.getName(),
+                methodName,
+                CruxOMRSAuditCode.NON_EXISTENT_ENUM,
+                null,
+                "ClassificationOrigin",
+                symbolicName);
         return null;
     }
 

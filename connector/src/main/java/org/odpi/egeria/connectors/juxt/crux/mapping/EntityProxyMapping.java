@@ -3,18 +3,17 @@
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
 import crux.api.CruxDocument;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Maps the properties of EntityProxies between persistence and objects.
  */
 public class EntityProxyMapping extends EntitySummaryMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(EntityProxyMapping.class);
+    private static final String ENTITY_PROXY = "EntityProxy";
 
     private static final String UNIQUE_PROPERTIES_NS = "uniqueProperties";
 
@@ -75,7 +74,7 @@ public class EntityProxyMapping extends EntitySummaryMapping {
     @Override
     protected void fromDoc() {
         super.fromDoc();
-        InstanceProperties uniqueProperties = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, UNIQUE_PROPERTIES_NS);
+        InstanceProperties uniqueProperties = InstancePropertiesMapping.getFromDoc(cruxConnector, instanceHeader.getType(), cruxDoc, UNIQUE_PROPERTIES_NS);
         ((EntityProxy) instanceHeader).setUniqueProperties(uniqueProperties);
     }
 
@@ -87,6 +86,7 @@ public class EntityProxyMapping extends EntitySummaryMapping {
      */
     public static EntityProxy getFromDoc(CruxOMRSRepositoryConnector cruxConnector,
                                          CruxDocument doc) {
+        final String methodName = "getFromDoc";
         if (doc == null) {
             return null;
         } else if (isOnlyAProxy(doc)) {
@@ -100,7 +100,13 @@ public class EntityProxyMapping extends EntitySummaryMapping {
             try {
                 return cruxConnector.getRepositoryHelper().getNewEntityProxy(cruxConnector.getRepositoryName(), edm.toEgeria());
             } catch (RepositoryErrorException e) {
-                log.error("Unable to retrieve proxy from EntityDetail.", e);
+                cruxConnector.logProblem(EntityProxyMapping.class.getName(),
+                        methodName,
+                        CruxOMRSAuditCode.FAILED_RETRIEVAL,
+                        e,
+                        ENTITY_PROXY,
+                        doc.getId().toString(),
+                        e.getClass().getName());
             }
             return null;
         }

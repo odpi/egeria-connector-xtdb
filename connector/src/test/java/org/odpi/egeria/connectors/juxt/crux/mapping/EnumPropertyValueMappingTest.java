@@ -2,6 +2,8 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.crux.mapping;
 
+import org.odpi.egeria.connectors.juxt.crux.mocks.MockConnection;
+import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EnumPropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProvenanceType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
@@ -13,6 +15,8 @@ import static org.testng.Assert.*;
  * Test the mappings of various property values.
  */
 public class EnumPropertyValueMappingTest {
+
+    private static final CruxOMRSRepositoryConnector connector = MockConnection.getMockConnector();
 
     @Test
     void testValid() {
@@ -40,12 +44,12 @@ public class EnumPropertyValueMappingTest {
     @Test
     void testInstanceProvenanceType() {
 
-        InstanceProvenanceType ipt = EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(1);
+        InstanceProvenanceType ipt = EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(connector, 1);
         assertNotNull(ipt);
         int ordinal = EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(ipt);
         assertEquals(ordinal, 1, "InstanceProvenanceType ordinal is expected to be identical after conversion.");
 
-        assertNull(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(null));
+        assertNull(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(connector, null));
         assertNull(EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(null));
 
     }
@@ -53,12 +57,12 @@ public class EnumPropertyValueMappingTest {
     @Test
     void testInstanceStatus() {
 
-        InstanceStatus is = EnumPropertyValueMapping.getInstanceStatusFromOrdinal(1);
+        InstanceStatus is = EnumPropertyValueMapping.getInstanceStatusFromOrdinal(connector, 1);
         assertNotNull(is);
         int ordinal = EnumPropertyValueMapping.getOrdinalForInstanceStatus(is);
         assertEquals(ordinal, 1, "InstanceStatus ordinal is expected to be identical after conversion.");
 
-        assertNull(EnumPropertyValueMapping.getInstanceStatusFromOrdinal(null));
+        assertNull(EnumPropertyValueMapping.getInstanceStatusFromOrdinal(connector, null));
         assertNull(EnumPropertyValueMapping.getOrdinalForInstanceStatus(null));
 
     }

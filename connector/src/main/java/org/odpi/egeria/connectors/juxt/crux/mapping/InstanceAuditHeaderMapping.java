@@ -5,12 +5,11 @@ package org.odpi.egeria.connectors.juxt.crux.mapping;
 import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentVector;
 import crux.api.CruxDocument;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceAuditHeader;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefLink;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.*;
@@ -20,7 +19,7 @@ import java.util.*;
  */
 public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(InstanceAuditHeaderMapping.class);
+    private static final String INSTANCE_AUDIT_HEADER = "InstanceAuditHeader";
 
     private static final String N_HEADER_VERSION = "headerVersion";
     private static final String N_TYPE = "type";
@@ -134,11 +133,11 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         }
         builder.put(getKeyword(namespace, N_TYPE + ".guids"), PersistentVector.create(typeList));
         builder.put(getKeyword(namespace, N_TYPE + ".category"), type.getTypeDefCategory().getOrdinal());
-        builder.put(getKeyword(namespace, N_TYPE), getEmbeddedSerializedForm(type));
+        builder.put(getKeyword(namespace, N_TYPE), getEmbeddedSerializedForm(cruxConnector, INSTANCE_AUDIT_HEADER, N_TYPE, type));
         builder.put(getKeyword(namespace, N_INSTANCE_PROVENANCE_TYPE), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()));
         builder.put(getKeyword(namespace, N_CURRENT_STATUS), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()));
         builder.put(getKeyword(namespace, N_STATUS_ON_DELETE), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatusOnDelete()));
-        builder.put(getKeyword(namespace, N_MAPPING_PROPERTIES), getEmbeddedSerializedForm(iah.getMappingProperties()));
+        builder.put(getKeyword(namespace, N_MAPPING_PROPERTIES), getEmbeddedSerializedForm(cruxConnector, INSTANCE_AUDIT_HEADER, N_MAPPING_PROPERTIES, iah.getMappingProperties()));
 
         return updateTime == null ? createTime : updateTime;
 
@@ -162,6 +161,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     @SuppressWarnings("unchecked")
     protected void fromDoc(InstanceAuditHeader iah, CruxDocument doc, String namespace) {
 
+        final String methodName = "fromDoc";
         for (String propertyName : KNOWN_PROPERTIES) {
             String property = getKeyword(namespace, propertyName);
             Object objValue = doc.get(property);
@@ -171,10 +171,10 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                     iah.setHeaderVersion(objValue == null ? 0 : (Long) objValue);
                     break;
                 case N_TYPE:
-                    iah.setType(getDeserializedValue((IPersistentMap)objValue, mapper.getTypeFactory().constructType(InstanceType.class)));
+                    iah.setType(getDeserializedValue(cruxConnector, INSTANCE_AUDIT_HEADER, N_TYPE, (IPersistentMap)objValue, mapper.getTypeFactory().constructType(InstanceType.class)));
                     break;
                 case N_INSTANCE_PROVENANCE_TYPE:
-                    iah.setInstanceProvenanceType(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal((Integer) objValue));
+                    iah.setInstanceProvenanceType(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal(cruxConnector, (Integer) objValue));
                     break;
                 case N_METADATA_COLLECTION_ID:
                     iah.setMetadataCollectionId(value);
@@ -207,16 +207,21 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                     iah.setVersion(objValue == null ? -1 : (Long) objValue);
                     break;
                 case N_CURRENT_STATUS:
-                    iah.setStatus(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
+                    iah.setStatus(EnumPropertyValueMapping.getInstanceStatusFromOrdinal(cruxConnector, (Integer) objValue));
                     break;
                 case N_STATUS_ON_DELETE:
-                    iah.setStatusOnDelete(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
+                    iah.setStatusOnDelete(EnumPropertyValueMapping.getInstanceStatusFromOrdinal(cruxConnector, (Integer) objValue));
                     break;
                 case N_MAPPING_PROPERTIES:
-                    iah.setMappingProperties(getDeserializedValue((IPersistentMap)objValue, mapper.getTypeFactory().constructMapType(Map.class, String.class, Serializable.class)));
+                    iah.setMappingProperties(getDeserializedValue(cruxConnector, INSTANCE_AUDIT_HEADER, N_MAPPING_PROPERTIES, (IPersistentMap)objValue, mapper.getTypeFactory().constructMapType(Map.class, String.class, Serializable.class)));
                     break;
                 default:
-                    log.warn("Unmapped InstanceAuditHeader property ({}): {}", property, objValue);
+                    cruxConnector.logProblem(this.getClass().getName(),
+                            methodName,
+                            CruxOMRSAuditCode.UNMAPPED_PROPERTY,
+                            null,
+                            property,
+                            INSTANCE_AUDIT_HEADER);
                     break;
             }
 
