@@ -48,8 +48,7 @@ public class ConditionBuilderTest {
                     propertyValue,
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -75,8 +74,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
             // Expected --> [[e :entityProperties/Referenceable.qualifiedName.value "a-qualified-name"]]
@@ -87,8 +85,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
             // Expected --> [[e :entityProperties/Referenceable.qualifiedName.value "a-qualified-name"]]
@@ -99,8 +96,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
             // Expected --> [(not [e :entityProperties/Referenceable.qualifiedName.value "a-qualified-name"])]
@@ -166,8 +162,7 @@ public class ConditionBuilderTest {
                     this.getClass().getName());
 
             InstancePropertyValue ipv1 = ip.getPropertyValue(propertyName1);
-            Set<Keyword> propertyKeywords1 = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords1 = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName1,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -179,8 +174,7 @@ public class ConditionBuilderTest {
             }
 
             InstancePropertyValue ipv2 = ip.getPropertyValue(propertyName2);
-            Set<Keyword> propertyKeywords2 = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords2 = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName2,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -211,8 +205,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     true,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -246,8 +239,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -287,8 +279,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -355,8 +346,7 @@ public class ConditionBuilderTest {
                     this.getClass().getName());
 
             InstancePropertyValue ipv1 = ip1.getPropertyValue(propertyName1);
-            Set<Keyword> propertyKeywords1 = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords1 = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName1,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -373,8 +363,7 @@ public class ConditionBuilderTest {
                     propertyValue2,
                     this.getClass().getName());
             InstancePropertyValue ipv2 = ip2.getPropertyValue(propertyName2);
-            Set<Keyword> propertyKeywords2 = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords2 = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName2,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -415,8 +404,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -480,8 +468,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -523,8 +510,7 @@ public class ConditionBuilderTest {
                     propertyValue,
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -550,8 +536,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -626,8 +611,7 @@ public class ConditionBuilderTest {
                 apv.setArrayValue(i, ipv);
             }
 
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -653,8 +637,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -720,8 +703,7 @@ public class ConditionBuilderTest {
                     propertyValue,
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -747,8 +729,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -802,8 +783,7 @@ public class ConditionBuilderTest {
                     propertyValue,
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     RelationshipMapping.RELATIONSHIP_PROPERTIES_NS,
                     typeNames,
@@ -825,8 +805,7 @@ public class ConditionBuilderTest {
                     RelationshipMapping.RELATIONSHIP_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     true,
                     true);
 
@@ -882,8 +861,7 @@ public class ConditionBuilderTest {
                     RelationshipMapping.RELATIONSHIP_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -934,8 +912,7 @@ public class ConditionBuilderTest {
                     propertyValue,
                     this.getClass().getName());
             InstancePropertyValue ipv = ip.getPropertyValue(propertyName);
-            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector.getRepositoryName(),
-                    helper,
+            Set<Keyword> propertyKeywords = InstancePropertyValueMapping.getKeywordsForProperty(connector,
                     propertyName,
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     typeNames,
@@ -957,8 +934,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     typeNames,
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true);
 
@@ -987,8 +963,7 @@ public class ConditionBuilderTest {
                     EntityDetailMapping.ENTITY_PROPERTIES_NS,
                     false,
                     new HashSet<>(),
-                    connector.getRepositoryHelper(),
-                    connector.getRepositoryName(),
+                    connector,
                     false,
                     true),
                     "No conditions are expected when the search properties are null.");

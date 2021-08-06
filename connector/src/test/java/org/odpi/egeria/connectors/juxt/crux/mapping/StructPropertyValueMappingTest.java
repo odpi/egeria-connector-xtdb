@@ -40,7 +40,7 @@ public class StructPropertyValueMappingTest {
                     this.getClass().getName());
         }
         spv.setAttributes(properties);
-        Map<String, Object> comparison = StructPropertyValueMapping.getStructPropertyValueForComparison(spv);
+        Map<String, Object> comparison = StructPropertyValueMapping.getStructPropertyValueForComparison(connector, spv);
         assertEquals(comparison, map, "Struct property values are expected to be identical after conversion.");
 
     }
@@ -48,7 +48,7 @@ public class StructPropertyValueMappingTest {
     @Test
     void testEmpty() {
         StructPropertyValue spv = new StructPropertyValue();
-        Map<String, Object> comparison = StructPropertyValueMapping.getStructPropertyValueForComparison(spv);
+        Map<String, Object> comparison = StructPropertyValueMapping.getStructPropertyValueForComparison(connector, spv);
         assertNull(comparison, "Empty struct property value is expected to be null after conversion.");
     }
 

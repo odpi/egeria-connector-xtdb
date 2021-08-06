@@ -30,7 +30,7 @@ public class InstanceHeaderMappingTest {
                     InstanceProvenanceType.LOCAL_COHORT,
                     MockConnection.USERNAME,
                     "Referenceable");
-            String docId = InstanceHeaderMapping.getGuidReference(entity);
+            String docId = InstanceHeaderMapping.getGuidReference(connector, entity);
             assertNotNull(docId);
             assertTrue(docId.startsWith(EntitySummaryMapping.INSTANCE_REF_PREFIX));
 
@@ -40,7 +40,7 @@ public class InstanceHeaderMappingTest {
                     InstanceProvenanceType.LOCAL_COHORT,
                     MockConnection.USERNAME,
                     "SemanticAssignment");
-            docId = InstanceHeaderMapping.getGuidReference(relationship);
+            docId = InstanceHeaderMapping.getGuidReference(connector, relationship);
             assertNotNull(docId);
             assertTrue(docId.startsWith(RelationshipMapping.INSTANCE_REF_PREFIX));
 

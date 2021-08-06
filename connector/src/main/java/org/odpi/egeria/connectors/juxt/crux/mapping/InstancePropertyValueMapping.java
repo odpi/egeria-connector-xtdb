@@ -5,12 +5,11 @@ package org.odpi.egeria.connectors.juxt.crux.mapping;
 import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
 import crux.api.CruxDocument;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -38,8 +37,6 @@ import java.util.*;
  */
 public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(InstancePropertyValueMapping.class);
-
     /**
      * Necessary default constructor to ensure we can use the static objectMapper of the base class.
      */
@@ -49,10 +46,11 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
     /**
      * Convert the provided Egeria value into a Crux comparable form.
+     * @param cruxConnector connectivity to the repository
      * @param ipv Egeria value to translate to Crux-comparable value
      * @return Object value that Crux can compare
      */
-    public static Object getValueForComparison(InstancePropertyValue ipv) {
+    public static Object getValueForComparison(CruxOMRSRepositoryConnector cruxConnector, InstancePropertyValue ipv) {
         Object value = null;
         if (ipv != null) {
             InstancePropertyCategory category = ipv.getInstancePropertyCategory();
@@ -64,17 +62,21 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                     value = EnumPropertyValueMapping.getEnumPropertyValueForComparison((EnumPropertyValue) ipv);
                     break;
                 case ARRAY:
-                    value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison((ArrayPropertyValue) ipv);
+                    value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison(cruxConnector, (ArrayPropertyValue) ipv);
                     break;
                 case MAP:
-                    value = MapPropertyValueMapping.getMapPropertyValueForComparison((MapPropertyValue) ipv);
+                    value = MapPropertyValueMapping.getMapPropertyValueForComparison(cruxConnector, (MapPropertyValue) ipv);
                     break;
                 case STRUCT:
-                    value = StructPropertyValueMapping.getStructPropertyValueForComparison((StructPropertyValue) ipv);
+                    value = StructPropertyValueMapping.getStructPropertyValueForComparison(cruxConnector, (StructPropertyValue) ipv);
                     break;
                 case UNKNOWN:
                 default:
-                    log.warn("Unmapped value type: {}", category);
+                    cruxConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                            "getValueForComparison",
+                            CruxOMRSAuditCode.UNMAPPED_TYPE,
+                            null,
+                            "InstancePropertyCategory::" + category.name());
                     break;
             }
         }
@@ -83,12 +85,14 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
     /**
      * Retrieve a single property value from the provided Crux representation.
+     * @param cruxConnector connectivity to the repository
      * @param cruxDoc from which to retrieve the value
      * @param namespace by which the property is qualified
      * @param propertyName of the property
      * @return InstancePropertyValue giving Egeria representation of the value
      */
-    public static InstancePropertyValue getInstancePropertyValueFromDoc(CruxDocument cruxDoc,
+    public static InstancePropertyValue getInstancePropertyValueFromDoc(CruxOMRSRepositoryConnector cruxConnector,
+                                                                        CruxDocument cruxDoc,
                                                                         String namespace,
                                                                         String propertyName) {
 
@@ -96,7 +100,7 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
         Object objValue = cruxDoc.get(getKeyword(namespace, propertyName + ".json"));
         IPersistentMap embeddedValue = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
         if (embeddedValue != null) {
-            return getInstancePropertyValue(embeddedValue);
+            return getInstancePropertyValue(cruxConnector, namespace, propertyName, embeddedValue);
         }
         return null;
 
@@ -119,7 +123,7 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                                                      InstancePropertyValue value) {
 
         // Persist the serialized form in all cases
-        builder.put(getSerializedPropertyKeyword(namespace, propertyName), getEmbeddedSerializedForm(value));
+        builder.put(getSerializedPropertyKeyword(namespace, propertyName), getEmbeddedSerializedForm(cruxConnector, instanceType.getTypeDefName(), propertyName, value));
 
         // And then also persist a searchable form
         if (value != null) {
@@ -177,7 +181,11 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                     break;
                 case UNKNOWN:
                 default:
-                    log.warn("No searchable mapping yet implemented for InstancePropertyValue category: {}", category);
+                    cruxConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                            "addInstancePropertyValueToDoc",
+                            CruxOMRSAuditCode.UNMAPPED_TYPE,
+                            null,
+                            "InstancePropertyValueCategory::" + category.name());
                     break;
             }
         } else {
@@ -206,24 +214,29 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * @return String
      */
     protected static String getPropertyValueKeyword(CruxOMRSRepositoryConnector cruxConnector,
-                                                     InstanceType instanceType,
-                                                     String propertyName,
-                                                     String namespace) {
+                                                    InstanceType instanceType,
+                                                    String propertyName,
+                                                    String namespace) {
         // Note that different TypeDefinitions may include the same attribute name, but with different types (eg. 'position'
         // meaning order (int) as well as role (string) -- we must therefore fully-qualify the propertyName with the
         // name of the typedef in which it is defined -- and that must be done here so that it flows down to any
         // subclasses as well.
         Set<String> typesToConsider = new HashSet<>();
         typesToConsider.add(instanceType.getTypeDefName());
-        Set<String> names = getNamesForProperty(cruxConnector.getRepositoryName(),
-                cruxConnector.getRepositoryHelper(),
+        Set<String> names = getNamesForProperty(cruxConnector,
                 propertyName,
                 namespace,
                 typesToConsider,
                 null);
         String qualified = null;
         if (names.size() > 1) {
-            log.error("Found more than one property in this instanceType ({}) with the name '{}': {}", instanceType.getTypeDefName(), propertyName, names);
+            cruxConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                    "getPropertyValueKeyword",
+                    CruxOMRSAuditCode.DUPLICATE_PROPERTIES,
+                    null,
+                    instanceType.getTypeDefName(),
+                    propertyName,
+                    names.toString());
         }
         for (String name : names) {
             qualified = name;
@@ -233,11 +246,14 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
     /**
      * Translate the provided JSON representation of a value into an Egeria object.
+     * @param cruxConnector connectivity to the repository
+     * @param namespace of the property
+     * @param property name of the property
      * @param jsonValue to translate
      * @return InstancePropertyValue
      */
-    private static InstancePropertyValue getInstancePropertyValue(IPersistentMap jsonValue) {
-        return getDeserializedValue(jsonValue, mapper.getTypeFactory().constructType(InstancePropertyValue.class));
+    private static InstancePropertyValue getInstancePropertyValue(CruxOMRSRepositoryConnector cruxConnector, String namespace, String property, IPersistentMap jsonValue) {
+        return getDeserializedValue(cruxConnector, namespace, property, jsonValue, mapper.getTypeFactory().constructType(InstancePropertyValue.class));
     }
 
     /**
@@ -245,21 +261,22 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * Note that generally the returned Set will only have a single element, however if requested from a sufficiently
      * abstract type (eg. Referenceable) under which different subtypes have the same property defined, the Set will
      * contain a property reference for each of those subtypes' properties.
-     * @param repositoryName of the repository (for logging)
-     * @param repositoryHelper utilities for introspecting type definitions and their properties
+     * @param cruxConnector connectivity to the repository
      * @param propertyName of the property for which to qualify type-specific references
      * @param namespace under which to qualify the properties
      * @param limitToTypes limit the type-specific qualifications to only properties that are applicable to these types
      * @param value that will be used for comparison, to limit the properties to include based on their type
      * @return {@code Set<String>} of the property references
      */
-    public static Set<String> getNamesForProperty(String repositoryName,
-                                                  OMRSRepositoryHelper repositoryHelper,
+    public static Set<String> getNamesForProperty(CruxOMRSRepositoryConnector cruxConnector,
                                                   String propertyName,
                                                   String namespace,
                                                   Set<String> limitToTypes,
                                                   InstancePropertyValue value) {
         final String methodName = "getNamesForProperty";
+
+        final OMRSRepositoryHelper repositoryHelper = cruxConnector.getRepositoryHelper();
+        String repositoryName = cruxConnector.getRepositoryName();
 
         // Start by determining all valid combinations of propertyName in every type name provided in limitToTypes
         Set<String> validTypesForProperty = repositoryHelper.getAllTypeDefsForProperty(repositoryName, propertyName, methodName);
@@ -279,7 +296,7 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                             // Only if the property's types align do we continue with ensuring that the type itself should be included
                             // (While this conditional itself will further loop over cached information, it should do so only
                             // in limited cases due to the short-circuiting above)
-                            if (propertyDefMatchesValueType(repositoryHelper, repositoryName, typeNameWithProperty, propertyName, value)) {
+                            if (propertyDefMatchesValueType(cruxConnector, repositoryName, typeNameWithProperty, propertyName, value)) {
                                 qualifiedNames.add(candidateRef);
                             }
                         }
@@ -295,22 +312,20 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * Note that generally the returned Set will only have a single element, however if requested from a sufficiently
      * abstract type (eg. Referenceable) under which different subtypes have the same property defined, the Set will
      * contain a property reference for each of those subtypes' properties.
-     * @param repositoryName of the repository (for logging)
-     * @param repositoryHelper utilities for introspecting type definitions and their properties
+     * @param cruxConnector connectivity to the repository
      * @param propertyName of the property for which to qualify type-specific references
      * @param namespace under which to qualify the properties
      * @param limitToTypes limit the type-specific qualifications to only properties that are applicable to these types
      * @param value that will be used for comparison, to limit the properties to include based on their type
      * @return {@code Set<Keyword>} of the property references
      */
-    public static Set<Keyword> getKeywordsForProperty(String repositoryName,
-                                                      OMRSRepositoryHelper repositoryHelper,
+    public static Set<Keyword> getKeywordsForProperty(CruxOMRSRepositoryConnector cruxConnector,
                                                       String propertyName,
                                                       String namespace,
                                                       Set<String> limitToTypes,
                                                       InstancePropertyValue value) {
         Set<Keyword> keywords = new TreeSet<>();
-        Set<String> strings = getNamesForProperty(repositoryName, repositoryHelper, propertyName, namespace, limitToTypes, value);
+        Set<String> strings = getNamesForProperty(cruxConnector, propertyName, namespace, limitToTypes, value);
         for (String string : strings) {
             keywords.add(Keyword.intern(string));
         }
@@ -340,14 +355,14 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
     /**
      * Indicates whether the provided property value is of the same type as the named property in the specified type
      * definition.
-     * @param repositoryHelper utilities for introspecting type definitions and their properties
+     * @param cruxConnector connectivity to the repository
      * @param repositoryName of the repository (for logging)
      * @param typeDefName of the type definition in which the property is defined
      * @param propertyName of the property for which to check the type definition
      * @param value that will be used for comparison, to limit the properties to include based on their type
      * @return boolean true if the value's type matches the property definition's type, otherwise false (if they do not match)
      */
-    private static boolean propertyDefMatchesValueType(OMRSRepositoryHelper repositoryHelper,
+    private static boolean propertyDefMatchesValueType(CruxOMRSRepositoryConnector cruxConnector,
                                                        String repositoryName,
                                                        String typeDefName,
                                                        String propertyName,
@@ -360,6 +375,7 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
         // Otherwise, determine the type of this property in the model, and only if they match consider including
         // this property
+        final OMRSRepositoryHelper repositoryHelper = cruxConnector.getRepositoryHelper();
         TypeDef typeDef = repositoryHelper.getTypeDefByName(repositoryName, typeDefName);
         List<TypeDefAttribute> typeDefProperties = typeDef.getPropertiesDefinition();
         for (TypeDefAttribute typeDefProperty : typeDefProperties) {
@@ -390,13 +406,21 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
                                 return (value.getInstancePropertyCategory().equals(InstancePropertyCategory.STRUCT));
                             case OM_COLLECTION_UNKNOWN:
                             default:
-                                log.warn("Unhandled collection type definition category for comparison: {}", cd.getCollectionDefCategory());
+                                cruxConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                                        "propertyDefMatchesValueType",
+                                        CruxOMRSAuditCode.UNMAPPED_TYPE,
+                                        null,
+                                        "CollectionDefCategory::" + cd.getCollectionDefCategory());
                                 break;
                         }
                         break;
                     case UNKNOWN_DEF:
                     default:
-                        log.warn("Unhandled attribute type definition category for comparison: {}", atd.getCategory());
+                        cruxConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                                "propertyDefMatchesValueType",
+                                CruxOMRSAuditCode.UNMAPPED_TYPE,
+                                null,
+                                "AttributeTypeDefCategory::" + atd.getCategory());
                         break;
                 }
             }

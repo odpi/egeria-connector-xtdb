@@ -39,15 +39,16 @@ public class MapPropertyValueMapping extends InstancePropertyValueMapping {
                                                 String propertyName,
                                                 String namespace,
                                                 MapPropertyValue value) {
-        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getMapPropertyValueForComparison(value));
+        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getMapPropertyValueForComparison(cruxConnector, value));
     }
 
     /**
      * Convert the provided map property value into a Crux comparable form.
+     * @param cruxConnector connectivity to the repository
      * @param mpv Egeria value to translate to Crux-comparable value
      * @return {@code Map<String, Object>} value that Crux can compare
      */
-    public static Map<String, Object> getMapPropertyValueForComparison(MapPropertyValue mpv) {
+    public static Map<String, Object> getMapPropertyValueForComparison(CruxOMRSRepositoryConnector cruxConnector, MapPropertyValue mpv) {
         InstanceProperties values = mpv.getMapValues();
         if (values != null && values.getInstanceProperties() != null) {
             // Create a new TreeMap of the values to ensure they are sorted by key (for consistency)
@@ -55,7 +56,7 @@ public class MapPropertyValueMapping extends InstancePropertyValueMapping {
             for (Map.Entry<String, InstancePropertyValue> entry : values.getInstanceProperties().entrySet()) {
                 String key = entry.getKey();
                 InstancePropertyValue value = entry.getValue();
-                Object toCompare = getValueForComparison(value);
+                Object toCompare = getValueForComparison(cruxConnector, value);
                 if (toCompare != null) {
                     results.put(key, toCompare);
                 }

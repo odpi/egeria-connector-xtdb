@@ -7,9 +7,8 @@ import clojure.lang.Keyword;
 import clojure.lang.PersistentHashMap;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -19,8 +18,6 @@ import java.util.Map;
  * General utilities for the mapping of any instance data.
  */
 public abstract class AbstractMapping {
-
-    private static final Logger log = LoggerFactory.getLogger(AbstractMapping.class);
 
     protected final CruxOMRSRepositoryConnector cruxConnector;
 
@@ -64,10 +61,13 @@ public abstract class AbstractMapping {
     /**
      * Retrieve an embedded JSON-serialized form of a given object. This will prevent the object from being searchable,
      * but provides an efficient means to store structured information.
+     * @param cruxConnector connectivity to the repository
+     * @param type name of the type into which the value is being serialized
+     * @param property name of the property for which the value is being serialized
      * @param value to JSON-serialize
      * @return IPersistentMap giving the embedded serialized form
      */
-    protected static IPersistentMap getEmbeddedSerializedForm(Object value) {
+    protected static IPersistentMap getEmbeddedSerializedForm(CruxOMRSRepositoryConnector cruxConnector, String type, String property, Object value) {
         IPersistentMap subMap = null;
         if (value != null) {
             try {
@@ -78,7 +78,13 @@ public abstract class AbstractMapping {
                 map.put(EMBEDDED_JSON, json);
                 subMap = PersistentHashMap.create(map);
             } catch (IOException e) {
-                log.error("Unable to serialize object into JSON: {}", value);
+                cruxConnector.logProblem(AbstractMapping.class.getName(),
+                        "getEmbeddedSerializedForm",
+                        CruxOMRSAuditCode.SERIALIZATION_FAILURE,
+                        e,
+                        property,
+                        type,
+                        e.getClass().getName());
             }
         }
         return subMap;
@@ -87,20 +93,30 @@ public abstract class AbstractMapping {
     /**
      * Retrieve the deserialized value given an embedded form. This will prevent the object from being searchable,
      * but provides an efficient means to retrieve structured information.
+     * @param cruxConnector connectivity to the repository
+     * @param type name of the type from which the value is being deserialized
+     * @param property name of the property from which the value is being deserialized
      * @param embedded value to JSON-deserialize
-     * @param type the type of value to deserialize
+     * @param javaType the type of value to deserialize
      * @param <T> type of value to deserialize
      * @return the deserialized value
      */
-    protected static <T> T getDeserializedValue(IPersistentMap embedded, JavaType type) {
+    protected static <T> T getDeserializedValue(CruxOMRSRepositoryConnector cruxConnector, String type, String property, IPersistentMap embedded, JavaType javaType) {
         // There must be the ":json" keyword in the map for it to be an embedded serialized form
         T deserialized = null;
         if (embedded != null && embedded.containsKey(EMBEDDED_JSON)) {
             String value = (String) embedded.valAt(EMBEDDED_JSON);
             try {
-                deserialized = mapper.readValue(value, type);
+                deserialized = mapper.readValue(value, javaType);
             } catch (IOException e) {
-                log.error("Unable to deserialize object from JSON: {}", value);
+                cruxConnector.logProblem(AbstractMapping.class.getName(),
+                        "getEmbeddedSerializedForm",
+                        CruxOMRSAuditCode.DESERIALIZATION_FAILURE,
+                        e,
+                        property,
+                        type,
+                        javaType.getTypeName(),
+                        e.getClass().getName());
             }
         }
         return deserialized;

@@ -39,22 +39,23 @@ public class ArrayPropertyValueMapping extends InstancePropertyValueMapping {
                                                   String propertyName,
                                                   String namespace,
                                                   ArrayPropertyValue value) {
-        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getArrayPropertyValueForComparison(value));
+        builder.put(getPropertyValueKeyword(cruxConnector, instanceType, propertyName, namespace), getArrayPropertyValueForComparison(cruxConnector, value));
     }
 
     /**
      * Convert the provided array property value into a Crux comparable form.
+     * @param cruxConnector connectivity to the repository
      * @param apv Egeria value to translate to Crux-comparable value
      * @return {@code List<Object>} value that Crux can compare
      */
-    public static List<Object> getArrayPropertyValueForComparison(ArrayPropertyValue apv) {
+    public static List<Object> getArrayPropertyValueForComparison(CruxOMRSRepositoryConnector cruxConnector, ArrayPropertyValue apv) {
         InstanceProperties values = apv.getArrayValues();
         if (values != null) {
             List<Object> results = new ArrayList<>();
             int total = apv.getArrayCount();
             for (int i = 0; i < total; i++) {
                 InstancePropertyValue value = values.getPropertyValue("" + i);
-                Object toCompare = getValueForComparison(value);
+                Object toCompare = getValueForComparison(cruxConnector, value);
                 if (toCompare != null) {
                     results.add(toCompare);
                 }

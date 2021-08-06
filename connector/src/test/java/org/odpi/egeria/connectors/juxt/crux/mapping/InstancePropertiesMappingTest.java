@@ -57,7 +57,8 @@ public class InstancePropertiesMappingTest {
                     properties,
                     namespace);
 
-            InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(type,
+            InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(connector,
+                    type,
                     builder.build(),
                     namespace);
 
@@ -87,7 +88,8 @@ public class InstancePropertiesMappingTest {
                     properties,
                     namespace);
 
-            InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(type,
+            InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(connector,
+                    type,
                     builder.build(),
                     namespace);
 
@@ -116,7 +118,8 @@ public class InstancePropertiesMappingTest {
                     null,
                     namespace);
 
-            InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(type,
+            InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(connector,
+                    type,
                     builder.build(),
                     namespace);
 

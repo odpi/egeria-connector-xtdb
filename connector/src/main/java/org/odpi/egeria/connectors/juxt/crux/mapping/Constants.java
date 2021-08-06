@@ -14,7 +14,6 @@ public class Constants {
     // Common strings
     private static final String CRUX_TX = "crux.tx";
     private static final String CRUX_DB = "crux.db";
-    public static final String NO_ACTION = "No action is required.  This is part of the normal operation of the service.";
     public static final String ENTITY_GUID = "entityGUID";
     public static final String RELATIONSHIP_GUID = "relationshipGUID";
     public static final String HOME_METADATA_COLLECTION_ID = "homeMetadataCollectionId";

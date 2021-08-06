@@ -4,7 +4,9 @@ package org.odpi.egeria.connectors.juxt.crux.model.search;
 
 import clojure.lang.*;
 import org.apache.lucene.queryparser.classic.QueryParserBase;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.mapping.InstancePropertyValueMapping;
+import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.PropertyComparisonOperator;
@@ -53,8 +55,7 @@ public class TextConditionBuilder {
      * Add conditions to the search to find any text field that matches the supplied criteria (without a separate Lucene
      * index).
      * @param regexCriteria defining what should be matched
-     * @param repositoryHelper through which we can introspect the type definitions and their properties
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
      * @param namespace by which to qualify the properties
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
@@ -62,15 +63,17 @@ public class TextConditionBuilder {
      * @return {@code List<IPersistentCollection>} of condition(s) for the text matching
      */
     public static List<IPersistentCollection> buildWildcardTextCondition(String regexCriteria,
-                                                                         OMRSRepositoryHelper repositoryHelper,
-                                                                         String repositoryName,
+                                                                         CruxOMRSRepositoryConnector cruxConnector,
                                                                          Set<String> typesToInclude,
                                                                          String namespace,
                                                                          boolean luceneEnabled,
                                                                          boolean luceneRegexes) {
 
         final String methodName = "addWildcardTextCondition";
-        log.debug("Falling back to a non-Lucene wildcard text condition (likely to be slow!): {}", regexCriteria);
+        log.info("Falling back to a non-Lucene wildcard text condition (likely to be slow!): {}", regexCriteria);
+
+        final OMRSRepositoryHelper repositoryHelper = cruxConnector.getRepositoryHelper();
+        final String repositoryName = cruxConnector.getRepositoryName();
 
         // Note: this fallback search should be avoided, as it will only iterate through the potential property
         //  combinations that are valid for the specified typesToInclude. For example, if this is limited to
@@ -82,7 +85,7 @@ public class TextConditionBuilder {
         string.setPrimitiveDefCategory(PrimitiveDefCategory.OM_PRIMITIVE_TYPE_STRING);
         string.setPrimitiveValue(regexCriteria);
 
-        // Build up a Set of all of the unique string properties across all of the types that are to be included for
+        // Build up a Set of all the unique string properties across all the types that are to be included for
         // the search
         Set<Keyword> stringProperties = new HashSet<>();
         for (String typeDefName : typesToInclude) {
@@ -90,8 +93,7 @@ public class TextConditionBuilder {
             if (typeDef != null) {
                 List<TypeDefAttribute> properties = repositoryHelper.getAllPropertiesForTypeDef(repositoryName, typeDef, methodName);
                 for (TypeDefAttribute property : properties) {
-                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getKeywordsForProperty(repositoryName,
-                            repositoryHelper,
+                    Set<Keyword> propertyRefs = InstancePropertyValueMapping.getKeywordsForProperty(cruxConnector,
                             property.getAttributeName(),
                             namespace,
                             typesToInclude,
@@ -116,7 +118,7 @@ public class TextConditionBuilder {
                         PropertyComparisonOperator.LIKE,
                         string,
                         variable,
-                        repositoryHelper,
+                        cruxConnector,
                         luceneEnabled,
                         luceneRegexes
                 );
@@ -132,7 +134,7 @@ public class TextConditionBuilder {
                         PropertyComparisonOperator.LIKE,
                         string,
                         variable,
-                        repositoryHelper,
+                        cruxConnector,
                         luceneEnabled,
                         luceneRegexes
                 );
@@ -148,19 +150,19 @@ public class TextConditionBuilder {
      * Adds conditions to the search to find any text field that matches the supplied criteria (leveraging a separate
      * Lucene index).
      * @param regexCriteria defining what should be matched
-     * @param repositoryHelper through which we can check the regular expressions in the criteria
-     * @param repositoryName of the repository (for logging)
+     * @param cruxConnector connectivity to the repository
      * @param typesToInclude defining which type definitions should be included in the search (to limit the properties)
      * @param namespace by which to qualify the properties
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} of condition(s) for the text matching
      */
     public static List<IPersistentCollection> buildWildcardLuceneCondition(String regexCriteria,
-                                                                           OMRSRepositoryHelper repositoryHelper,
-                                                                           String repositoryName,
+                                                                           CruxOMRSRepositoryConnector cruxConnector,
                                                                            Set<String> typesToInclude,
                                                                            String namespace,
                                                                            boolean luceneRegexes) {
+
+        final OMRSRepositoryHelper repositoryHelper = cruxConnector.getRepositoryHelper();
 
         List<IPersistentCollection> conditions = null;
         // Since a Lucene index has some limitations and will never support a full Java regex on its own, the idea here
@@ -173,8 +175,7 @@ public class TextConditionBuilder {
                 // should at least still return accurate results
                 conditions = buildWildcardTextCondition(
                         regexCriteria,
-                        repositoryHelper,
-                        repositoryName,
+                        cruxConnector,
                         typesToInclude,
                         namespace,
                         true,
@@ -197,17 +198,19 @@ public class TextConditionBuilder {
      * @param simpleName of the property (unqualified by type details)
      * @param comparator used to compare the property's value
      * @param value of the property
-     * @param repositoryHelper through which we can lookup type information and properties
+     * @param cruxConnector connectivity to the repository
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} giving the appropriate Crux query condition(s)
      */
     static List<IPersistentCollection> buildLuceneOptimizedConditions(String simpleName,
                                                                       PropertyComparisonOperator comparator,
                                                                       InstancePropertyValue value,
-                                                                      OMRSRepositoryHelper repositoryHelper,
+                                                                      CruxOMRSRepositoryConnector cruxConnector,
                                                                       boolean luceneRegexes) {
 
         List<IPersistentCollection> allConditionsForProperty = new ArrayList<>();
+        final String methodName = "buildLuceneOptimizedConditions";
+        final OMRSRepositoryHelper repositoryHelper = cruxConnector.getRepositoryHelper();
 
         String regexSearchString = value.valueAsString();
         String searchString = null;
@@ -220,7 +223,12 @@ public class TextConditionBuilder {
                 searchString = getLuceneComparisonString(regexSearchString, repositoryHelper, luceneRegexes);
                 break;
             default:
-                log.error("Invalid comparison operator for string value: {}", comparator);
+                cruxConnector.logProblem(TextConditionBuilder.class.getName(),
+                        methodName,
+                        CruxOMRSAuditCode.INVALID_STRING_COMPARISON,
+                        null,
+                        simpleName,
+                        comparator.name());
                 break;
         }
         if (searchString != null) {
@@ -262,7 +270,7 @@ public class TextConditionBuilder {
      * @param propertyRef to compare
      * @param value against which to compare
      * @param variable to which to compare
-     * @param repositoryHelper through which we can introspect regular expressions
+     * @param cruxConnector connectivity to the repository
      * @param luceneEnabled indicates whether Lucene search index is configured (true) or not (false)
      * @param luceneRegexes indicates whether unquoted regexes should be treated as Lucene compatible (true) or not (false)
      * @return {@code List<IPersistentCollection>} of the conditions
@@ -270,14 +278,17 @@ public class TextConditionBuilder {
     static List<IPersistentCollection> buildRegexConditions(Keyword propertyRef,
                                                             InstancePropertyValue value,
                                                             Symbol variable,
-                                                            OMRSRepositoryHelper repositoryHelper,
+                                                            CruxOMRSRepositoryConnector cruxConnector,
                                                             boolean luceneEnabled,
                                                             boolean luceneRegexes) {
 
+        final String methodName = "buildRegexConditions";
         List<IPersistentCollection> propertyConditions = new ArrayList<>();
         List<IPersistentCollection> clauseConditions = new ArrayList<>();
 
-        Object compareTo = InstancePropertyValueMapping.getValueForComparison(value);
+        Object compareTo = InstancePropertyValueMapping.getValueForComparison(cruxConnector, value);
+
+        final OMRSRepositoryHelper repositoryHelper = cruxConnector.getRepositoryHelper();
 
         if (compareTo instanceof String) {
 
@@ -323,7 +334,11 @@ public class TextConditionBuilder {
             propertyConditions.addAll(clauseConditions);
 
         } else {
-            log.warn("Requested a regex-based search without providing a regex -- cannot add condition: {}", value);
+            cruxConnector.logProblem(TextConditionBuilder.class.getName(),
+                    methodName,
+                    CruxOMRSAuditCode.NO_REGEX,
+                    null,
+                    value == null ? "<null>" : value.toString());
         }
 
         return propertyConditions;

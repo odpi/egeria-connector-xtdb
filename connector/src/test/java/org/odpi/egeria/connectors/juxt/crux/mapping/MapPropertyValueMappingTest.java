@@ -41,7 +41,7 @@ public class MapPropertyValueMappingTest {
             InstancePropertyValue ipv = properties.getPropertyValue("property");
             mpv.setMapValue(key, ipv);
         }
-        Map<String, Object> comparison = MapPropertyValueMapping.getMapPropertyValueForComparison(mpv);
+        Map<String, Object> comparison = MapPropertyValueMapping.getMapPropertyValueForComparison(connector, mpv);
         assertEquals(comparison, map, "Map property values are expected to be identical after conversion.");
 
     }
@@ -49,7 +49,7 @@ public class MapPropertyValueMappingTest {
     @Test
     void testEmpty() {
         MapPropertyValue mpv = new MapPropertyValue();
-        Map<String, Object> comparison = MapPropertyValueMapping.getMapPropertyValueForComparison(mpv);
+        Map<String, Object> comparison = MapPropertyValueMapping.getMapPropertyValueForComparison(connector, mpv);
         assertNull(comparison, "Empty map property values are expected to be null after conversion.");
     }
 

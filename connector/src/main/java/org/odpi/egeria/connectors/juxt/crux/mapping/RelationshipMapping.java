@@ -6,17 +6,14 @@ import clojure.lang.IPersistentVector;
 import clojure.lang.PersistentVector;
 import crux.api.CruxDocument;
 import crux.api.ICruxDatasource;
+import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Maps the properties of Relationships between persistence and objects.
  */
 public class RelationshipMapping extends InstanceHeaderMapping {
-
-    private static final Logger log = LoggerFactory.getLogger(RelationshipMapping.class);
 
     public static final String INSTANCE_REF_PREFIX = "r";
 
@@ -91,19 +88,27 @@ public class RelationshipMapping extends InstanceHeaderMapping {
         if (proxies instanceof IPersistentVector) {
             IPersistentVector v = (IPersistentVector) proxies;
             if (v.length() == 2) {
-                EntityProxy one = getEntityProxyFromRef((String) v.nth(0));
-                EntityProxy two = getEntityProxyFromRef((String) v.nth(1));
+                String oneRef = (String) v.nth(0);
+                String twoRef = (String) v.nth(1);
+                EntityProxy one = getEntityProxyFromRef(oneRef);
+                EntityProxy two = getEntityProxyFromRef(twoRef);
                 if (one != null && two != null) {
                     ((Relationship) instanceHeader).setEntityOneProxy(one);
                     ((Relationship) instanceHeader).setEntityTwoProxy(two);
                 } else {
-                    log.error("Unable to retrieve entity proxy, nullifying the relationship.");
+                    cruxConnector.logProblem(this.getClass().getName(),
+                            "fromDoc",
+                            CruxOMRSAuditCode.FAILED_RETRIEVAL,
+                            null,
+                            "relationship",
+                            instanceHeader.getGUID(),
+                            "one or both of the entity proxies were not found -- 1:" + oneRef + ", 2:" + twoRef);
                     instanceHeader = null;
                     return;
                 }
             }
         }
-        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(instanceHeader.getType(), cruxDoc, RELATIONSHIP_PROPERTIES_NS);
+        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(cruxConnector, instanceHeader.getType(), cruxDoc, RELATIONSHIP_PROPERTIES_NS);
         ((Relationship) instanceHeader).setProperties(ip);
     }
 
