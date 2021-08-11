@@ -69,7 +69,7 @@
 
     <properties>
         <open-metadata.version>3.0-SNAPSHOT</open-metadata.version>
-        <crux.version>1.18.0</crux.version>
+        <crux.version>1.18.1-beta1</crux.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.4</jackson.version>
         <lucene.version>8.9.0</lucene.version>
@@ -103,7 +103,7 @@
             <dependency>
                 <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-lucene</artifactId>
-                <version>1.18.0.1-SNAPSHOT</version>
+                <version>${crux.version}</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
