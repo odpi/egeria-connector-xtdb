@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.0-SNAPSHOT</open-metadata.version>
+        <open-metadata.version>3.0</open-metadata.version>
         <crux.version>1.18.1</crux.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.4</jackson.version>
