@@ -11,7 +11,7 @@
     <groupId>org.odpi.egeria</groupId>
     <artifactId>egeria-connector-crux-module</artifactId>
     <packaging>pom</packaging>
-    <version>3.0-SNAPSHOT</version>
+    <version>3.1-SNAPSHOT</version>
     <modules>
         <module>connector</module>
         <module>migrator</module>
@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.0-SNAPSHOT</open-metadata.version>
+        <open-metadata.version>3.1-SNAPSHOT</open-metadata.version>
         <crux.version>1.18.1</crux.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.4</jackson.version>
