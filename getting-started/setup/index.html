@@ -1,0 +1,1415 @@
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Pluggable repository for Egeria, with native support for historical metadata.">
+      
+      
+      
+      
+        <link rel="canonical" href="https://odpi.github.io/egeria-connector-crux/getting-started/setup/">
+      
+      <link rel="icon" href="../../assets/favicon.ico">
+      <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.4">
+    
+    
+      
+        <title>Setup - Crux Connector</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.f7f47774.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.3f5d1f46.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/egeria.css">
+    
+    
+      
+
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="cyan">
+  
+    
+    <script>function __prefix(e){return new URL("../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    
+      <script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#setup" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+        <aside class="md-banner md-announce">
+          <div class="md-banner__inner md-announce__inner md-grid md-typeset">
+            
+<a href="https://www.linuxfoundation.org/projects" target="_blank"><img src="https://lfaidata.foundation/wp-content/themes/salient-child/images/logo_lf_projects_horizontal_2018.png" style="height: 15px; width: auto"></a>
+
+          </div>
+        </aside>
+      
+    </div>
+    
+      <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+
+<!--
+  Copyright (c) 2016-2021 Martin Donath <martin.donath@squidfunk.com>
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Header -->
+<header class="md-header" data-md-component="header">
+    <nav
+            class="md-header__inner md-grid"
+            aria-label="Header"
+    >
+
+        <!-- Button to open drawer -->
+        <label class="md-header__button md-icon" for="__drawer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+        </label>
+
+        <!-- Link to home -->
+        <a
+                href="../.."
+                title="Crux Connector"
+                class="md-header__button md-logo"
+                aria-label="Crux Connector"
+                data-md-component="logo"
+        >
+            <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+
+<a href="https://egeria.ai" target="_blank"><img src="../../assets/images/egeria-header.png" alt="Egeria" style="height:26px; width:auto;" /></a>
+        </a>
+
+        <!-- Header title -->
+        <div class="md-header__title" data-md-component="header-title">
+            <div class="md-header__ellipsis">
+                <div class="md-header__topic">
+                    <a href="https://odpi.github.io/egeria-connector-crux/">
+                        <span class="md-ellipsis">
+                            Crux Connector
+                        </span>
+                    </a>
+                </div>
+                <div class="md-header__topic" data-md-component="header-topic">
+                    <span class="md-ellipsis">
+                        <a href="https://odpi.github.io/egeria-connector-crux/">Crux Connector</a> /
+                        
+                            Setup
+                        
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Color palette -->
+        
+        <form class="md-header__option" data-md-component="palette">
+            
+            
+            
+            <input
+                    class="md-option"
+                    data-md-color-media=""
+                    data-md-color-scheme="default"
+                    data-md-color-primary=""
+                    data-md-color-accent="cyan"
+                    
+                    aria-label="Switch to dark mode"
+                    
+                    type="radio"
+                    name="__palette"
+                    id="__palette_1"
+            />
+            
+            <label
+                    class="md-header__button md-icon"
+                    title="Switch to dark mode"
+                    for="__palette_2"
+                    hidden
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2m10-3a5 5 0 0 1 5 5 5 5 0 0 1-5 5H7a5 5 0 0 1-5-5 5 5 0 0 1 5-5h10M7 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 3 3 0 0 0-3-3H7z"/></svg>
+            </label>
+            
+            
+            
+            
+            <input
+                    class="md-option"
+                    data-md-color-media=""
+                    data-md-color-scheme="slate"
+                    data-md-color-primary=""
+                    data-md-color-accent="cyan"
+                    
+                    aria-label="Switch to light mode"
+                    
+                    type="radio"
+                    name="__palette"
+                    id="__palette_2"
+            />
+            
+            <label
+                    class="md-header__button md-icon"
+                    title="Switch to light mode"
+                    for="__palette_1"
+                    hidden
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3z"/></svg>
+            </label>
+            
+            
+        </form>
+        
+
+        <!-- Site language selector -->
+        
+
+        <!-- Button to open search modal -->
+        
+        <label class="md-header__button md-icon" for="__search">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        </label>
+
+        <!-- Search interface -->
+        
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+
+        <!-- Repository information -->
+        
+        <div class="md-header__source">
+            
+<a href="https://github.com/odpi/egeria-connector-crux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    odpi/egeria-connector-crux
+  </div>
+</a>
+        </div>
+        
+    </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../.." class="md-tabs__link">
+      About
+    </a>
+  </li>
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="./" class="md-tabs__link md-tabs__link--active">
+        Getting Started
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../../how-it-works/" class="md-tabs__link">
+      How it Works
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cts/testing-overview/" class="md-tabs__link">
+        Conformance
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../migrating/how-migration-works/" class="md-tabs__link">
+        Migration
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../high-availability/sample/" class="md-tabs__link">
+        High Availability
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Crux Connector" class="md-nav__button md-logo" aria-label="Crux Connector" data-md-component="logo">
+      <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+
+<a href="https://egeria.ai" target="_blank"><img src="../../assets/images/egeria-header.png" alt="Egeria" style="height:26px; width:auto;" /></a>
+    </a>
+    Crux Connector
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/odpi/egeria-connector-crux" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    odpi/egeria-connector-crux
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        About
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      <label class="md-nav__link" for="__nav_2">
+        Getting Started
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Setup
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Setup
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-obtain-connector" class="md-nav__link">
+    1. Obtain connector
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-obtain-omag-server-platform" class="md-nav__link">
+    2. Obtain OMAG Server Platform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-configure-security" class="md-nav__link">
+    3. Configure security
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-start-the-omag-server-platform" class="md-nav__link">
+    4. Start the OMAG Server Platform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-configure-the-metadata-server" class="md-nav__link">
+    5. Configure the metadata server
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-start-the-metadata-server" class="md-nav__link">
+    6. Start the metadata server
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-for-configuring-crux" class="md-nav__link">
+    Options for configuring Crux
+  </a>
+  
+    <nav class="md-nav" aria-label="Options for configuring Crux">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pluggable-persistence" class="md-nav__link">
+    Pluggable persistence
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connector-options" class="md-nav__link">
+    Connector options
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explore/" class="md-nav__link">
+        Explore
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-it-works/" class="md-nav__link">
+        How it Works
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      <label class="md-nav__link" for="__nav_4">
+        Conformance
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Conformance" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Conformance
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cts/testing-overview/" class="md-nav__link">
+        Testing Overview
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cts/3.0/" class="md-nav__link">
+        3.0
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cts/2.11/2.11/" class="md-nav__link">
+        2.11
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cts/2.10/2.10/" class="md-nav__link">
+        2.10
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cts/2.9/2.9/" class="md-nav__link">
+        2.9
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cts/2.8/2.8/" class="md-nav__link">
+        2.8
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      <label class="md-nav__link" for="__nav_5">
+        Migration
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Migration" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Migration
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrating/how-migration-works/" class="md-nav__link">
+        How Migration Works
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrating/run-migration/" class="md-nav__link">
+        Run Migration
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrating/build-migrator/" class="md-nav__link">
+        Build Migrator
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      <label class="md-nav__link" for="__nav_6">
+        High Availability
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="High Availability" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          High Availability
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../high-availability/sample/" class="md-nav__link">
+        Sample
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../high-availability/limitations/" class="md-nav__link">
+        Limitations
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-obtain-connector" class="md-nav__link">
+    1. Obtain connector
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-obtain-omag-server-platform" class="md-nav__link">
+    2. Obtain OMAG Server Platform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-configure-security" class="md-nav__link">
+    3. Configure security
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-start-the-omag-server-platform" class="md-nav__link">
+    4. Start the OMAG Server Platform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-configure-the-metadata-server" class="md-nav__link">
+    5. Configure the metadata server
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-start-the-metadata-server" class="md-nav__link">
+    6. Start the metadata server
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-for-configuring-crux" class="md-nav__link">
+    Options for configuring Crux
+  </a>
+  
+    <nav class="md-nav" aria-label="Options for configuring Crux">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pluggable-persistence" class="md-nav__link">
+    Pluggable persistence
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connector-options" class="md-nav__link">
+    Connector options
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+
+<h1 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h1>
+<h2 id="1-obtain-connector">1. Obtain connector<a class="headerlink" href="#1-obtain-connector" title="Permanent link">&para;</a></h2>
+<p>Start by downloading the Crux repository connector:</p>
+<div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Latest release</label><div class="tabbed-content">
+<p><a href="http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&amp;g=org.odpi.egeria&amp;a=egeria-connector-crux&amp;v=RELEASE&amp;c=jar-with-dependencies"><img alt="Release" src="https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release" /></a></p>
+</div>
+<input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Latest snapshot</label><div class="tabbed-content">
+<p><a href="https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-crux/" target="dl"><img alt="Development" src="https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-crux?label=development&amp;server=https%3A%2F%2Foss.sonatype.org" /></a></p>
+</div>
+</div>
+<p>The connector is: <code>egeria-connector-crux-{version}-jar-with-dependencies.jar</code></p>
+<h2 id="2-obtain-omag-server-platform">2. Obtain <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform<a class="headerlink" href="#2-obtain-omag-server-platform" title="Permanent link">&para;</a></h2>
+<p>Download Egeria's <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform:</p>
+<div class="tabbed-set" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><label for="__tabbed_2_1">Latest release</label><div class="tabbed-content">
+<p><a href="http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&amp;g=org.odpi.egeria&amp;a=server-chassis-spring&amp;v=RELEASE"><img alt="Release" src="https://img.shields.io/maven-central/v/org.odpi.egeria/server-chassis-spring?label=release" /></a></p>
+</div>
+<input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><label for="__tabbed_2_2">Latest snapshot</label><div class="tabbed-content">
+<p><a href="https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/server-chassis-spring/" target="dl"><img alt="Development" src="https://img.shields.io/nexus/s/org.odpi.egeria/server-chassis-spring?label=development&amp;server=https%3A%2F%2Foss.sonatype.org" /></a></p>
+</div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">The connector version indicates the minimum required Egeria version</p>
+</div>
+<p>The <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform is: <code>server-chassis-spring-{version}.jar</code></p>
+<details class="question"><summary><abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform</summary><p>The <a href="https://egeria.ai/open-metadata-implementation/admin-services/docs/concepts/omag-server-platform.html" target="core"><abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform</a>
+is a runtime process for Open Metadata and Governance services like the metadata server that we will configure and
+run through the steps below.</p>
+</details>
+<h2 id="3-configure-security">3. Configure security<a class="headerlink" href="#3-configure-security" title="Permanent link">&para;</a></h2>
+<p>To get an initial environment up-and-running just download the <code>truststore.p12</code>
+file from: <a href="https://github.com/odpi/egeria/raw/master/truststore.p12">https://github.com/odpi/egeria/raw/master/truststore.p12</a>.</p>
+<details class="question"><summary>Transport-level security</summary><p>The <a href="https://github.com/odpi/egeria/raw/master/truststore.p12">truststore.p12</a>
+file provides a local truststore for Java. This allows the self-signed certificate embedded
+within the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform (by default) to be trusted.</p>
+<p>Without this trust, interactions with the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform (such as the REST calls that are made
+through Java to handle interaction between the Platform and the connector) will result in an
+<code>SSLHandshakeException</code>.</p>
+<p>While this <code>truststore.p12</code> file allows SSL-encrypted communication, the fact that
+it relies on a self-signed certificate means that there is no independent source of trust
+in the interactions (which would typically be achieved through an independent Certificate
+Authority).</p>
+<p>Additional details on TLS for Egeria can be found in <a href="https://egeria.ai/open-metadata-implementation/admin-services/docs/user/omag-server-platform-transport-level-security.html">the Egeria documentation</a>.</p>
+</details>
+<h2 id="4-start-the-omag-server-platform">4. Start the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform<a class="headerlink" href="#4-start-the-omag-server-platform" title="Permanent link">&para;</a></h2>
+<p>Ensure the 3 files are in the same directory, and run:</p>
+<div class="highlight"><pre><span></span><code>java -Dloader.path<span class="o">=</span>. -jar server-chassis-spring-*.jar
+</code></pre></div>
+<details class="question"><summary>Explanation of the command</summary><p>The <code>-Dloader.path=.</code> indicates that the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform should look for any
+connectors in the current directory. If you wanted to instead place the connector in a
+separate location (for example <code>/lib</code>), you could change the <code>.</code> to
+point to that other location (<code>-Dloader.path=/lib</code>).</p>
+</details>
+<details class="success"><summary>Output for <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform startup</summary><div class="highlight"><pre><span></span><code> ODPi Egeria
+    ____   __  ___ ___    ______   _____                                 ____   _         _     ___
+   / __ \ /  |/  //   |  / ____/  / ___/ ___   ____ _   __ ___   ____   / _  \ / / __    / /  / _ /__   ____ _  _
+  / / / // /|_/ // /| | / / __    \__ \ / _ \ / __/| | / // _ \ / __/  / /_/ // //   |  / _\ / /_ /  | /  _// || |
+ / /_/ // /  / // ___ |/ /_/ /   ___/ //  __// /   | |/ //  __// /    /  __ // // /  \ / /_ /  _// / // /  / / / /
+ \____//_/  /_//_/  |_|\____/   /____/ \___//_/    |___/ \___//_/    /_/    /_/ \__/\//___//_/   \__//_/  /_/ /_/
+
+ :: Powered by Spring Boot (v2.3.3.RELEASE) ::
+
+2021-02-12 20:16:37.243  INFO 53787 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 9443 (https)
+2021-02-12 20:16:49.162  INFO 53787 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 9443 (https) with context path &#39;&#39;
+
+Fri Feb 12 20:16:40 GMT 2021 No OMAG servers listed in startup configuration
+Fri Feb 12 20:16:49 GMT 2021 OMAG server platform ready for more configuration
+</code></pre></div>
+</details>
+<div class="admonition attention">
+<p class="admonition-title">Wait for these two final lines of output to appear before proceeding</p>
+<div class="highlight"><pre><span></span><code>{timestamp} No OMAG servers listed in startup configuration
+{timestamp} OMAG server platform ready for more configuration
+</code></pre></div>
+<p>These final two lines of output indicate that the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform has completed starting up
+and is now ready to be configured.</p>
+<p>Any attempt to configure the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform before these lines are output is likely to
+result in failures.</p>
+</div>
+<h2 id="5-configure-the-metadata-server">5. Configure the metadata server<a class="headerlink" href="#5-configure-the-metadata-server" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>curl -k -X POST -H <span class="s2">&quot;Content-Type: application/json&quot;</span> <span class="se">\</span>
+  --data <span class="s1">&#39;{&quot;class&quot;:&quot;Connection&quot;,&quot;connectorType&quot;:{&quot;class&quot;:&quot;ConnectorType&quot;,&quot;connectorProviderClassName&quot;:&quot;org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider&quot;}}&#39;</span> <span class="se">\</span>
+  <span class="s2">&quot;https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/local-repository/mode/plugin-repository/connection&quot;</span>
+</code></pre></div>
+<details class="question"><summary>Detailed explanation</summary><p>A <a href="https://egeria.ai/open-metadata-implementation/admin-services/docs/concepts/metadata-server.html" target="core">metadata server</a>
+is an <abbr title="Open Metadata and Governance">OMAG</abbr> server that hosts a metadata repository with native support for open metadata types and
+instances.</p>
+<p>This API call configures Crux as the repository for the metadata server.</p>
+<p>The URL to which we post indicates that we will use the Egeria <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform's built-in
+repository plugin capability to enable Crux as the metadata server's repository.</p>
+<p>The JSON payload's contents define how this plugin itself should be configured: specifically,
+which Java class should be used for the repository connection. Here we can see the payload
+refers to the <code>CruxOMRSRepositoryConnectorProvider</code>, which therefore tells the
+plugin to use this class -- specific to the Crux repository plugin -- in order to configure
+its repository connection.</p>
+</details>
+<details class="success"><summary>Response from metadata server configuration</summary><div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">&quot;class&quot;</span><span class="p">:</span><span class="s2">&quot;VoidResponse&quot;</span><span class="p">,</span><span class="nt">&quot;relatedHTTPCode&quot;</span><span class="p">:</span><span class="mi">200</span><span class="p">}</span>
+</code></pre></div>
+</details>
+<div class="admonition attention">
+<p class="admonition-title">The default configuration is for an in-memory (non-persistent) repository</p>
+<p>The default configuration used in this example will startup the Crux repository in
+a completely embedded, in-memory-only mode. No data will be persisted, so if you stop or
+restart the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform all data will be lost.</p>
+<p>While this is actually beneficial for quick experimentation and testing purposes, it is
+naturally not desirable for a "real" repository: you'd want your metadata to stick around
+even when the server goes offline.</p>
+<p><a href="#options-for-configuring-crux">Additional options for configuring Crux</a>, including with
+persistence, can be found at the end of this page.</p>
+</div>
+<h2 id="6-start-the-metadata-server">6. Start the metadata server<a class="headerlink" href="#6-start-the-metadata-server" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>curl -k -X POST <span class="s2">&quot;https://localhost:9443/open-metadata/admin-services/users/admin/servers/crux/instance&quot;</span>
+</code></pre></div>
+<details class="question"><summary>Detailed explanation</summary><p>Up to this point we have only configured the metadata server, but have not actually started it.</p>
+<p>This final API call tells Egeria to start the metadata server, based on the configuration the previous
+API calls defined.</p>
+</details>
+<details class="success"><summary>Response from metadata server startup</summary><div class="highlight"><pre><span></span><code><span class="p">{</span>
+  <span class="nt">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;SuccessMessageResponse&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;relatedHTTPCode&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
+  <span class="nt">&quot;successMessage&quot;</span><span class="p">:</span> <span class="s2">&quot;Fri Feb 12 20:34:16 GMT 2021 crux is running the following services: [Open Metadata Repository Services (OMRS)]&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>It may take 10-15 seconds to complete, but the example response above indicates that the
+metadata server is now running.</p>
+</details>
+<details class="info"><summary>Other startup information of potential interest</summary><p>Back in the console where the <abbr title="Open Metadata and Governance">OMAG</abbr> Server Platform is running, you should see the audit log
+printing out a large amount of information as the startup is running. Most of this is
+related to the registration of type definition details with the repository.</p>
+<div class="highlight"><pre><span></span><code> ODPi Egeria
+    ____   __  ___ ___    ______   _____                                 ____   _         _     ___
+   / __ \ /  |/  //   |  / ____/  / ___/ ___   ____ _   __ ___   ____   / _  \ / / __    / /  / _ /__   ____ _  _
+  / / / // /|_/ // /| | / / __    \__ \ / _ \ / __/| | / // _ \ / __/  / /_/ // //   |  / _\ / /_ /  | /  _// || |
+ / /_/ // /  / // ___ |/ /_/ /   ___/ //  __// /   | |/ //  __// /    /  __ // // /  \ / /_ /  _// / // /  / / / /
+ \____//_/  /_//_/  |_|\____/   /____/ \___//_/    |___/ \___//_/    /_/    /_/ \__/\//___//_/   \__//_/  /_/ /_/
+
+ :: Powered by Spring Boot (v2.3.3.RELEASE) ::
+
+2021-02-12 20:27:40.812  INFO 61953 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 9443 (https)
+2021-02-12 20:27:48.963  INFO 61953 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 9443 (https) with context path &#39;&#39;
+
+Fri Feb 12 20:27:42 GMT 2021 No OMAG servers listed in startup configuration
+Fri Feb 12 20:27:49 GMT 2021 OMAG server platform ready for more configuration
+Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0064 The Open Metadata Repository Services (OMRS) has initialized the audit log for the Metadata Server called crux
+Fri Feb 12 20:34:04 GMT 2021 crux Startup OMAG-ADMIN-0001 The crux server is configured with a max page size of 1000
+Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0001 The Open Metadata Repository Services (OMRS) is initializing the subsystems to support a new server
+Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0003 The local repository is initializing the metadata collection named crux with an id of aa1f9067-7bba-4f65-ac0d-bd64e7ac7e6e
+Fri Feb 12 20:34:04 GMT 2021 crux Startup OMRS-AUDIT-0029 The local repository outbound event manager is initializing
+Fri Feb 12 20:34:04 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0001 The Crux repository is starting a new server instance
+Fri Feb 12 20:34:04 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0003 The Crux repository is starting a new in-memory instance
+Fri Feb 12 20:34:14 GMT 2021 crux Information OMRS-CRUX-REPOSITORY-0004 The Crux repository has started a new instance for server crux, detected Crux version 21.02-1.15.0-beta
+Fri Feb 12 20:34:14 GMT 2021 crux Information OMRS-AUDIT-0050 The Open Metadata Repository Services (OMRS) is about to process open metadata archive Open Metadata Types
+Fri Feb 12 20:34:14 GMT 2021 crux Types OMRS-AUDIT-0301 The local server has added a new type called object with a unique identifier of 1c4b21f4-0b67-41a7-a6ed-2af185eb9b3b and a version number of 1 from ODPi Egeria (2.6)
+...
+Fri Feb 12 20:34:14 GMT 2021 crux Types OMRS-AUDIT-0303 The local server has updated an existing type called SupportedDiscoveryService with a unique identifier of dff45aeb-c65e-428c-9ab3-d756bc5d8dbb to version number of 3 using a patch from ODPi Egeria (2.6)
+Fri Feb 12 20:34:14 GMT 2021 crux Information OMRS-AUDIT-0053 The Open Metadata Repository Services (OMRS) has processed 698 types and 0 instances from open metadata archive Open Metadata Types
+Fri Feb 12 20:34:14 GMT 2021 crux Startup OMRS-AUDIT-0004 Connecting to the metadata highway
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0005 Connecting to open metadata repository cohort mycohort
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0029 The mycohort cohort inbound event manager is initializing
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0030 Registering the mycohort event consumer with the local repository outbound event manager
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0030 Registering the Local Repository Content (TypeDef) Manager event consumer with the mycohort cohort inbound event manager
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0030 Registering the Local Repository Inbound Instance Events event consumer with the mycohort cohort inbound event manager
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0031 The mycohort cohort inbound event manager is starting with 1 type definition event consumer(s) and 1 instance event consumer(s)
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0026 Initializing listener for cohort mycohort
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0019 An OMRS Topic Connector has registered with an event bus connector for topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OCF-KAFKA-TOPIC-CONNECTOR-0001 Connecting to Apache Kafka Topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic with a server identifier of 1e0c241c-d4d0-48b2-92c7-e4aa0115b15f
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OCF-KAFKA-TOPIC-CONNECTOR-0015 The local server is attempting to connect to Kafka, attempt 1
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OCF-KAFKA-TOPIC-CONNECTOR-0003 10 properties passed to the Apache Kafka Consumer for topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OCF-KAFKA-TOPIC-CONNECTOR-0002 10 properties passed to the Apache Kafka Producer for topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OCF-KAFKA-TOPIC-CONNECTOR-0010 The Apache Kafka producer for topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic is starting up with 0 buffered messages
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0015 The listener thread for an OMRS Topic Connector for topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic has started
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0020 An OMRS Topic Connector is ready to send and receive events on topic OMRSTopic.openmetadata.repositoryservices.cohort.mycohort.OMRSTopic
+Fri Feb 12 20:34:15 GMT 2021 crux Cohort OMRS-AUDIT-0060 Registering with open metadata repository cohort mycohort using metadata collection id aa1f9067-7bba-4f65-ac0d-bd64e7ac7e6e
+Fri Feb 12 20:34:15 GMT 2021 crux Cohort OMRS-AUDIT-0062 Requesting registration information from other members of the open metadata repository cohort mycohort
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0031 The local repository outbound event manager is starting with 1 type definition event consumer(s) and 1 instance event consumer(s)
+Fri Feb 12 20:34:15 GMT 2021 crux Startup OMRS-AUDIT-0032 The local repository outbound event manager is sending out the 698 type definition events that were generated and buffered during server initialization
+Fri Feb 12 20:34:16 GMT 2021 crux Startup OMRS-AUDIT-0007 The Open Metadata Repository Services (OMRS) has initialized
+<span class="hll">Fri Feb 12 20:34:16 GMT 2021 crux Startup OMAG-ADMIN-0004 The crux server has successfully completed start up.  The following services are running: [Open Metadata Repository Services (OMRS)]
+</span></code></pre></div>
+<p>This final line indicates that the server has now started up and completed its registration with the cohort.</p>
+</details>
+<h2 id="options-for-configuring-crux">Options for configuring Crux<a class="headerlink" href="#options-for-configuring-crux" title="Permanent link">&para;</a></h2>
+<h3 id="pluggable-persistence">Pluggable persistence<a class="headerlink" href="#pluggable-persistence" title="Permanent link">&para;</a></h3>
+<p>There are many options for configuring Crux itself.</p>
+<p>A list of overall persistence modules and deeper configuration options for each can be found
+through <a href="https://opencrux.com/reference/configuration.html" target="crux">Crux's own documentation</a>.</p>
+<p>To enable persistence, send in the JSON document configuration outlined in
+<a href="https://opencrux.com/reference/configuration.html" target="crux">Crux's own documentation</a>
+directly to the <code>cruxConfig</code> key of the <code>configurationProperties</code>
+property of Egeria's connector configuration:</p>
+<div class="admonition example">
+<p class="admonition-title">Example persistent configuration</p>
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code><span class="p">{</span>
+  <span class="nt">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;Connection&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;connectorType&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;ConnectorType&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;connectorProviderClassName&quot;</span><span class="p">:</span> <span class="s2">&quot;org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider&quot;</span>
+  <span class="p">},</span>
+  <span class="nt">&quot;configurationProperties&quot;</span><span class="p">:</span> <span class="p">{</span>
+<span class="hll">    <span class="nt">&quot;cruxConfig&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">      <span class="nt">&quot;crux.lucene/lucene-store&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">        <span class="nt">&quot;db-dir&quot;</span><span class="p">:</span> <span class="s2">&quot;data/servers/crux/lucene&quot;</span>
+</span><span class="hll">      <span class="p">},</span>
+</span><span class="hll">      <span class="nt">&quot;crux/index-store&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">        <span class="nt">&quot;kv-store&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">          <span class="nt">&quot;crux/module&quot;</span><span class="p">:</span> <span class="s2">&quot;crux.rocksdb/-&gt;kv-store&quot;</span><span class="p">,</span>
+</span><span class="hll">          <span class="nt">&quot;db-dir&quot;</span><span class="p">:</span> <span class="s2">&quot;data/servers/crux/rdb-index&quot;</span>
+</span><span class="hll">        <span class="p">}</span>
+</span><span class="hll">      <span class="p">},</span>
+</span><span class="hll">      <span class="nt">&quot;crux/document-store&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">        <span class="nt">&quot;kv-store&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">          <span class="nt">&quot;crux/module&quot;</span><span class="p">:</span> <span class="s2">&quot;crux.rocksdb/-&gt;kv-store&quot;</span><span class="p">,</span>
+</span><span class="hll">          <span class="nt">&quot;db-dir&quot;</span><span class="p">:</span> <span class="s2">&quot;data/servers/crux/rdb-docs&quot;</span>
+</span><span class="hll">        <span class="p">}</span>
+</span><span class="hll">      <span class="p">},</span>
+</span><span class="hll">      <span class="nt">&quot;crux/tx-log&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">        <span class="nt">&quot;kv-store&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class="hll">          <span class="nt">&quot;crux/module&quot;</span><span class="p">:</span> <span class="s2">&quot;crux.rocksdb/-&gt;kv-store&quot;</span><span class="p">,</span>
+</span><span class="hll">          <span class="nt">&quot;db-dir&quot;</span><span class="p">:</span> <span class="s2">&quot;data/servers/crux/rdb-tx&quot;</span>
+</span><span class="hll">        <span class="p">}</span>
+</span><span class="hll">      <span class="p">}</span>
+</span><span class="hll">    <span class="p">}</span>
+</span>  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</td></tr></table>
+<div class="admonition attention">
+<p class="admonition-title">Some of the Lucene configuration will be automatically injected</p>
+<p>In the example above, lines 9-11 configure Crux's built-in Lucene index. You should be aware
+that some additional entries will be automatically injected by Egeria: specifically the <code>indexer</code>
+and <code>analyzer</code> entries used to configure the Lucene index optimally for the <abbr title="Open Metadata Repository Services">OMRS</abbr>-level search
+interfaces that Egeria defines. If you have defined your own <code>analyzer</code> or <code>indexer</code> in the
+configuration, these will be overridden by the connector's injection process -- in other words,
+any custom configuration you attempt for <code>analyzer</code> or <code>indexer</code> will be ignored.</p>
+</div>
+<p>It is highly recommended to include the Lucene entry like that above as it offers significant performance
+improvements for any text-based queries.</p>
+<p>The remainder of the configuration in this example defines RocksDB to act as the persistence
+layer for Crux's index and document stores, as well as its transaction log.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">You may need to download additional dependencies</p>
+<p>Depending on the persistence you choose to use, you may need to download additional
+dependencies and place them into the same directory as the connector.</p>
+<p>For example, when using RocksDB you will need the following:</p>
+<ul>
+<li><a href="https://search.maven.org/artifact/pro.juxt.crux/crux-rocksdb" target="dl">pro.juxt.crux:crux-rocksdb</a></li>
+<li><a href="https://search.maven.org/artifact/org.rocksdb/rocksdbjni" target="dl">org.rocksdb:rocksdbjni</a></li>
+<li><a href="https://search.maven.org/artifact/com.github.jnr/jnr-ffi" target="dl">com.github.jnr:jnr-ffi</a></li>
+</ul>
+<p>You can generally determine the additional dependencies you will need by looking at the
+<code>project.clj</code> file of relevant Crux module -- specifically its <code>:dependencies</code>
+section. For example, sticking with RocksDB, here is the <a href="https://github.com/juxt/crux/blob/master/crux-rocksdb/project.clj" target="crux">project.clj</a>:</p>
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code><span class="hll"><span class="p">(</span><span class="kd">defproject </span><span class="nv">pro.juxt.crux/crux-rocksdb</span> <span class="s">&quot;crux-git-version&quot;</span>
+</span>  <span class="ss">:description</span> <span class="s">&quot;Crux RocksDB&quot;</span>
+  <span class="ss">:plugins</span> <span class="p">[[</span><span class="nv">lein-parent</span> <span class="s">&quot;0.3.8&quot;</span><span class="p">]]</span>
+  <span class="ss">:parent-project</span> <span class="p">{</span><span class="ss">:path</span> <span class="s">&quot;../project.clj&quot;</span>
+                   <span class="ss">:inherit</span> <span class="p">[</span><span class="ss">:repositories</span> <span class="ss">:deploy-repositories</span>
+                             <span class="ss">:managed-dependencies</span>
+                             <span class="ss">:pedantic?</span> <span class="ss">:global-vars</span>
+                             <span class="ss">:license</span> <span class="ss">:url</span> <span class="ss">:pom-addition</span><span class="p">]}</span>
+  <span class="ss">:scm</span> <span class="p">{</span><span class="ss">:dir</span> <span class="s">&quot;..&quot;</span><span class="p">}</span>
+  <span class="ss">:dependencies</span> <span class="p">[[</span><span class="nv">org.clojure/clojure</span> <span class="s">&quot;1.10.3&quot;</span><span class="p">]</span>
+                 <span class="p">[</span><span class="nv">pro.juxt.crux/crux-core</span> <span class="s">&quot;crux-git-version&quot;</span><span class="p">]</span>
+                 <span class="p">[</span><span class="nv">pro.juxt.crux/crux-metrics</span> <span class="s">&quot;crux-git-version&quot;</span> <span class="ss">:scope</span> <span class="s">&quot;provided&quot;</span><span class="p">]</span>
+<span class="hll">                 <span class="p">[</span><span class="nv">org.rocksdb/rocksdbjni</span> <span class="s">&quot;6.12.7&quot;</span><span class="p">]</span>
+</span><span class="hll">                 <span class="p">[</span><span class="nv">com.github.jnr/jnr-ffi</span> <span class="s">&quot;2.1.12&quot;</span><span class="p">]]</span>
+</span>  <span class="ss">:middleware</span> <span class="p">[</span><span class="nv">leiningen.project-version/middleware</span><span class="p">])</span>
+</code></pre></div>
+</td></tr></table>
+<p>Note that its dependencies include <code>org.rocksdb:rocksdbjni</code> and <code>com.github.jnr:jnr-ffi</code>.
+The third dependency given in the previous slide is this Crux persistence module itself
+(<code>pro.juxt.crux:crux-rocksdb</code>).</p>
+</div>
+<h3 id="connector-options">Connector options<a class="headerlink" href="#connector-options" title="Permanent link">&para;</a></h3>
+<p>There are currently two configuration options for the connector itself:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>luceneRegexes</code></td>
+<td>Controls whether the connector will interpret unquoted regexes as Lucene-compatible (true) or not (false): in the latter case ensuring that we fallback to full Java regex checking (which will be significantly slower).</td>
+</tr>
+<tr>
+<td><code>syncIndex</code></td>
+<td>Controls whether the connector will wait for the Crux indexes to be updated before returning from write operations (true) or only that they are transactionally persisted (false).</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition example">
+<p class="admonition-title">Example configuration showing the default settings</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+  <span class="nt">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;Connection&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;connectorType&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;ConnectorType&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;connectorProviderClassName&quot;</span><span class="p">:</span> <span class="s2">&quot;org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider&quot;</span>
+  <span class="p">},</span>
+  <span class="nt">&quot;configurationProperties&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;cruxConfig&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="p">},</span>
+    <span class="nt">&quot;luceneRegexes&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;syncIndex&quot;</span><span class="p">:</span> <span class="kc">true</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the ODPi Egeria project. -->
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+        
+          <a href="#" class="md-top md-icon" data-md-component="top" data-md-state="hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"/></svg>
+            Back to top
+          </a>
+        
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../.." class="md-footer__link md-footer__link--prev" aria-label="Previous: About" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              About
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../explore/" class="md-footer__link md-footer__link--next" aria-label="Next: Explore" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Explore
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            License: <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>, &copy; 2018-2021 contributors to the Egeria project.
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+        
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+      <a href="https://github.com/odpi/egeria" target="_blank" rel="noopener" title="Egeria on GitHub" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+      </a>
+    
+      
+      
+      <a href="https://hub.docker.com/u/odpi" target="_blank" rel="noopener" title="Egeria on Docker" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M349.9 236.3h-66.1v-59.4h66.1v59.4zm0-204.3h-66.1v60.7h66.1V32zm78.2 144.8H362v59.4h66.1v-59.4zm-156.3-72.1h-66.1v60.1h66.1v-60.1zm78.1 0h-66.1v60.1h66.1v-60.1zm276.8 100c-14.4-9.7-47.6-13.2-73.1-8.4-3.3-24-16.7-44.9-41.1-63.7l-14-9.3-9.3 14c-18.4 27.8-23.4 73.6-3.7 103.8-8.7 4.7-25.8 11.1-48.4 10.7H2.4c-8.7 50.8 5.8 116.8 44 162.1 37.1 43.9 92.7 66.2 165.4 66.2 157.4 0 273.9-72.5 328.4-204.2 21.4.4 67.6.1 91.3-45.2 1.5-2.5 6.6-13.2 8.5-17.1l-13.3-8.9zm-511.1-27.9h-66v59.4h66.1v-59.4zm78.1 0h-66.1v59.4h66.1v-59.4zm78.1 0h-66.1v59.4h66.1v-59.4zm-78.1-72.1h-66.1v60.1h66.1v-60.1z"/></svg>
+      </a>
+    
+      
+      
+      <a href="https://medium.com/tag/egeria" target="_blank" rel="noopener" title="Egeria on Medium" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M0 32v448h448V32H0zm372.2 106.1-24 23c-2.1 1.6-3.1 4.2-2.7 6.7v169.3c-.4 2.6.6 5.2 2.7 6.7l23.5 23v5.1h-118V367l24.3-23.6c2.4-2.4 2.4-3.1 2.4-6.7V199.8l-67.6 171.6h-9.1L125 199.8v115c-.7 4.8 1 9.7 4.4 13.2l31.6 38.3v5.1H71.2v-5.1l31.6-38.3c3.4-3.5 4.9-8.4 4.1-13.2v-133c.4-3.7-1-7.3-3.8-9.8L75 138.1V133h87.3l67.4 148L289 133.1h83.2v5z"/></svg>
+      </a>
+    
+      
+      
+      <a href="https://lfaifoundation.slack.com/archives/C01F40J2XA8" target="_blank" rel="noopener" title="Egeria on Slack" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M94.12 315.1c0 25.9-21.16 47.06-47.06 47.06S0 341 0 315.1c0-25.9 21.16-47.06 47.06-47.06h47.06v47.06zm23.72 0c0-25.9 21.16-47.06 47.06-47.06s47.06 21.16 47.06 47.06v117.84c0 25.9-21.16 47.06-47.06 47.06s-47.06-21.16-47.06-47.06V315.1zm47.06-188.98c-25.9 0-47.06-21.16-47.06-47.06S139 32 164.9 32s47.06 21.16 47.06 47.06v47.06H164.9zm0 23.72c25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06H47.06C21.16 243.96 0 222.8 0 196.9s21.16-47.06 47.06-47.06H164.9zm188.98 47.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06h-47.06V196.9zm-23.72 0c0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06V79.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06V196.9zM283.1 385.88c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06v-47.06h47.06zm0-23.72c-25.9 0-47.06-21.16-47.06-47.06 0-25.9 21.16-47.06 47.06-47.06h117.84c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06H283.1z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../assets/javascripts/workers/search.709b4209.min.js", "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.febc23d1.min.js"></script>
+      
+    
+  </body>
+</html>
