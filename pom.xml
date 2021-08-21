@@ -377,6 +377,7 @@
                         <exclude>**/*.ipynb</exclude>
                         <exclude>**/*.patch</exclude>
                         <exclude>**/*.drawio</exclude>
+                        <exclude>**/*.svg</exclude>
                         <exclude>**/*.log</exclude>
                         <exclude>**/*.csv</exclude>
                         <exclude>**/*.iml</exclude>
