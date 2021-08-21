@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CC-BY-4.0
-# Copyright Contributors to the ODPi Egeria project.
+# Copyright Contributors to the Egeria project.
 
 site_name: Crux Connector
 site_description: Pluggable repository for Egeria, with native support for historical metadata.
@@ -11,23 +11,24 @@ edit_uri: ""
 
 nav:
   - About: index.md
-  - Getting started:
-      - getting-started/setup.md
-      - getting-started/explore.md
-  - How it works: how-it-works.md
+  - Getting Started:
+      - Setup: getting-started/setup.md
+      - Explore: getting-started/explore.md
+  - How it Works: how-it-works.md
   - Conformance:
-      - cts/testing-overview.md
-      - cts/2.11/2.11.md
-      - cts/2.10/2.10.md
-      - cts/2.9/2.9.md
-      - cts/2.8/2.8.md
+      - Testing Overview: cts/testing-overview.md
+      - "3.0": cts/3.0/index.md
+      - "2.11": cts/2.11/2.11.md
+      - "2.10": cts/2.10/2.10.md
+      - "2.9": cts/2.9/2.9.md
+      - "2.8": cts/2.8/2.8.md
   - Migration:
-      - migrating/how-migration-works.md
-      - migrating/run-migration.md
-      - migrating/build-migrator.md
-  - High availability:
-      - high-availability/sample.md
-      - high-availability/limitations.md
+      - How Migration Works: migrating/how-migration-works.md
+      - Run Migration: migrating/run-migration.md
+      - Build Migrator: migrating/build-migrator.md
+  - High Availability:
+      - Sample: high-availability/sample.md
+      - Limitations: high-availability/limitations.md
 
 theme:
   name: material
