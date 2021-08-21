@@ -16,9 +16,9 @@ on a pluggable architecture supporting a variety of underlying storage back-ends
 Of particular interest for Egeria is that it has native support for storing historical information and temporal queries
 -- making it one of the first repositories to support the use of the `asOfTime` parameter across all metadata.
 
-## [Documentation](https://odpi.github.io/egeria-connector-crux/)
+## [Documentation](https://odpi.github.io/egeria-docs/connectors/repository/crux/)
 
-[https://odpi.github.io/egeria-connector-crux/](https://odpi.github.io/egeria-connector-crux/)
+[https://odpi.github.io/egeria-docs/connectors/repository/crux/](https://odpi.github.io/egeria-docs/connectors/repository/crux/)
 
 ----
 License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
