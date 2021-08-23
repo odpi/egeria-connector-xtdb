@@ -1,0 +1,380 @@
+Name:         c80-10-crux-6c8f765886-cg2l8
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-3.fyre.ibm.com/9.20.194.199
+Start Time:   Sat, 21 Aug 2021 17:53:09 +0100
+Labels:       app.kubernetes.io/component=crux-service
+              app.kubernetes.io/instance=c80-10
+              app.kubernetes.io/name=ec-pts-crux
+              pod-template-hash=6c8f765886
+Annotations:  cni.projectcalico.org/podIP: 10.233.64.75/32
+              cni.projectcalico.org/podIPs: 10.233.64.75/32
+Status:       Running
+IP:           10.233.64.75
+IPs:
+  IP:           10.233.64.75
+Controlled By:  ReplicaSet/c80-10-crux-6c8f765886
+Init Containers:
+  init-connector:
+    Container ID:  docker://db617d711aa69fa2c244bc9141b3f266215d55af8a0d4843a1fffee00b4bfb75
+    Image:         docker.io/odpi/egeria-configure:3.0
+    Image ID:      docker-pullable://odpi/egeria-configure@sha256:16937c1d9240fd354c35101aebbb5891df05109c6edab570133e72a1746a5b77
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      cd /opt/egeria/connectors && curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR} && wget ${CRUX_ROCKS_JAR_URL} && wget ${ROCKS_JAR_URL} && wget ${JNR_JAR_URL}
+      
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Sat, 21 Aug 2021 17:53:12 +0100
+      Finished:     Sat, 21 Aug 2021 17:53:15 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      c80-10-configmap  ConfigMap  Optional: false
+    Environment:        <none>
+    Mounts:
+      /opt/egeria/connectors from egeria-crux-connector-volume (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Containers:
+  proxy:
+    Container ID:   docker://ef13fa06c1c13beb6f2ab48d8c98f54996856912283eb8af5d26105ce8efb8e3
+    Image:          docker.io/odpi/egeria:3.0
+    Image ID:       docker-pullable://odpi/egeria@sha256:1a34671ac4f1aa78b45fde69ae3acfb6e57e6cc3195136af242a5cba106e5e1e
+    Port:           9443/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 21 Aug 2021 17:53:17 +0100
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     4
+      memory:  16Gi
+    Requests:
+      cpu:      2
+      memory:   8Gi
+    Readiness:  tcp-socket :9443 delay=10s timeout=1s period=10s #success=1 #failure=6
+    Environment Variables from:
+      c80-10-configmap  ConfigMap  Optional: false
+    Environment:
+      LOADER_PATH:       /opt/egeria/connectors
+      MALLOC_ARENA_MAX:  2
+    Mounts:
+      /opt/egeria/connectors from egeria-crux-connector-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  egeria-crux-connector-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
+Name:         c80-10-init-and-report-85c465fbd-4jw8l
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-3.fyre.ibm.com/9.20.194.199
+Start Time:   Sat, 21 Aug 2021 17:53:09 +0100
+Labels:       app.kubernetes.io/component=init-and-report
+              app.kubernetes.io/instance=c80-10
+              app.kubernetes.io/name=ec-pts-crux
+              pod-template-hash=85c465fbd
+Annotations:  cni.projectcalico.org/podIP: 10.233.64.80/32
+              cni.projectcalico.org/podIPs: 10.233.64.80/32
+Status:       Running
+IP:           10.233.64.80
+IPs:
+  IP:           10.233.64.80
+Controlled By:  ReplicaSet/c80-10-init-and-report-85c465fbd
+Init Containers:
+  wait-for-proxy:
+    Container ID:   docker://7e4ea14ac13d15330284772f3f832f82743c1610d003012c4f32046d58f9845d
+    Image:          docker.io/odpi/egeria-configure:3.0
+    Image ID:       docker-pullable://odpi/egeria-configure@sha256:16937c1d9240fd354c35101aebbb5891df05109c6edab570133e72a1746a5b77
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Sat, 21 Aug 2021 17:53:14 +0100
+      Finished:     Sat, 21 Aug 2021 17:53:42 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  c80-10-crux-service
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from c80-10-pts-token-w9wj4 (ro)
+  wait-for-kafka:
+    Container ID:   docker://3f58bc9b2cd01cc9a7ac03844df9d416d1121adba75d22ab0bfbc74ab422cc50
+    Image:          docker.io/odpi/egeria-configure:3.0
+    Image ID:       docker-pullable://odpi/egeria-configure@sha256:16937c1d9240fd354c35101aebbb5891df05109c6edab570133e72a1746a5b77
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Sat, 21 Aug 2021 17:53:44 +0100
+      Finished:     Sat, 21 Aug 2021 17:53:44 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  c80-10-kafka
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from c80-10-pts-token-w9wj4 (ro)
+Containers:
+  init-and-report:
+    Container ID:  docker://56fa63fc2ad6601cf54441e8d055853440adccbc4c726fa924a4fe84f3bf1704
+    Image:         docker.io/odpi/egeria-configure:3.0
+    Image ID:      docker-pullable://odpi/egeria-configure@sha256:16937c1d9240fd354c35101aebbb5891df05109c6edab570133e72a1746a5b77
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/server-url-root?url=${CRUXPROXY_ENDPOINT} && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/server-type?typeName=Conformance && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/event-bus?topicURLRoot=egeria --data '{"producer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"}, "consumer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"} }' && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/cohorts/${EGERIA_COHORT} && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/conformance-suite-workbenches/repository-workbench/performance --data '{"class":"RepositoryPerformanceWorkbenchConfig","tutRepositoryServerName":"'"${CRUX_SERVER}"'","instancesPerType":80,"maxSearchResults":10,"waitBetweenScenarios":0,"profilesToSkip":["Graph queries","Graph history queries"] }' && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/instance && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/server-type?typeName=Crux && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/organization-name?name=ODPi && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/event-bus?topicURLRoot=egeria --data '{"producer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"}, "consumer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"} }' && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/local-repository/mode/plugin-repository/connection --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"},"configurationProperties":{"cruxConfig":{"crux/index-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-index"}},"crux/document-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-docs"}},"crux/tx-log":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-tx"}},"crux.lucene/lucene-store":{"db-dir":"data/servers/crux/lucene"}},"syncIndex":true}}' && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/cohorts/${EGERIA_COHORT} && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X POST --max-time 900 ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/instance && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/pts/configuration > /tmp/omag.server.pts.config && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/configuration > /tmp/omag.server.${CRUX_SERVER}.config && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/local-registration > /tmp/cohort.${EGERIA_COHORT}.pts.local && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/cohorts/${EGERIA_COHORT}/remote-members > /tmp/cohort.${EGERIA_COHORT}.pts.remote && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUXPROXY_ENDPOINT}/servers/${CRUX_SERVER}/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/local-registration > /tmp/cohort.${EGERIA_COHORT}.${CRUX_SERVER}.local && curl -f -k -w "\n  (%{http_code} - %{url_effective})\n" --silent -X GET ${CRUXPROXY_ENDPOINT}/servers/${CRUX_SERVER}/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/cohorts/${EGERIA_COHORT}/remote-members > /tmp/cohort.${EGERIA_COHORT}.${CRUX_SERVER}.remote && echo ""; echo "Waiting 2 minutes for PTS to start..."; sleep 120 && until [ $(curl -f -k --silent --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/status/workbenches/performance-workbench | jq '.workbenchStatus.workbenchComplete') == "true" ]; do echo "... waiting for PTS to complete"; sleep 20; done && curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/summary > /tmp/openmetadata_cts_summary.json && TEST_CASES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases  | jq -r '.testCaseIds[]') && PROFILES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles | jq -r '.profileNames[]') && mkdir -p /tmp/profile-details && while read -r line; do urlencoded=$(echo ${line} | sed -e 's/ /%20/g'); filename=$(echo ${line} | sed -e 's/ /_/g'); echo "Retrieving profile details for: ${line}"; curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles/${urlencoded} > /tmp/profile-details/${filename}.json; done < <(echo "${PROFILES}") && mkdir -p /tmp/test-case-details && while read -r line; do echo "Retrieving test case details for: ${line}"; urlencoded=$(echo ${line} | sed -e 's/</%3C/g'); urlencoded=$(echo ${urlencoded} | sed -e 's/>/%3E/g'); filename=$(echo ${line} | sed -e 's/[<>]/_/g'); curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/pts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases/${urlencoded} > /tmp/test-case-details/${filename}.json; done < <(echo "${TEST_CASES}") && cd /tmp && tar cvf pd.tar profile-details/*.json; gzip pd.tar && tar cvf tcd.tar test-case-details/*.json; gzip tcd.tar && tar cvf ${PTS_REPORT_NAME}.tar *.config cohort.* openmetadata_cts_summary.json pd.tar.gz tcd.tar.gz; gzip ${PTS_REPORT_NAME}.tar && echo "Complete -- PTS results available to download from /tmp/${PTS_REPORT_NAME}.tar.gz" && tail -f /dev/null
+      
+    State:          Running
+      Started:      Sat, 21 Aug 2021 17:53:46 +0100
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     500m
+      memory:  64Mi
+    Requests:
+      cpu:     100m
+      memory:  16Mi
+    Environment Variables from:
+      c80-10-configmap  ConfigMap  Optional: false
+    Environment:        <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from c80-10-pts-token-w9wj4 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  c80-10-pts-token-w9wj4:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  c80-10-pts-token-w9wj4
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
+Name:         c80-10-kafka-0
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-3.fyre.ibm.com/9.20.194.199
+Start Time:   Sat, 21 Aug 2021 17:53:09 +0100
+Labels:       app.kubernetes.io/component=kafka
+              app.kubernetes.io/instance=c80-10
+              app.kubernetes.io/managed-by=Helm
+              app.kubernetes.io/name=kafka
+              controller-revision-hash=c80-10-kafka-75df4cbb85
+              helm.sh/chart=kafka-12.2.0
+              statefulset.kubernetes.io/pod-name=c80-10-kafka-0
+Annotations:  cni.projectcalico.org/podIP: 10.233.64.78/32
+              cni.projectcalico.org/podIPs: 10.233.64.78/32
+Status:       Running
+IP:           10.233.64.78
+IPs:
+  IP:           10.233.64.78
+Controlled By:  StatefulSet/c80-10-kafka
+Containers:
+  kafka:
+    Container ID:  docker://87f92a8186f654848f32709c79b015907769635f9f34eed02183d014dd49b454
+    Image:         docker.io/bitnami/kafka:2.6.0-debian-10-r78
+    Image ID:      docker-pullable://bitnami/kafka@sha256:3905ef15b2342b0f39dcf472e5f78be396bc771ec4ee3448544b0325378f36db
+    Ports:         9092/TCP, 9093/TCP
+    Host Ports:    0/TCP, 0/TCP
+    Command:
+      /scripts/setup.sh
+    State:          Running
+      Started:      Sat, 21 Aug 2021 17:53:24 +0100
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    1
+      Started:      Sat, 21 Aug 2021 17:53:12 +0100
+      Finished:     Sat, 21 Aug 2021 17:53:24 +0100
+    Ready:          True
+    Restart Count:  1
+    Liveness:       tcp-socket :kafka-client delay=10s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      tcp-socket :kafka-client delay=5s timeout=5s period=10s #success=1 #failure=6
+    Environment:
+      BITNAMI_DEBUG:                                       false
+      MY_POD_IP:                                            (v1:status.podIP)
+      MY_POD_NAME:                                         c80-10-kafka-0 (v1:metadata.name)
+      KAFKA_CFG_ZOOKEEPER_CONNECT:                         c80-10-zookeeper
+      KAFKA_INTER_BROKER_LISTENER_NAME:                    INTERNAL
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:            INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
+      KAFKA_CFG_LISTENERS:                                 INTERNAL://:9093,CLIENT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS:                      INTERNAL://$(MY_POD_NAME).c80-10-kafka-headless.default.svc.cluster.local:9093,CLIENT://$(MY_POD_NAME).c80-10-kafka-headless.default.svc.cluster.local:9092
+      ALLOW_PLAINTEXT_LISTENER:                            yes
+      KAFKA_CFG_DELETE_TOPIC_ENABLE:                       false
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE:                 true
+      KAFKA_HEAP_OPTS:                                     -Xmx1024m -Xms1024m
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MESSAGES:               10000
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MS:                     1000
+      KAFKA_CFG_LOG_RETENTION_BYTES:                       1073741824
+      KAFKA_CFG_LOG_RETENTION_CHECK_INTERVALS_MS:          300000
+      KAFKA_CFG_LOG_RETENTION_HOURS:                       168
+      KAFKA_CFG_MESSAGE_MAX_BYTES:                         1000012
+      KAFKA_CFG_LOG_SEGMENT_BYTES:                         1073741824
+      KAFKA_CFG_LOG_DIRS:                                  /bitnami/kafka/data
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR:                1
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR:          1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:  1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR:             1
+      KAFKA_CFG_NUM_IO_THREADS:                            8
+      KAFKA_CFG_NUM_NETWORK_THREADS:                       3
+      KAFKA_CFG_NUM_PARTITIONS:                            1
+      KAFKA_CFG_NUM_RECOVERY_THREADS_PER_DATA_DIR:         1
+      KAFKA_CFG_SOCKET_RECEIVE_BUFFER_BYTES:               102400
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES:                  104857600
+      KAFKA_CFG_SOCKET_SEND_BUFFER_BYTES:                  102400
+      KAFKA_CFG_ZOOKEEPER_CONNECTION_TIMEOUT_MS:           6000
+    Mounts:
+      /bitnami/kafka from data (rw)
+      /opt/bitnami/kafka/logs from logs (rw)
+      /scripts/setup.sh from scripts (rw,path="setup.sh")
+      /var/run/secrets/kubernetes.io/serviceaccount from c80-10-kafka-token-bjrfj (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  scripts:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      c80-10-kafka-scripts
+    Optional:  false
+  data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  logs:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  c80-10-kafka-token-bjrfj:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  c80-10-kafka-token-bjrfj
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
+Name:         c80-10-zookeeper-0
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-3.fyre.ibm.com/9.20.194.199
+Start Time:   Sat, 21 Aug 2021 17:53:09 +0100
+Labels:       app.kubernetes.io/component=zookeeper
+              app.kubernetes.io/instance=c80-10
+              app.kubernetes.io/managed-by=Helm
+              app.kubernetes.io/name=zookeeper
+              controller-revision-hash=c80-10-zookeeper-845f489ccc
+              helm.sh/chart=zookeeper-6.0.0
+              statefulset.kubernetes.io/pod-name=c80-10-zookeeper-0
+Annotations:  cni.projectcalico.org/podIP: 10.233.64.76/32
+              cni.projectcalico.org/podIPs: 10.233.64.76/32
+Status:       Running
+IP:           10.233.64.76
+IPs:
+  IP:           10.233.64.76
+Controlled By:  StatefulSet/c80-10-zookeeper
+Containers:
+  zookeeper:
+    Container ID:  docker://0026aeebcf655b7ddacb9fc6f0d1d1a8b71ce13b99458f4eac4ed57d308b485c
+    Image:         docker.io/bitnami/zookeeper:3.6.2-debian-10-r58
+    Image ID:      docker-pullable://bitnami/zookeeper@sha256:73b6237c910904b8c66822ce112a4ca0d01b60977c78e94d020a2e498b950291
+    Ports:         2181/TCP, 2888/TCP, 3888/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      bash
+      -ec
+      # Execute entrypoint as usual after obtaining ZOO_SERVER_ID based on POD hostname
+      HOSTNAME=`hostname -s`
+      if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+        ORD=${BASH_REMATCH[2]}
+        export ZOO_SERVER_ID=$((ORD+1))
+      else
+        echo "Failed to get index from hostname $HOST"
+        exit 1
+      fi
+      exec /entrypoint.sh /run.sh
+      
+    State:          Running
+      Started:      Sat, 21 Aug 2021 17:53:12 +0100
+    Ready:          True
+    Restart Count:  0
+    Requests:
+      cpu:      250m
+      memory:   256Mi
+    Liveness:   exec [/bin/bash -c echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok] delay=30s timeout=5s period=10s #success=1 #failure=6
+    Readiness:  exec [/bin/bash -c echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok] delay=5s timeout=5s period=10s #success=1 #failure=6
+    Environment:
+      ZOO_DATA_LOG_DIR:            
+      ZOO_PORT_NUMBER:             2181
+      ZOO_TICK_TIME:               2000
+      ZOO_INIT_LIMIT:              10
+      ZOO_SYNC_LIMIT:              5
+      ZOO_MAX_CLIENT_CNXNS:        60
+      ZOO_4LW_COMMANDS_WHITELIST:  srvr, mntr, ruok
+      ZOO_LISTEN_ALLIPS_ENABLED:   no
+      ZOO_AUTOPURGE_INTERVAL:      0
+      ZOO_AUTOPURGE_RETAIN_COUNT:  3
+      ZOO_MAX_SESSION_TIMEOUT:     40000
+      ZOO_SERVERS:                 c80-10-zookeeper-0.c80-10-zookeeper-headless.default.svc.cluster.local:2888:3888
+      ZOO_ENABLE_AUTH:             no
+      ZOO_HEAP_SIZE:               1024
+      ZOO_LOG_LEVEL:               ERROR
+      ALLOW_ANONYMOUS_LOGIN:       yes
+      POD_NAME:                    c80-10-zookeeper-0 (v1:metadata.name)
+    Mounts:
+      /bitnami/zookeeper from data (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
