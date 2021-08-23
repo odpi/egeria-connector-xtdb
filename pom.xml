@@ -94,15 +94,16 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- The connector code itself directly relies on these dependencies in order to build. -->
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-core</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
                 <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-lucene</artifactId>
+                <artifactId>crux-core</artifactId>
                 <version>${crux.version}</version>
                 <scope>compile</scope>
             </dependency>
@@ -124,30 +125,56 @@
                 <version>${lucene.version}</version>
                 <scope>compile</scope>
             </dependency>
+            <!-- Dependencies only required if configured to run with these extras: they will be included in the
+                 'jar-with-dependencies' by default, but if you do not need them you can remove them and re-build
+                 to get a smaller footprint with less potential CVE exposure. -->
             <dependency>
                 <groupId>org.apache.lucene</groupId>
                 <artifactId>lucene-analyzers-common</artifactId>
                 <version>${lucene.version}</version>
-                <scope>compile</scope>
+                <scope>runtime</scope>
             </dependency>
-            <!-- Dependencies only required if configured to run with these extras -->
+            <dependency>
+                <groupId>pro.juxt.crux</groupId>
+                <artifactId>crux-lucene</artifactId>
+                <version>${crux.version}</version>
+                <scope>runtime</scope>
+            </dependency>
             <dependency>
                 <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-rocksdb</artifactId>
                 <version>${crux.version}</version>
-                <scope>provided</scope>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>pro.juxt.crux</groupId>
+                <artifactId>crux-lmdb</artifactId>
+                <version>${crux.version}</version>
+                <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-kafka</artifactId>
                 <version>${crux.version}</version>
-                <scope>provided</scope>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>pro.juxt.crux</groupId>
+                <artifactId>crux-jdbc</artifactId>
+                <version>${crux.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>pro.juxt.crux</groupId>
+                <artifactId>crux-s3</artifactId>
+                <version>${crux.version}</version>
+                <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>pro.juxt.crux</groupId>
                 <artifactId>crux-metrics</artifactId>
                 <version>${crux.version}</version>
-                <scope>provided</scope>
+                <scope>runtime</scope>
             </dependency>
             <!-- Dependencies provided by Egeria itself -->
             <dependency>
@@ -169,17 +196,12 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
                 <scope>provided</scope>
             </dependency>
+            <!-- Dependencies only used for the build-time tests -->
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
@@ -475,22 +497,6 @@
                         <configuration>
                             <failOnWarning>true</failOnWarning>
                             <outputXML>true</outputXML>
-                            <ignoredUnusedDeclaredDependencies>
-                                <!-- Test dependencies - should only be used in test scope. False positive from dependency check -->
-                                <ignoredUnusedDeclaredDependency>org.junit.jupiter:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.testng:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>junit:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.junit.platform:*</ignoredUnusedDeclaredDependency>
-                                <!-- Used with slf4j as default implementation for testing -->
-                                <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
-                                <!-- Ignore these as usage depends on runtime configuration -->
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-lucene:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-core:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-analyzers-common:*</ignoredUnusedDeclaredDependency>
-                            </ignoredUnusedDeclaredDependencies>
                         </configuration>
                     </execution>
                 </executions>

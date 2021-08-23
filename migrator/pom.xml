@@ -38,38 +38,27 @@
             <artifactId>crux-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-rocksdb</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-kafka</artifactId>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
         </dependency>
         <dependency>
             <groupId>org.odpi.egeria</groupId>
             <artifactId>audit-log-framework</artifactId>
-            <scope>compile</scope>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.odpi.egeria</groupId>
             <artifactId>repository-services-apis</artifactId>
-            <scope>compile</scope>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.odpi.egeria</groupId>
             <artifactId>open-connector-framework</artifactId>
-            <scope>compile</scope>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -101,21 +90,14 @@
                             <outputXML>true</outputXML>
                             <ignoredUnusedDeclaredDependencies>
                                 <!-- Test dependencies - should only be used in test scope. False positive from dependency check -->
-                                <ignoredUnusedDeclaredDependency>org.junit.jupiter:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.testng:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>junit:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.junit.platform:*</ignoredUnusedDeclaredDependency>
                                 <!-- Used with slf4j as default implementation for chassis & apps (more configurable in xml)-->
                                 <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-simple:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-api:*</ignoredUnusedDeclaredDependency>
                                 <!-- Ignore these as usage depends on runtime configuration -->
                                 <ignoredUnusedDeclaredDependency>org.odpi.egeria:audit-log-framework:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.odpi.egeria:repository-services-apis:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.odpi.egeria:open-connector-framework:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>com.fasterxml.jackson.core:jackson-databind:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                         </configuration>
                     </execution>

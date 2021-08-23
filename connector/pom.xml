@@ -31,10 +31,6 @@
             <artifactId>crux-lucene</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-metrics</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
         </dependency>
@@ -45,14 +41,6 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-analyzers-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-rocksdb</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-kafka</artifactId>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -99,6 +87,31 @@
             <groupId>org.odpi.egeria</groupId>
             <artifactId>open-metadata-types</artifactId>
         </dependency>
+        <!-- Configurable runtimes for the connector: included for completeness. -->
+        <dependency>
+            <groupId>pro.juxt.crux</groupId>
+            <artifactId>crux-rocksdb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>pro.juxt.crux</groupId>
+            <artifactId>crux-lmdb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>pro.juxt.crux</groupId>
+            <artifactId>crux-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>pro.juxt.crux</groupId>
+            <artifactId>crux-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>pro.juxt.crux</groupId>
+            <artifactId>crux-s3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>pro.juxt.crux</groupId>
+            <artifactId>crux-metrics</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -120,19 +133,20 @@
                             <outputXML>true</outputXML>
                             <ignoredUnusedDeclaredDependencies>
                                 <!-- Test dependencies - should only be used in test scope. False positive from dependency check -->
-                                <ignoredUnusedDeclaredDependency>org.junit.jupiter:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.testng:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>junit:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>org.junit.platform:*</ignoredUnusedDeclaredDependency>
-                                <!-- Used with slf4j as default implementation for testing -->
                                 <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
-                                <!-- Ignore these as usage depends on runtime configuration -->
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
+                                <!-- This module is used both at runtime and as part of the tests, which the dependency-checker
+                                     cannot determine: hence excluding from checking. -->
                                 <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-lucene:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-core:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-analyzers-common:*</ignoredUnusedDeclaredDependency>
+                                <!-- These are runtime-configurable, so included in the jar for completeness -->
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-lmdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-jdbc:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-s3:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                         </configuration>
                     </execution>
