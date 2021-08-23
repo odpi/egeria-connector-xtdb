@@ -16,6 +16,7 @@ data:
   EGERIA_COHORT: {{ .Values.egeria.cohort }}
   EGERIA_SERVER: {{ .Values.egeria.server }}
   KAFKA_ENDPOINT: {{ .Release.Name }}-kafka:9092
+  JDBC_HOST: {{ .Values.jdbcDetails.service }}
 
   # Used by Crux
   CRUX_RELEASE_NAME: {{ .Release.Name }}
@@ -31,9 +32,11 @@ data:
   # Used for downloads
   CONNECTOR_JAR: egeria-connector-crux-{{ .Values.crux.connectorversion }}-jar-with-dependencies.jar
   CONNECTOR_URL: {{  .Values.crux.connectorurl }}
-  CRUX_ROCKS_JAR_URL: https://clojars.org/repo/juxt/crux-rocksdb/{{ .Values.crux.version }}/crux-rocksdb-{{ .Values.crux.version }}.jar
+  CRUX_ROCKS_JAR_URL: https://repo1.maven.org/maven2/pro/juxt/crux/crux-rocksdb/{{ .Values.crux.version }}/crux-rocksdb-{{ .Values.crux.version }}.jar
   ROCKS_JAR_URL: https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/{{ .Values.dependencyVersions.rocksdb }}/rocksdbjni-{{ .Values.dependencyVersions.rocksdb }}.jar
   JNR_JAR_URL: https://repo1.maven.org/maven2/com/github/jnr/jnr-ffi/{{ .Values.dependencyVersions.jnr }}/jnr-ffi-{{ .Values.dependencyVersions.jnr }}.jar
-  CRUX_KAFKA_JAR_URL: https://clojars.org/repo/juxt/crux-kafka/{{ .Values.crux.version }}/crux-kafka-{{ .Values.crux.version }}.jar
+  CRUX_KAFKA_JAR_URL: https://repo1.maven.org/maven2/pro/juxt/crux/crux-kafka/{{ .Values.crux.version }}/crux-kafka-{{ .Values.crux.version }}.jar
   KAFKA_JAR_URL: https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/{{ .Values.dependencyVersions.kafka }}/kafka-clients-{{ .Values.dependencyVersions.kafka }}.jar
+  CRUX_JDBC_JAR_URL: https://repo1.maven.org/maven2/pro/juxt/crux/crux-jdbc/{{ .Values.crux.version }}/crux-jdbc-{{ .Values.crux.version }}.jar
+  JDBC_JAR_URL: https://repo1.maven.org/maven2/org/postgresql/postgresql/{{ .Values.dependencyVersions.postgres }}/postgresql-{{ .Values.dependencyVersions.postgres }}.jar
   PTS_REPORT_NAME: {{ .Release.Name }}

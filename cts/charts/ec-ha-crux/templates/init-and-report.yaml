@@ -86,6 +86,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Release.Name }}-configmap
+            - secretRef:
+                name: {{ .Values.jdbcDetails.secret }}
           command:
             - "/bin/bash"
             - "-c"
