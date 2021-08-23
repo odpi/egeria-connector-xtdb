@@ -73,13 +73,7 @@ spec:
             - >
                 cd /opt/egeria/connectors &&
                 curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR} &&
-                wget ${CRUX_ROCKS_JAR_URL} &&
-                wget ${ROCKS_JAR_URL} &&
-                wget ${JNR_JAR_URL} &&
-                wget ${CRUX_KAFKA_JAR_URL} &&
-                wget ${KAFKA_JAR_URL} &&
-                wget ${CRUX_JDBC_JAR_URL} &&
-                wget ${JDBC_JAR_URL}
+                wget ${JDBC_DRIVER_URL}
           volumeMounts:
             - mountPath: /opt/egeria/connectors
               name: egeria-crux-connector-volume

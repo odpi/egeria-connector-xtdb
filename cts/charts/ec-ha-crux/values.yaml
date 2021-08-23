@@ -38,14 +38,14 @@ volumeParameters:
   profilesToSkip: "[]"
 
 dependencyVersions:
-  rocksdb: 6.15.2
-  jnr: 2.2.1
-  kafka: 2.8.0
-  postgres: 42.2.18
+  postgresql: 42.2.18
 
 jdbcDetails:
-  service: edb-crux-any
-  secret: edb-crux-superuser
+  db_type: postgresql
+  database: "app"
+  service: edb-crux-rw
+  secret: edb-crux-app
+  port: 5432
 
 kafka:
   replicaCount: 2
