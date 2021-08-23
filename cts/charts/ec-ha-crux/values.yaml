@@ -25,8 +25,8 @@ image:
     pullPolicy: IfNotPresent
 
 crux:
-  version: 1.18.0
-  connectorversion: 3.0
+  version: 1.18.1
+  connectorversion: "3.0"
   connectorurl: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies"
   proxyserver: crux
   replicaCount: 2
@@ -41,6 +41,11 @@ dependencyVersions:
   rocksdb: 6.15.2
   jnr: 2.2.1
   kafka: 2.8.0
+  postgres: 42.2.18
+
+jdbcDetails:
+  service: edb-crux-any
+  secret: edb-crux-superuser
 
 kafka:
   replicaCount: 2
