@@ -133,6 +133,7 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
                 try {
                     configFile = File.createTempFile("crux", ".edn", new File("./"));
                     String cruxCfg = (String) configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG_EDN);
+                    luceneConfigured = cruxCfg.contains(Constants.CRUX_LUCENE);
                     BufferedWriter writer = new BufferedWriter(new FileWriter(configFile));
                     writer.write(cruxCfg);
                     writer.close();
