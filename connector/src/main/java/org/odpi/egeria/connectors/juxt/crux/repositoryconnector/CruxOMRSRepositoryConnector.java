@@ -3,7 +3,6 @@
 package org.odpi.egeria.connectors.juxt.crux.repositoryconnector;
 
 import clojure.lang.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import crux.api.*;
 import crux.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.crux.auditlog.CruxOMRSAuditCode;
@@ -31,7 +30,9 @@ import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -98,37 +99,43 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         // Retrieve the configuration from the configurationProperties, and serialise it directly into a .json file
         File configFile = null;
+        Map<?, ?> configMap = null;
         Map<String, Object> configProperties = connectionProperties.getConfigurationProperties();
         if (configProperties != null && !configProperties.isEmpty()) {
             if (configProperties.containsKey(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG)) {
-                try {
-                    ObjectMapper mapper = new ObjectMapper();
-                    configFile = File.createTempFile("crux", ".json", new File("./"));
-                    Object cruxCfg = configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG);
-                    if (cruxCfg instanceof Map) {
-                        Map<String, Object> cruxConfig = (Map<String, Object>) cruxCfg;
-                        // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
-                        // the configurationProperties
-                        luceneConfigured = cruxConfig.containsKey(Constants.CRUX_LUCENE);
-                        // If Lucene is configured, inject the custom analyzers and indexers required by Egeria
-                        if (luceneConfigured) {
-                            Object luceneCfg = cruxConfig.get(Constants.CRUX_LUCENE);
-                            if (luceneCfg instanceof Map) {
-                                Map<String, Object> luceneConfig = (Map<String, Object>) luceneCfg;
-                                Map<String, String> indexer = new HashMap<>();
-                                indexer.put("crux/module", "crux.lucene.egeria/->egeria-indexer");
-                                luceneConfig.put("indexer", indexer);
-                                Map<String, String> analyzer = new HashMap<>();
-                                analyzer.put("crux/module", "crux.lucene.egeria/->ci-analyzer");
-                                luceneConfig.put("analyzer", analyzer);
-                                // Override the Lucene configuration with these injected customizations
-                                cruxConfig.put(Constants.CRUX_LUCENE, luceneConfig);
-                            }
+                // JSON-style configuration
+                Object cruxCfg = configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG);
+                if (cruxCfg instanceof Map) {
+                    Map<String, Object> cruxConfig = (Map<String, Object>) cruxCfg;
+                    // Dynamically set whether Lucene is configured or not based on the presence of its configuration in
+                    // the configurationProperties
+                    luceneConfigured = cruxConfig.containsKey(Constants.CRUX_LUCENE);
+                    // If Lucene is configured, inject the custom analyzers and indexers required by Egeria
+                    if (luceneConfigured) {
+                        Object luceneCfg = cruxConfig.get(Constants.CRUX_LUCENE);
+                        if (luceneCfg instanceof Map) {
+                            Map<String, Object> luceneConfig = (Map<String, Object>) luceneCfg;
+                            Map<String, String> indexer = new HashMap<>();
+                            indexer.put("crux/module", "crux.lucene.egeria/->egeria-indexer");
+                            luceneConfig.put("indexer", indexer);
+                            Map<String, String> analyzer = new HashMap<>();
+                            analyzer.put("crux/module", "crux.lucene.egeria/->ci-analyzer");
+                            luceneConfig.put("analyzer", analyzer);
+                            // Override the Lucene configuration with these injected customizations
+                            cruxConfig.put(Constants.CRUX_LUCENE, luceneConfig);
                         }
-                        if (log.isDebugEnabled())
-                            log.debug("Writing configuration to: {}", configFile.getCanonicalPath());
-                        mapper.writeValue(configFile, cruxConfig);
                     }
+                    configMap = cruxConfig;
+                }
+            }
+            if (configProperties.containsKey(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG_EDN)) {
+                // EDN-style configuration
+                try {
+                    configFile = File.createTempFile("crux", ".edn", new File("./"));
+                    String cruxCfg = (String) configProperties.get(CruxOMRSRepositoryConnectorProvider.CRUX_CONFIG_EDN);
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(configFile));
+                    writer.write(cruxCfg);
+                    writer.close();
                 } catch (IOException e) {
                     auditLog.logException(methodName, CruxOMRSAuditCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(e.getClass().getName()), e);
                     throw new ConnectorCheckedException(CruxOMRSErrorCode.CANNOT_READ_CONFIGURATION.getMessageDefinition(repositoryName),
@@ -151,13 +158,19 @@ public class CruxOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         try {
 
-            if (configFile == null) {
+            if (configMap == null && configFile == null) {
                 // If no configuration options were specified, we will start an in-memory node
                 auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_NODE_STARTING_NO_CONFIG.getMessageDefinition());
                 cruxAPI = Crux.startNode();
-            } else {
-                // Otherwise we will use the configuration options to start the server
+            } else if (configMap != null) {
+                // If the map (JSON-style) is populated, use that to start the server
                 auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_NODE_STARTING_WITH_CONFIG.getMessageDefinition());
+                log.debug("Starting Crux with configuration: {}", configMap);
+                cruxAPI = Crux.startNode(configMap);
+            } else {
+                // Otherwise, fall-back to configuring based on the EDN-style config
+                auditLog.logMessage(methodName, CruxOMRSAuditCode.REPOSITORY_NODE_STARTING_WITH_CONFIG.getMessageDefinition());
+                log.debug("Starting Crux with configuration: {}", configFile);
                 cruxAPI = Crux.startNode(configFile);
                 Files.delete(Paths.get(configFile.getCanonicalPath()));
             }
