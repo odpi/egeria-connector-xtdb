@@ -19,6 +19,7 @@ data:
 
   # Used by Crux
   CRUX_RELEASE_NAME: {{ .Release.Name }}
+  STRICT_SSL: "false"
   NUM_REPLICAS: "{{ .Values.crux.replicaCount }}"
   WAIT_BETWEEN_SCENARIOS: "{{ .Values.volumeParameters.waitBetweenScenarios }}"
   PTS_ENDPOINT: https://{{ .Release.Name }}-pts:9443
