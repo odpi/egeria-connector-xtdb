@@ -79,6 +79,7 @@ public class CruxOMRSRepositoryConnectorProvider extends OMRSRepositoryConnector
     static final String CONNECTOR_TYPE_DESC = "OMRS Crux Repository Connector that uses Crux as a back-end historical repository for metadata.";
 
     public static final String CRUX_CONFIG = "cruxConfig";
+    public static final String CRUX_CONFIG_EDN = "cruxConfigEDN";
     public static final String SYNCHRONOUS_INDEX = "syncIndex";
     public static final String LUCENE_REGEXES = "luceneRegexes";
 
