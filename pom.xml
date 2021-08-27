@@ -71,7 +71,7 @@
         <open-metadata.version>3.1-SNAPSHOT</open-metadata.version>
         <crux.version>1.18.1</crux.version>
         <clojure.version>1.10.3</clojure.version>
-        <jackson.version>2.12.4</jackson.version>
+        <jackson.version>2.12.5</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.32</slf4j.version>
         <logback.version>1.2.5</logback.version>
