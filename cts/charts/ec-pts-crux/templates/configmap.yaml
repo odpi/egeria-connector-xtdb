@@ -26,7 +26,4 @@ data:
   # Used for downloads
   CONNECTOR_JAR: egeria-connector-crux-{{ .Values.crux.connectorversion }}-jar-with-dependencies.jar
   CONNECTOR_URL: {{  .Values.crux.connectorurl }}
-  CRUX_ROCKS_JAR_URL: https://repo1.maven.org/maven2/pro/juxt/crux/crux-rocksdb/{{ .Values.crux.version }}/crux-rocksdb-{{ .Values.crux.version }}.jar
-  ROCKS_JAR_URL: https://repo1.maven.org/maven2/org/rocksdb/rocksdbjni/{{ .Values.rocksdb.version }}/rocksdbjni-{{ .Values.rocksdb.version }}.jar
-  JNR_JAR_URL: https://repo1.maven.org/maven2/com/github/jnr/jnr-ffi/{{ .Values.jnr.version }}/jnr-ffi-{{ .Values.jnr.version }}.jar
   PTS_REPORT_NAME: {{ .Release.Name }}

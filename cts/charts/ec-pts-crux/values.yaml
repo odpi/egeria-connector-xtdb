@@ -25,8 +25,8 @@ image:
     pullPolicy: Always
 
 crux:
-  version: 1.18.0
-  connectorversion: "3.0"
+  version: 1.18.1
+  connectorversion: "3.1"
   connectorurl: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies"
   proxyserver: crux
 
@@ -35,12 +35,6 @@ volumeParameters:
   maxSearchResults: 2
   waitBetweenScenarios: 0
   profilesToSkip: "[]"
-
-rocksdb:
-  version: 6.15.2
-
-jnr:
-  version: 2.2.1
 
 kafka:
   zookeeper:
