@@ -1,0 +1,360 @@
+Name:         cts5-crux-7f55d47b5-g72zm
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-1.fyre.ibm.com/9.20.193.94
+Start Time:   Thu, 02 Sep 2021 11:34:55 +0100
+Labels:       app.kubernetes.io/component=crux-service
+              app.kubernetes.io/instance=cts5
+              app.kubernetes.io/name=ec-cts-crux
+              pod-template-hash=7f55d47b5
+Annotations:  cni.projectcalico.org/podIP: 10.233.72.187/32
+              cni.projectcalico.org/podIPs: 10.233.72.187/32
+Status:       Running
+IP:           10.233.72.187
+IPs:
+  IP:           10.233.72.187
+Controlled By:  ReplicaSet/cts5-crux-7f55d47b5
+Init Containers:
+  init-connector:
+    Container ID:  docker://a3395c00920be3fc708c73cb0a01bcaa4e4651847d33c4171549bc8756fdbfed
+    Image:         docker.io/odpi/egeria-configure:3.1
+    Image ID:      docker-pullable://odpi/egeria-configure@sha256:d62ef7ceb45639bda5c93e550fff41e896a1451674f8ed8dfd5e2329c2936e8f
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      cd /opt/egeria/connectors && curl --location ${CONNECTOR_URL} --output ${CONNECTOR_JAR} && wget ${CRUX_ROCKS_JAR_URL} && wget ${ROCKS_JAR_URL} && wget ${JNR_JAR_URL}
+      
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Thu, 02 Sep 2021 11:35:00 +0100
+      Finished:     Thu, 02 Sep 2021 11:35:06 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      cts5-configmap  ConfigMap  Optional: false
+    Environment:      <none>
+    Mounts:
+      /opt/egeria/connectors from egeria-crux-connector-volume (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Containers:
+  proxy:
+    Container ID:   docker://c7e1f138c8833dddf114cc37c7a47d3a12b5349f41c45d16d965af42316266f9
+    Image:          docker.io/odpi/egeria:3.1
+    Image ID:       docker-pullable://odpi/egeria@sha256:3e529c7779cacbac63ac3b93ff01e08d219f75e1ae284c55b4fbcaad8f475aaa
+    Port:           9443/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 02 Sep 2021 11:35:08 +0100
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     4
+      memory:  16Gi
+    Requests:
+      cpu:      2
+      memory:   8Gi
+    Readiness:  tcp-socket :9443 delay=10s timeout=1s period=10s #success=1 #failure=6
+    Environment Variables from:
+      cts5-configmap  ConfigMap  Optional: false
+    Environment:
+      LOADER_PATH:       /opt/egeria/connectors
+      MALLOC_ARENA_MAX:  2
+    Mounts:
+      /opt/egeria/connectors from egeria-crux-connector-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  egeria-crux-connector-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
+Name:         cts5-init-and-report-6d475b877d-9scnb
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-1.fyre.ibm.com/9.20.193.94
+Start Time:   Thu, 02 Sep 2021 11:34:55 +0100
+Labels:       app.kubernetes.io/component=init-and-report
+              app.kubernetes.io/instance=cts5
+              app.kubernetes.io/name=ec-cts-crux
+              pod-template-hash=6d475b877d
+Annotations:  cni.projectcalico.org/podIP: 10.233.72.192/32
+              cni.projectcalico.org/podIPs: 10.233.72.192/32
+Status:       Running
+IP:           10.233.72.192
+IPs:
+  IP:           10.233.72.192
+Controlled By:  ReplicaSet/cts5-init-and-report-6d475b877d
+Init Containers:
+  wait-for-proxy:
+    Container ID:   docker://9016b1fef039b467afa524cf05cddede12693afe987cdb78a68e4bcec6b0667a
+    Image:          docker.io/odpi/egeria-configure:3.1
+    Image ID:       docker-pullable://odpi/egeria-configure@sha256:d62ef7ceb45639bda5c93e550fff41e896a1451674f8ed8dfd5e2329c2936e8f
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Thu, 02 Sep 2021 11:34:59 +0100
+      Finished:     Thu, 02 Sep 2021 11:35:34 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  cts5-crux-service
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from cts5-cts-token-876fb (ro)
+  wait-for-kafka:
+    Container ID:   docker://4d2a0e2b0d852ef813406bb7001c01f286add1576e16bd48a7148419c0347641
+    Image:          docker.io/odpi/egeria-configure:3.1
+    Image ID:       docker-pullable://odpi/egeria-configure@sha256:d62ef7ceb45639bda5c93e550fff41e896a1451674f8ed8dfd5e2329c2936e8f
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Thu, 02 Sep 2021 11:35:37 +0100
+      Finished:     Thu, 02 Sep 2021 11:35:37 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  cts5-kafka
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from cts5-cts-token-876fb (ro)
+Containers:
+  init-and-report:
+    Container ID:  docker://2286b887e22a8d47bfac876a060186676fc94d8f62b009e5c8949c12d129455c
+    Image:         docker.io/odpi/egeria-configure:3.1
+    Image ID:      docker-pullable://odpi/egeria-configure@sha256:d62ef7ceb45639bda5c93e550fff41e896a1451674f8ed8dfd5e2329c2936e8f
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/server-url-root?url=${CRUXPROXY_ENDPOINT} && curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/cts/server-type?typeName=Conformance && curl -f -k --verbose --basic admin:admin -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/cts/event-bus?topicURLRoot=egeria --data '{"producer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"}, "consumer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"} }' && curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/cts/cohorts/${EGERIA_COHORT} && curl -f -k --verbose --basic admin:admin -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/cts/conformance-suite-workbenches/repository-workbench/repositories --data '{"class":"RepositoryConformanceWorkbenchConfig","tutRepositoryServerName":"'"${CRUX_SERVER}"'","maxSearchResults":5 }' && curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/cts/instance && curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/server-type?typeName=Crux && curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/organization-name?name=ODPi && curl -f -k --verbose --basic admin:admin -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/event-bus?topicURLRoot=egeria --data '{"producer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"}, "consumer": {"bootstrap.servers": "'"${KAFKA_ENDPOINT}"'"} }' && curl -f -k --verbose --basic admin:admin -X POST --header "Content-Type: application/json" ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/local-repository/mode/plugin-repository/connection --data '{"class":"Connection","connectorType":{"class":"ConnectorType","connectorProviderClassName":"org.odpi.egeria.connectors.juxt.crux.repositoryconnector.CruxOMRSRepositoryConnectorProvider"},"configurationProperties":{"cruxConfig":{"crux/index-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-index"}},"crux/document-store":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-docs"}},"crux/tx-log":{"kv-store":{"crux/module":"crux.rocksdb/->kv-store","db-dir":"data/servers/crux/rdb-tx"}},"crux.lucene/lucene-store":{"db-dir":"data/servers/crux/lucene"}}}}' && curl -f -k --verbose --basic admin:admin -X POST ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/cohorts/${EGERIA_COHORT} && curl -f -k --verbose --basic admin:admin -X POST --max-time 900 ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/instance && curl -f -k --verbose --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/cts/configuration > /tmp/omag.server.cts.config && curl -f -k --verbose --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/open-metadata/admin-services/users/${EGERIA_USER}/servers/${CRUX_SERVER}/configuration > /tmp/omag.server.${CRUX_SERVER}.config && curl -f -k --verbose --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/local-registration > /tmp/cohort.${EGERIA_COHORT}.cts.local && curl -f -k --verbose --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/cohorts/${EGERIA_COHORT}/remote-members > /tmp/cohort.${EGERIA_COHORT}.cts.remote && curl -f -k --verbose --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/servers/${CRUX_SERVER}/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/local-registration > /tmp/cohort.${EGERIA_COHORT}.${CRUX_SERVER}.local && curl -f -k --verbose --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/servers/${CRUX_SERVER}/open-metadata/repository-services/users/${EGERIA_USER}/metadata-highway/cohorts/${EGERIA_COHORT}/remote-members > /tmp/cohort.${EGERIA_COHORT}.${CRUX_SERVER}.remote && echo ""; echo "Waiting 2 minutes for CTS to start..."; sleep 120 && until [ $(curl -f -k --silent --basic admin:admin -X GET ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/status/workbenches/repository-workbench | jq '.workbenchStatus.workbenchComplete') == "true" ]; do echo "... waiting for CTS to complete"; sleep 20; done && curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/summary > /tmp/openmetadata_cts_summary.json && TEST_CASES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases  | jq -r '.testCaseIds[]') && PROFILES=$(curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles | jq -r '.profileNames[]') && mkdir -p /tmp/profile-details && while read -r line; do urlencoded=$(echo ${line} | sed -e 's/ /%20/g'); filename=$(echo ${line} | sed -e 's/ /_/g'); echo "Retrieving profile details for: ${line}"; curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/profiles/${urlencoded} > /tmp/profile-details/${filename}.json; done < <(echo "${PROFILES}") && mkdir -p /tmp/test-case-details && while read -r line; do urlencoded=$(echo ${line} | sed -e 's/</%3C/g'); urlencoded=$(echo ${urlencoded} | sed -e 's/>/%3E/g'); filename=$(echo ${line} | sed -e 's/[<>]/_/g'); echo "Retrieving test case details for: ${line}"; curl -f -k --silent --basic admin:admin -X GET --max-time 60 ${CRUXPROXY_ENDPOINT}/servers/cts/open-metadata/conformance-suite/users/${EGERIA_USER}/report/test-cases/${urlencoded} > /tmp/test-case-details/${filename}.json; done < <(echo "${TEST_CASES}") && cd /tmp && tar cvf pd.tar profile-details/*.json; gzip pd.tar && tar cvf tcd.tar test-case-details/*.json; gzip tcd.tar && tar cvf ${CTS_REPORT_NAME}.tar *.config cohort.* openmetadata_cts_summary.json pd.tar.gz tcd.tar.gz; gzip ${CTS_REPORT_NAME}.tar && echo "Complete -- CTS results available to download from /tmp/${CTS_REPORT_NAME}.tar.gz" && tail -f /dev/null
+      
+    State:          Running
+      Started:      Thu, 02 Sep 2021 11:35:39 +0100
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     500m
+      memory:  64Mi
+    Requests:
+      cpu:     100m
+      memory:  16Mi
+    Environment Variables from:
+      cts5-configmap  ConfigMap  Optional: false
+    Environment:      <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from cts5-cts-token-876fb (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  cts5-cts-token-876fb:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5-cts-token-876fb
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
+Name:         cts5-kafka-0
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-1.fyre.ibm.com/9.20.193.94
+Start Time:   Thu, 02 Sep 2021 11:34:56 +0100
+Labels:       app.kubernetes.io/component=kafka
+              app.kubernetes.io/instance=cts5
+              app.kubernetes.io/managed-by=Helm
+              app.kubernetes.io/name=kafka
+              controller-revision-hash=cts5-kafka-5db84f9468
+              helm.sh/chart=kafka-7.0.4
+              statefulset.kubernetes.io/pod-name=cts5-kafka-0
+Annotations:  cni.projectcalico.org/podIP: 10.233.72.188/32
+              cni.projectcalico.org/podIPs: 10.233.72.188/32
+Status:       Running
+IP:           10.233.72.188
+IPs:
+  IP:           10.233.72.188
+Controlled By:  StatefulSet/cts5-kafka
+Containers:
+  kafka:
+    Container ID:   docker://f60e005fb7c195a5d4d8988fab3e88d40a000c1433981361341a5cee3aa35930
+    Image:          docker.io/bitnami/kafka:2.3.1-debian-9-r21
+    Image ID:       docker-pullable://bitnami/kafka@sha256:c8f86b2bba447bec12dbda8c6ec48bada65f59ca67cd5dba04e41cf5373f2162
+    Port:           9092/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 02 Sep 2021 11:35:12 +0100
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    1
+      Started:      Thu, 02 Sep 2021 11:34:58 +0100
+      Finished:     Thu, 02 Sep 2021 11:35:11 +0100
+    Ready:          True
+    Restart Count:  1
+    Liveness:       tcp-socket :kafka delay=10s timeout=5s period=10s #success=1 #failure=2
+    Readiness:      tcp-socket :kafka delay=5s timeout=5s period=10s #success=1 #failure=6
+    Environment:
+      BITNAMI_DEBUG:                                       false
+      MY_POD_IP:                                            (v1:status.podIP)
+      MY_POD_NAME:                                         cts5-kafka-0 (v1:metadata.name)
+      KAFKA_CFG_ZOOKEEPER_CONNECT:                         cts5-zookeeper
+      KAFKA_PORT_NUMBER:                                   9092
+      KAFKA_CFG_LISTENERS:                                 PLAINTEXT://:$(KAFKA_PORT_NUMBER)
+      KAFKA_CFG_ADVERTISED_LISTENERS:                      PLAINTEXT://$(MY_POD_NAME).cts5-kafka-headless.default.svc.cluster.local:$(KAFKA_PORT_NUMBER)
+      ALLOW_PLAINTEXT_LISTENER:                            yes
+      KAFKA_CFG_BROKER_ID:                                 -1
+      KAFKA_CFG_DELETE_TOPIC_ENABLE:                       false
+      KAFKA_HEAP_OPTS:                                     -Xmx1024m -Xms1024m
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MESSAGES:               10000
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MS:                     1000
+      KAFKA_CFG_LOG_RETENTION_BYTES:                       1073741824
+      KAFKA_CFG_LOG_RETENTION_CHECK_INTERVALS_MS:          300000
+      KAFKA_CFG_LOG_RETENTION_HOURS:                       168
+      KAFKA_CFG_MESSAGE_MAX_BYTES:                         1000012
+      KAFKA_CFG_LOG_SEGMENT_BYTES:                         1073741824
+      KAFKA_CFG_LOG_DIRS:                                  /bitnami/kafka/data
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR:                1
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR:          1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:  1
+      KAFKA_CFG_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM:     https
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR:             1
+      KAFKA_CFG_NUM_IO_THREADS:                            8
+      KAFKA_CFG_NUM_NETWORK_THREADS:                       3
+      KAFKA_CFG_NUM_PARTITIONS:                            1
+      KAFKA_CFG_NUM_RECOVERY_THREADS_PER_DATA_DIR:         1
+      KAFKA_CFG_SOCKET_RECEIVE_BUFFER_BYTES:               102400
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES:                  104857600
+      KAFKA_CFG_SOCKET_SEND_BUFFER_BYTES:                  102400
+      KAFKA_CFG_ZOOKEEPER_CONNECTION_TIMEOUT_MS:           6000
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+
+Name:         cts5-zookeeper-0
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-1.fyre.ibm.com/9.20.193.94
+Start Time:   Thu, 02 Sep 2021 11:34:56 +0100
+Labels:       app.kubernetes.io/component=zookeeper
+              app.kubernetes.io/instance=cts5
+              app.kubernetes.io/name=zookeeper
+              controller-revision-hash=cts5-zookeeper-78b9bb94bb
+              helm.sh/chart=zookeeper-5.1.1
+              statefulset.kubernetes.io/pod-name=cts5-zookeeper-0
+Annotations:  cni.projectcalico.org/podIP: 10.233.72.191/32
+              cni.projectcalico.org/podIPs: 10.233.72.191/32
+Status:       Running
+IP:           10.233.72.191
+IPs:
+  IP:           10.233.72.191
+Controlled By:  StatefulSet/cts5-zookeeper
+Containers:
+  zookeeper:
+    Container ID:  docker://5f5f8a3c146853f67bf9b4bac9bdcd7a5fbc604a321c70061846dbc7d47ad103
+    Image:         docker.io/bitnami/zookeeper:3.5.6-debian-9-r20
+    Image ID:      docker-pullable://bitnami/zookeeper@sha256:0c546cc26e4d3a53a8f4f58e0517e1903c862a60ff03d9b5e9f5beb6acca8683
+    Ports:         2181/TCP, 2888/TCP, 3888/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      bash
+      -ec
+      # Execute entrypoint as usual after obtaining ZOO_SERVER_ID based on POD hostname
+      HOSTNAME=`hostname -s`
+      if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+        ORD=${BASH_REMATCH[2]}
+        export ZOO_SERVER_ID=$((ORD+1))
+      else
+        echo "Failed to get index from hostname $HOST"
+        exit 1
+      fi
+      exec /entrypoint.sh /run.sh
+      
+    State:          Running
+      Started:      Thu, 02 Sep 2021 11:34:58 +0100
+    Ready:          True
+    Restart Count:  0
+    Requests:
+      cpu:      250m
+      memory:   256Mi
+    Liveness:   tcp-socket :client delay=30s timeout=5s period=10s #success=1 #failure=6
+    Readiness:  tcp-socket :client delay=5s timeout=5s period=10s #success=1 #failure=6
+    Environment:
+      ZOO_PORT_NUMBER:             2181
+      ZOO_TICK_TIME:               2000
+      ZOO_INIT_LIMIT:              10
+      ZOO_SYNC_LIMIT:              5
+      ZOO_MAX_CLIENT_CNXNS:        60
+      ZOO_4LW_COMMANDS_WHITELIST:  srvr, mntr
+      ZOO_SERVERS:                 cts5-zookeeper-0.cts5-zookeeper-headless.default.svc.cluster.local:2888:3888
+      ZOO_ENABLE_AUTH:             no
+      ZOO_HEAP_SIZE:               1024
+      ZOO_LOG_LEVEL:               ERROR
+      ALLOW_ANONYMOUS_LOGIN:       yes
+    Mounts:
+      /bitnami/zookeeper from data (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>
+

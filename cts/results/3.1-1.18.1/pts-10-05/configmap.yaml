@@ -1,0 +1,29 @@
+apiVersion: v1
+data:
+  CONNECTOR_JAR: egeria-connector-crux-3.1-jar-with-dependencies.jar
+  CONNECTOR_URL: http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies
+  CRUX_SERVER: crux
+  CRUXPROXY_ENDPOINT: https://c10-5-crux-service:9443
+  EGERIA_COHORT: coco
+  EGERIA_SERVER: myserver
+  EGERIA_USER: myuser
+  KAFKA_ENDPOINT: c10-5-kafka:9092
+  LOGGING_LEVEL_ROOT: INFO
+  PTS_REPORT_NAME: c10-5
+  STRICT_SSL: "false"
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: c10-5
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2021-09-02T18:06:41Z"
+  labels:
+    app.kubernetes.io/instance: c10-5
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ec-pts-crux
+    helm.sh/chart: ec-pts-crux-0.1
+  name: c10-5-configmap
+  namespace: default
+  resourceVersion: "44204263"
+  selfLink: /api/v1/namespaces/default/configmaps/c10-5-configmap
+  uid: 068bbf79-9b2a-4104-a4cf-d127b18940d3
