@@ -74,7 +74,7 @@
         <jackson.version>2.12.5</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.32</slf4j.version>
-        <logback.version>1.2.5</logback.version>
+        <logback.version>1.2.6</logback.version>
         <testng.version>7.4.0</testng.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -285,7 +285,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.3.0</version>
+                    <version>3.3.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -305,7 +305,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
-                    <version>3.14.0</version>
+                    <version>3.15.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.owasp</groupId>
