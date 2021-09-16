@@ -42,14 +42,14 @@
     </organization>
 
     <scm>
-        <connection>scm:git:git://github.com/odpi/egeria-connector-crux.git</connection>
-        <developerConnection>scm:git:ssh://github.com:odpi/egeria-connector-crux.git</developerConnection>
-        <url>https://github.com/odpi/egeria-connector-crux/tree/master</url>
+        <connection>scm:git:git://github.com/odpi/egeria-connector-xtdb.git</connection>
+        <developerConnection>scm:git:ssh://github.com:odpi/egeria-connector-xtdb.git</developerConnection>
+        <url>https://github.com/odpi/egeria-connector-xtdb/tree/master</url>
     </scm>
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/odpi/egeria-connector-crux/issues</url>
+        <url>https://github.com/odpi/egeria-connector-xtdb/issues</url>
     </issueManagement>
 
     <inceptionYear>2021</inceptionYear>
@@ -676,7 +676,7 @@
                 <repository>
                     <id>github</id>
                     <name>GitHub Packages</name>
-                    <url>https://maven.pkg.github.com/odpi/egeria-connector-crux</url>
+                    <url>https://maven.pkg.github.com/odpi/egeria-connector-xtdb</url>
                 </repository>
             </distributionManagement>
         </profile>
