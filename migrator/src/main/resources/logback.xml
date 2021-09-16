@@ -12,5 +12,5 @@
     <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
-    <logger name="crux.query" level="DEBUG" />
+    <logger name="xtdb.query" level="DEBUG" />
 </configuration>

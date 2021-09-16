@@ -9,7 +9,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.odpi.egeria</groupId>
-    <artifactId>egeria-connector-crux-module</artifactId>
+    <artifactId>egeria-connector-xtdb-module</artifactId>
     <packaging>pom</packaging>
     <version>3.2-SNAPSHOT</version>
     <modules>
@@ -17,9 +17,9 @@
         <module>migrator</module>
     </modules>
 
-    <name>Overall Crux Connector Module</name>
+    <name>Overall XTDB Connector Module</name>
     <description>
-        The outer module for an OCF OMRS Connector for a historical metadata back-end based on Crux.
+        The outer module for an OCF OMRS Connector for a historical metadata back-end based on XTDB.
     </description>
 
     <url>https://odpi.github.io/Egeria</url>
@@ -69,7 +69,7 @@
 
     <properties>
         <open-metadata.version>3.2-SNAPSHOT</open-metadata.version>
-        <crux.version>1.18.1</crux.version>
+        <xtdb.version>1.19.0-beta1</xtdb.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.12.5</jackson.version>
         <lucene.version>8.9.0</lucene.version>
@@ -102,9 +102,9 @@
                 <scope>compile</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-core</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-core</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
@@ -135,45 +135,45 @@
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-lucene</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-lucene</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-rocksdb</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-rocksdb</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-lmdb</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-lmdb</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-kafka</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-kafka</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-jdbc</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-jdbc</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-s3</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-s3</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
-                <groupId>pro.juxt.crux</groupId>
-                <artifactId>crux-metrics</artifactId>
-                <version>${crux.version}</version>
+                <groupId>com.xtdb</groupId>
+                <artifactId>xtdb-metrics</artifactId>
+                <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <!-- Dependencies provided by Egeria itself -->
