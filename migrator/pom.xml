@@ -7,24 +7,24 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>egeria-connector-crux-module</artifactId>
+        <artifactId>egeria-connector-xtdb-module</artifactId>
         <groupId>org.odpi.egeria</groupId>
         <version>3.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>egeria-connector-crux-migrator</artifactId>
+    <artifactId>egeria-connector-xtdb-migrator</artifactId>
     <version>3.2-SNAPSHOT</version>
 
-    <name>Migration utilities for Crux Connector</name>
+    <name>Migration utilities for XTDB Connector</name>
     <description>
-        Migration utilities for the OCF OMRS Connector for a historical metadata back-end based on Crux.
+        Migration utilities for the OCF OMRS Connector for a historical metadata back-end based on XTDB.
     </description>
 
     <dependencies>
         <dependency>
             <groupId>org.odpi.egeria</groupId>
-            <artifactId>egeria-connector-crux</artifactId>
+            <artifactId>egeria-connector-xtdb</artifactId>
             <version>3.2-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
@@ -34,8 +34,8 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-core</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -111,7 +111,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.odpi.egeria.connectors.juxt.crux.migration.Migrator</mainClass>
+                            <mainClass>org.odpi.egeria.connectors.juxt.xtdb.migration.Migrator</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

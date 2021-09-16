@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  labels:
+    app.kubernetes.io/name: {{ include "myapp.name" . }}
+    helm.sh/chart: {{ include "myapp.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  # General cluster configuration - for core egeria, kafka - these must be used
+  EGERIA_USER: {{ .Values.egeria.user }}
+  EGERIA_COHORT: {{ .Values.egeria.cohort }}
+  EGERIA_SERVER: {{ .Values.egeria.server }}
+  KAFKA_ENDPOINT: {{ .Release.Name }}-kafka:9092
+
+  # Used by XTDB
+  XTDB_RELEASE_NAME: {{ .Release.Name }}
+  STRICT_SSL: "false"
+  NUM_REPLICAS: "{{ .Values.xtdb.replicaCount }}"
+  WAIT_BETWEEN_SCENARIOS: "{{ .Values.volumeParameters.waitBetweenScenarios }}"
+  PTS_ENDPOINT: https://{{ .Release.Name }}-pts:9443
+  INTERNAL_SVC_NAME: {{ .Release.Name }}-xtdb-headless
+  XTDB_PUBLIC_ENDPOINT: https://{{ .Release.Name }}-xtdb:9443
+  XTDB_BOOTSTRAP_ENDPOINT: https://{{ .Release.Name }}-xtdb-0.{{ .Release.Name }}-xtdb-headless:9443
+  XTDB_SERVER: {{ .Values.xtdb.proxyserver }}
+  JDBC_URL: "jdbc:{{ .Values.jdbcDetails.db_type }}://{{ .Values.jdbcDetails.service }}:{{ .Values.jdbcDetails.port }}/{{ .Values.jdbcDetails.database }}"
+
+  # Used for downloads
+  CONNECTOR_JAR: egeria-connector-xtdb-{{ .Values.xtdb.connectorversion }}-jar-with-dependencies.jar
+  CONNECTOR_URL: {{  .Values.xtdb.connectorurl }}
+  JDBC_DRIVER_URL: https://repo1.maven.org/maven2/org/postgresql/postgresql/{{ .Values.dependencyVersions.postgresql }}/postgresql-{{ .Values.dependencyVersions.postgresql }}.jar
+  PTS_REPORT_NAME: {{ .Release.Name }}

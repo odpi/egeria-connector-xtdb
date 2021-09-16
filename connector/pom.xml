@@ -7,28 +7,28 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>egeria-connector-crux-module</artifactId>
+        <artifactId>egeria-connector-xtdb-module</artifactId>
         <groupId>org.odpi.egeria</groupId>
         <version>3.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>egeria-connector-crux</artifactId>
+    <artifactId>egeria-connector-xtdb</artifactId>
     <version>3.2-SNAPSHOT</version>
 
-    <name>Egeria Connector for Crux</name>
+    <name>Egeria Connector for XTDB</name>
     <description>
-        An OCF OMRS Connector for a historical metadata back-end based on Crux.
+        An OCF OMRS Connector for a historical metadata back-end based on XTDB.
     </description>
 
     <dependencies>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-core</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-lucene</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-lucene</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.lucene</groupId>
@@ -89,28 +89,28 @@
         </dependency>
         <!-- Configurable runtimes for the connector: included for completeness. -->
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-rocksdb</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-rocksdb</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-lmdb</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-lmdb</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-kafka</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-kafka</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-jdbc</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-jdbc</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-s3</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-s3</artifactId>
         </dependency>
         <dependency>
-            <groupId>pro.juxt.crux</groupId>
-            <artifactId>crux-metrics</artifactId>
+            <groupId>com.xtdb</groupId>
+            <artifactId>xtdb-metrics</artifactId>
         </dependency>
     </dependencies>
 
@@ -137,16 +137,16 @@
                                 <ignoredUnusedDeclaredDependency>ch.qos.logback:logback-classic:*</ignoredUnusedDeclaredDependency>
                                 <!-- This module is used both at runtime and as part of the tests, which the dependency-checker
                                      cannot determine: hence excluding from checking. -->
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-lucene:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-lucene:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-core:*</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.apache.lucene:lucene-analyzers-common:*</ignoredUnusedDeclaredDependency>
                                 <!-- These are runtime-configurable, so included in the jar for completeness -->
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-rocksdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-lmdb:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-kafka:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-jdbc:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-s3:*</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>pro.juxt.crux:crux-metrics:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-rocksdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-lmdb:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-kafka:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-jdbc:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-s3:*</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.xtdb:xtdb-metrics:*</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                         </configuration>
                     </execution>
