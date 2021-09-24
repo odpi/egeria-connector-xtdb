@@ -43,9 +43,14 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     public static final String CREATE_TIME = getKeyword(N_CREATE_TIME);
     public static final String UPDATE_TIME = getKeyword(N_UPDATE_TIME);
     public static final String CURRENT_STATUS = getKeyword(N_CURRENT_STATUS);
+    public static final String STATUS_ON_DELETE = getKeyword(N_STATUS_ON_DELETE);
     public static final String TYPE_DEF_GUIDS = getKeyword(N_TYPE + ".guids");
     public static final String TYPE_DEF_CATEGORY = getKeyword(N_TYPE + ".category");
     public static final String VERSION = getKeyword(N_VERSION);
+    public static final String MAINTAINED_BY = getKeyword(N_MAINTAINED_BY);
+    public static final String UPDATED_BY = getKeyword(N_UPDATED_BY);
+    public static final String REPLICATED_BY = getKeyword(N_REPLICATED_BY);
+    public static final String INSTANCE_PROVENANCE_TYPE = getKeyword(N_INSTANCE_PROVENANCE_TYPE);
 
     private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {

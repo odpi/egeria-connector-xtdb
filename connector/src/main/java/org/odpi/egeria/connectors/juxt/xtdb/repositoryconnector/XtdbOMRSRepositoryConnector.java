@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
 import xtdb.api.*;
 import xtdb.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
@@ -30,10 +31,7 @@ import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -42,9 +40,11 @@ import java.util.concurrent.TimeoutException;
 /**
  * Provides all connectivity and API-based interaction with a XTDB back-end.
  */
-public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
+public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(XtdbOMRSRepositoryConnector.class);
+
+    private static final long serialVersionUID = 1L;
 
     private static final String SYNC = "Synchronously";
     private static final String ASYNC = "Asynchronously";
@@ -208,6 +208,21 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     this.getClass().getName(), methodName, e);
         }
 
+        Transaction.Builder tx = Transaction.builder();
+        AddEntityProxy.create(tx);
+        UpdateEntityStatus.create(tx);
+        UpdateEntityProperties.create(tx);
+        DeleteRelationship.create(tx);
+        PurgeRelationship.create(tx);
+        DeleteEntity.create(tx);
+        PurgeEntity.create(tx);
+        // Null for the timeout here means use the default (which is therefore configurable directly by
+        // the XTDB configurationProperties of the connector)
+        Transaction txn = tx.build();
+        log.info("Adding transaction functions: {}", txn.toVector());
+        TransactionInstant instant = xtdbAPI.submitTx(txn);
+        xtdbAPI.awaitTx(instant, null);
+
     }
 
     /**
@@ -272,14 +287,76 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
-     * Create the provided entity instance in the XTDB repository.
-     * @param entity to create
+     * Validate that the commit was persisted, or throw an exception if it failed.
+     * @param instant giving the commit point
+     * @param methodName that made the commit
+     * @throws RepositoryErrorException on any error
      */
-    public void createEntityProxy(EntityProxy entity) {
-        Transaction.Builder tx = Transaction.builder();
-        addCreateEntityProxyStatements(tx, entity);
-        TransactionInstant results = runTx(tx.build());
-        log.debug(Constants.WRITE_RESULTS, results);
+    public void validateCommit(TransactionInstant instant, String methodName) throws RepositoryErrorException {
+        if (synchronousIndex) {
+            if (!xtdbAPI.hasTxCommitted(instant)) {
+                // TODO: retrieve the underlying cause of the failure (exception) and re-throw it here
+                //  rather than this very generic error (or at least add it to this throw as the underlying cause)
+                throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                        this.getClass().getName(),
+                        methodName);
+            }
+        }
+    }
+
+    /**
+     * Validates that the commit was persisted (if synchronous), throwing an exception if it failed, and
+     * also retrieves and returns the detailed entity that resulted from the transaction. Note that if the
+     * operation is configured to be asynchronous, this will ALWAYS return null for the entity details.
+     * @param docId of the entity within XTDB itself (i.e. prefixed)
+     * @param instant giving the commit point of the transaction
+     * @param methodName that made the commit
+     * @return EntityDetail result of the committed transaction (synchronous) or null (asynchronous)
+     * @throws RepositoryErrorException on any error
+     */
+    public EntityDetail getResultingEntity(String docId,
+                                           TransactionInstant instant,
+                                           String methodName) throws RepositoryErrorException {
+        validateCommit(instant, methodName);
+        if (synchronousIndex) {
+            XtdbDocument result = getXtdbObjectByReference(docId);
+            EntityDetailMapping edm = new EntityDetailMapping(this, result);
+            return edm.toEgeria();
+        } else {
+            // For async write we will ALWAYS return null, as there cannot be any consistent idea
+            // of what the object looks like before the write itself has completed
+            return null;
+        }
+    }
+
+    /**
+     * Validates that the commit was persisted (if synchornous), throwing an exception if it failed, and
+     * also retrieves and returns the detailed relationship that resulted from the transaction. Note that if
+     * the operation is configured to be asynchronous, this will ALWAYS return null for the relationship detials.
+     * @param docId of the relationship within XTDB itself (i.e. prefixed)
+     * @param instant giving the commit point of the transaction
+     * @param methodName that made the commit
+     * @return Relationship result of the committed transaction (synchronous) or null (asynchronous)
+     * @throws RepositoryErrorException on any error
+     */
+    public Relationship getResultingRelationship(String docId,
+                                                 TransactionInstant instant,
+                                                 String methodName) throws RepositoryErrorException {
+        validateCommit(instant, methodName);
+        if (synchronousIndex) {
+            try (IXtdbDatasource db = xtdbAPI.openDB(instant)) {
+                XtdbDocument result = getXtdbObjectByReference(db, docId);
+                RelationshipMapping rm = new RelationshipMapping(this, result, db);
+                return rm.toEgeria();
+            } catch (IOException e) {
+                throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                        this.getClass().getName(), methodName, e);
+            }
+        } else {
+            // For async write we will ALWAYS return null, as there cannot be any consistent idea
+            // of what the object looks like before the write itself has completed
+            return null;
+        }
     }
 
     /**
@@ -316,42 +393,24 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
-     * Retrieve the statements that need to be executed against XTDB to update (persist) the entity provided.
-     * @param tx the transaction through which to update the entity
-     * @param entity to be updated
-     */
-    public void addUpdateEntityStatements(Transaction.Builder tx, EntityDetail entity) {
-        addCreateEntityStatements(tx, entity);
-    }
-
-    /**
-     * Permanently delete the entity (and all of its history) from the XTDB repository.
-     * Note that this operation is NOT reversible!
-     * @param guid of the entity to permanently delete
-     */
-    public void purgeEntity(String guid) {
-        Transaction.Builder tx = Transaction.builder();
-        addPurgeEntityStatements(tx, guid);
-        runTx(tx.build());
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to permanently delete the entity (and all of its
-     * history) from the XTDB repository.
-     * @param tx the transaction through which to purge the entity
-     * @param guid of the entity to permanently delete
-     */
-    public void addPurgeEntityStatements(Transaction.Builder tx, String guid) {
-        evict(tx, EntitySummaryMapping.getReference(guid));
-    }
-
-    /**
      * Update the provided entity instance in the XTDB repository.
      * @param entity to update
      * @return EntityDetail that was updated
      */
     public EntityDetail updateEntity(EntityDetail entity) {
         return createEntity(entity);
+    }
+
+    public EntityDetail updateEntityProperties(String userId,
+                                               String entityGUID,
+                                               InstanceProperties properties) {
+        Transaction.Builder tx = Transaction.builder();
+        tx.invokeFunction(UpdateEntityProperties.FUNCTION_NAME, EntityDetailMapping.getReference(entityGUID), properties, userId);
+        TransactionInstant results = runTx(tx.build());
+        log.debug(Constants.WRITE_RESULTS, results);
+        // TODO: need to translate results of the write back to Egeria (only possible for synchronous
+        //  writes -- should probably still return null for async writes?)
+        return null;
     }
 
     /**
@@ -1312,12 +1371,11 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
      * Permanently delete the relationship (and all of its history) from the XTDB repository.
      * Note that this operation is NOT reversible!
      * @param guid of the relationship to permanently delete
-     */
     public void purgeRelationship(String guid) {
         Transaction.Builder tx = Transaction.builder();
         addPurgeRelationshipStatements(tx, guid);
         runTx(tx.build());
-    }
+    }*/
 
     /**
      * Retrieve the statements that need to be executed against XTDB to permanently delete the relationship (and all of

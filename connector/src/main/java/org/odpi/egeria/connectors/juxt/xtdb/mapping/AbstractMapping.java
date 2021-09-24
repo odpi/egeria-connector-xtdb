@@ -26,6 +26,13 @@ public abstract class AbstractMapping {
 
     /**
      * Default constructor.
+     */
+    protected AbstractMapping() {
+        this.xtdbConnector = null;
+    }
+
+    /**
+     * Default constructor.
      * @param xtdbConnector connectivity to XTDB
      */
     protected AbstractMapping(XtdbOMRSRepositoryConnector xtdbConnector) {

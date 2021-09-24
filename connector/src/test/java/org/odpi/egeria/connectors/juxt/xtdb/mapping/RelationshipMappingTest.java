@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.AddEntityProxy;
 import xtdb.api.XtdbDocument;
 import xtdb.api.IXtdbDatasource;
 import org.odpi.egeria.connectors.juxt.xtdb.mocks.MockConnection;
@@ -41,8 +42,8 @@ public class RelationshipMappingTest {
             EntityProxy one = getEntityProxy(helper, "Referenceable", "some-referenceable");
             EntityProxy two = getEntityProxy(helper, "GlossaryTerm", "some-glossary-term");
 
-            connector.createEntityProxy(one);
-            connector.createEntityProxy(two);
+            AddEntityProxy.transact(connector, one);
+            AddEntityProxy.transact(connector, two);
 
             relationship.setEntityOneProxy(one);
             relationship.setEntityTwoProxy(two);

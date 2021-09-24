@@ -3,6 +3,9 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import clojure.lang.IPersistentVector;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.AddEntityProxy;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.PurgeEntity;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.PurgeRelationship;
 import xtdb.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.xtdb.mocks.MockConnection;
@@ -224,7 +227,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, previous, "Expected retrieved restored entity to be identical to the restored entity that was returned.");
 
             // Purge
-            connector.purgeEntity(original.getGUID());
+            PurgeEntity.transact(connector, original.getGUID(), true);
 
             retrieved = connector.getEntity(original.getGUID(), null, false);
             assertNull(retrieved, "Expected the entity to no longer exist after it has been purged.");
@@ -262,7 +265,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     assetProperties,
                     null);
 
-            connector.createEntityProxy(asset);
+            AddEntityProxy.transact(connector, asset);
 
             InstanceProperties termProperties = helper.addStringPropertyToInstance(MockConnection.SOURCE_NAME,
                     null,
@@ -278,7 +281,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     termProperties,
                     null);
 
-            connector.createEntityProxy(term);
+            AddEntityProxy.transact(connector, term);
 
             original.setEntityOneProxy(asset);
             original.setEntityTwoProxy(term);
@@ -342,7 +345,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, previous, "Expected retrieved restored relationship to be identical to the restored relationship that was returned.");
 
             // Purge
-            connector.purgeRelationship(original.getGUID());
+            PurgeRelationship.transact(connector, original.getGUID(), true);
 
             retrieved = connector.getRelationship(original.getGUID(), null);
             assertNull(retrieved, "Expected the relationship to no longer exist after it has been purged.");
