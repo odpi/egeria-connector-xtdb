@@ -227,7 +227,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, previous, "Expected retrieved restored entity to be identical to the restored entity that was returned.");
 
             // Purge
-            PurgeEntity.transact(connector, original.getGUID(), true);
+            PurgeEntity.transactWithoutValidation(connector, original.getGUID());
 
             retrieved = connector.getEntity(original.getGUID(), null, false);
             assertNull(retrieved, "Expected the entity to no longer exist after it has been purged.");
@@ -345,7 +345,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, previous, "Expected retrieved restored relationship to be identical to the restored relationship that was returned.");
 
             // Purge
-            PurgeRelationship.transact(connector, original.getGUID(), true);
+            PurgeRelationship.transactWithoutValidation(connector, original.getGUID());
 
             retrieved = connector.getRelationship(original.getGUID(), null);
             assertNull(retrieved, "Expected the relationship to no longer exist after it has been purged.");

@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.InstanceAuditHeaderMapping;
@@ -43,9 +44,10 @@ public class DeleteEntity extends AbstractTransactionFunction {
     private static final String FN = "" +
             "(fn [ctx eid user] " +
             "    (let [db (xtdb.api/db ctx)" +
+            "          tx-id (:tx-id db)" +
             "          relationships (xtdb.api/q db " + RELN_QUERY + " eid)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          deleted (.doc (" + DeleteEntity.class.getCanonicalName() + ". existing user eid))]" +
+            "          deleted (.doc (" + DeleteEntity.class.getCanonicalName() + ". tx-id existing user eid))]" +
             // For each of the relationships that was found, check the metadataCollectionId of it to determine
             // whether to delete the relationship (homed in this repo, same as entity) or to purge it (reference copy)
             // by delegating to the appropriate transaction function for those operations
@@ -61,24 +63,29 @@ public class DeleteEntity extends AbstractTransactionFunction {
 
     /**
      * Constructor used to execute the transaction function.
+     * @param txId the transaction ID of this function invocation
      * @param existing XTDB document to update
      * @param userId doing the deletion
      * @param obsoleteEntityGUID of the entity to delete
-     * @throws EntityNotKnownException if the entity cannot be found
-     * @throws InvalidParameterException if the relationship exists but is already soft-deleted
+     * @throws Exception on any error
      */
-    public DeleteEntity(PersistentHashMap existing,
+    public DeleteEntity(Long txId,
+                        PersistentHashMap existing,
                         String userId,
                         String obsoleteEntityGUID)
-            throws InvalidParameterException, EntityNotKnownException {
+            throws Exception {
 
-        if (existing == null) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
-                    obsoleteEntityGUID), this.getClass().getName(), METHOD_NAME);
-        } else {
-            TxnUtils.validateNonProxyEntity(existing, obsoleteEntityGUID, this.getClass().getName(), METHOD_NAME);
-            TxnUtils.validateInstanceIsNotDeleted(existing, obsoleteEntityGUID, this.getClass().getName(), METHOD_NAME);
-            xtdbDoc = TxnUtils.deleteInstance(userId, existing);
+        try {
+            if (existing == null) {
+                throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
+                        obsoleteEntityGUID), this.getClass().getName(), METHOD_NAME);
+            } else {
+                TxnUtils.validateNonProxyEntity(existing, obsoleteEntityGUID, this.getClass().getName(), METHOD_NAME);
+                TxnUtils.validateInstanceIsNotDeleted(existing, obsoleteEntityGUID, this.getClass().getName(), METHOD_NAME);
+                xtdbDoc = TxnUtils.deleteInstance(userId, existing);
+            }
+        } catch (Exception e) {
+            throw ErrorMessaging.add(txId, e);
         }
 
     }
@@ -89,16 +96,28 @@ public class DeleteEntity extends AbstractTransactionFunction {
      * @param userId doing the deletion
      * @param entityGUID of the entity to be deleted
      * @return the resulting deleted entity
-     * @throws RepositoryErrorException on any error
+     * @throws EntityNotKnownException if the entity cannot be found
+     * @throws InvalidParameterException if the relationship exists but is already soft-deleted
+     * @throws RepositoryErrorException on any other error
      */
     public static EntityDetail transact(XtdbOMRSRepositoryConnector xtdb,
                                         String userId,
-                                        String entityGUID) throws RepositoryErrorException {
+                                        String entityGUID)
+            throws EntityNotKnownException, InvalidParameterException, RepositoryErrorException {
         String docId = EntityDetailMapping.getReference(entityGUID);
         Transaction.Builder tx = Transaction.builder();
         tx.invokeFunction(FUNCTION_NAME, docId, userId);
         TransactionInstant results = xtdb.runTx(tx.build());
-        return xtdb.getResultingEntity(docId, results, METHOD_NAME);
+        try {
+            return xtdb.getResultingEntity(docId, results, METHOD_NAME);
+        } catch (EntityNotKnownException | InvalidParameterException | RepositoryErrorException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                    DeleteEntity.class.getName(),
+                    METHOD_NAME,
+                    e);
+        }
     }
 
     /**

@@ -3,10 +3,13 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityProxyMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityProxy;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import xtdb.api.TransactionInstant;
 import xtdb.api.XtdbDocument;
@@ -49,7 +52,16 @@ public class AddEntityProxy extends AbstractTransactionFunction {
         Transaction.Builder tx = Transaction.builder();
         tx.invokeFunction(FUNCTION_NAME, docId, proxyDoc.toMap());
         TransactionInstant results = xtdb.runTx(tx.build());
-        xtdb.validateCommit(results, METHOD_NAME);
+        try {
+            xtdb.validateCommit(results, METHOD_NAME);
+        } catch (RepositoryErrorException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                    DeleteEntity.class.getName(),
+                    METHOD_NAME,
+                    e);
+        }
     }
 
     /**

@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
 import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
 import xtdb.api.*;
 import xtdb.api.tx.Transaction;
@@ -290,16 +291,19 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
      * Validate that the commit was persisted, or throw an exception if it failed.
      * @param instant giving the commit point
      * @param methodName that made the commit
-     * @throws RepositoryErrorException on any error
+     * @throws Exception on any error
      */
-    public void validateCommit(TransactionInstant instant, String methodName) throws RepositoryErrorException {
+    public void validateCommit(TransactionInstant instant, String methodName) throws Exception {
         if (synchronousIndex) {
             if (!xtdbAPI.hasTxCommitted(instant)) {
-                // TODO: retrieve the underlying cause of the failure (exception) and re-throw it here
-                //  rather than this very generic error (or at least add it to this throw as the underlying cause)
-                throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                        this.getClass().getName(),
-                        methodName);
+                Exception e = ErrorMessaging.get(instant.getId());
+                if (e != null) {
+                    throw e;
+                } else {
+                    throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                            this.getClass().getName(),
+                            methodName);
+                }
             }
         }
     }
@@ -312,11 +316,11 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
      * @param instant giving the commit point of the transaction
      * @param methodName that made the commit
      * @return EntityDetail result of the committed transaction (synchronous) or null (asynchronous)
-     * @throws RepositoryErrorException on any error
+     * @throws Exception on any error
      */
     public EntityDetail getResultingEntity(String docId,
                                            TransactionInstant instant,
-                                           String methodName) throws RepositoryErrorException {
+                                           String methodName) throws Exception {
         validateCommit(instant, methodName);
         if (synchronousIndex) {
             XtdbDocument result = getXtdbObjectByReference(docId);
@@ -337,11 +341,11 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
      * @param instant giving the commit point of the transaction
      * @param methodName that made the commit
      * @return Relationship result of the committed transaction (synchronous) or null (asynchronous)
-     * @throws RepositoryErrorException on any error
+     * @throws Exception on any error
      */
     public Relationship getResultingRelationship(String docId,
                                                  TransactionInstant instant,
-                                                 String methodName) throws RepositoryErrorException {
+                                                 String methodName) throws Exception {
         validateCommit(instant, methodName);
         if (synchronousIndex) {
             try (IXtdbDatasource db = xtdbAPI.openDB(instant)) {

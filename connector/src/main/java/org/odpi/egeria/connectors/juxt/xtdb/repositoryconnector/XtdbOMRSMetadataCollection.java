@@ -939,7 +939,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "purgeEntity";
         final String parameterName = "deletedEntityGUID";
         this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedEntityGUID, parameterName, methodName);
-        PurgeEntity.transact(xtdbRepositoryConnector, deletedEntityGUID, false);
+        PurgeEntity.transactWithValidation(xtdbRepositoryConnector, deletedEntityGUID);
     }
 
     /**
@@ -1374,7 +1374,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "purgeRelationship";
         final String parameterName = "deletedRelationshipGUID";
         this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedRelationshipGUID, parameterName, methodName);
-        PurgeRelationship.transact(xtdbRepositoryConnector, deletedRelationshipGUID, false);
+        PurgeRelationship.transactWithValidation(xtdbRepositoryConnector, deletedRelationshipGUID);
     }
 
     /**
@@ -1777,7 +1777,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
         final String methodName = "purgeEntityReferenceCopy";
         this.manageReferenceInstanceParameterValidation(userId, entityGUID, typeDefGUID, typeDefName, Constants.ENTITY_GUID, homeMetadataCollectionId, Constants.HOME_METADATA_COLLECTION_ID, methodName);
-        PurgeEntity.transact(xtdbRepositoryConnector, entityGUID, true);
+        PurgeEntity.transactWithoutValidation(xtdbRepositoryConnector, entityGUID);
     }
 
     /**
@@ -1957,7 +1957,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException {
         final String methodName = "purgeRelationshipReferenceCopy";
         this.manageReferenceInstanceParameterValidation(userId, relationshipGUID, typeDefGUID, typeDefName, Constants.RELATIONSHIP_GUID, homeMetadataCollectionId, Constants.HOME_METADATA_COLLECTION_ID, methodName);
-        PurgeRelationship.transact(xtdbRepositoryConnector, relationshipGUID, true);
+        PurgeRelationship.transactWithoutValidation(xtdbRepositoryConnector, relationshipGUID);
     }
 
     /**

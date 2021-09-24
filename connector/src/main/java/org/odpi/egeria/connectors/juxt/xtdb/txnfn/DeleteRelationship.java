@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -27,31 +28,37 @@ public class DeleteRelationship extends AbstractTransactionFunction {
     private static final String FN = "" +
             "(fn [ctx rid user] " +
             "    (let [db (xtdb.api/db ctx)" +
+            "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db rid)" +
-            "          deleted (.doc (" + DeleteRelationship.class.getCanonicalName() + ". existing user rid))]" +
+            "          deleted (.doc (" + DeleteRelationship.class.getCanonicalName() + ". tx-id existing user rid))]" +
             "         [[:xtdb.api/put deleted]]))";
 
     private final IPersistentMap xtdbDoc;
 
     /**
      * Constructor used to execute the transaction function.
+     * @param txId the transaction ID of this function invocation
      * @param existing XTDB document to update
      * @param userId doing the deletion
      * @param obsoleteRelationshipGUID of the relationship to delete
-     * @throws RelationshipNotKnownException if the relationship cannot be found
-     * @throws InvalidParameterException if the relationship exists but is already soft-deleted
+     * @throws Exception on any error
      */
-    public DeleteRelationship(PersistentHashMap existing,
+    public DeleteRelationship(Long txId,
+                              PersistentHashMap existing,
                               String userId,
                               String obsoleteRelationshipGUID)
-            throws InvalidParameterException, RelationshipNotKnownException {
+            throws Exception {
 
-        if (existing == null) {
-            throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
-                    obsoleteRelationshipGUID), this.getClass().getName(), METHOD_NAME);
-        } else {
-            TxnUtils.validateInstanceIsNotDeleted(existing, obsoleteRelationshipGUID, this.getClass().getName(), METHOD_NAME);
-            xtdbDoc = TxnUtils.deleteInstance(userId, existing);
+        try {
+            if (existing == null) {
+                throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
+                        obsoleteRelationshipGUID), this.getClass().getName(), METHOD_NAME);
+            } else {
+                TxnUtils.validateInstanceIsNotDeleted(existing, obsoleteRelationshipGUID, this.getClass().getName(), METHOD_NAME);
+                xtdbDoc = TxnUtils.deleteInstance(userId, existing);
+            }
+        } catch (Exception e) {
+            throw ErrorMessaging.add(txId, e);
         }
 
     }
@@ -62,16 +69,28 @@ public class DeleteRelationship extends AbstractTransactionFunction {
      * @param userId doing the deletion
      * @param relationshipGUID of the relationship to be deleted
      * @return the resulting deleted relationship
-     * @throws RepositoryErrorException on any error
+     * @throws RelationshipNotKnownException if the relationship cannot be found
+     * @throws InvalidParameterException if the relationship exists but is already soft-deleted
+     * @throws RepositoryErrorException on any other error
      */
     public static Relationship transact(XtdbOMRSRepositoryConnector xtdb,
                                         String userId,
-                                        String relationshipGUID) throws RepositoryErrorException {
+                                        String relationshipGUID)
+            throws RelationshipNotKnownException, InvalidParameterException, RepositoryErrorException {
         String docId = RelationshipMapping.getReference(relationshipGUID);
         Transaction.Builder tx = Transaction.builder();
         tx.invokeFunction(FUNCTION_NAME, docId, userId);
         TransactionInstant results = xtdb.runTx(tx.build());
-        return xtdb.getResultingRelationship(docId, results, METHOD_NAME);
+        try {
+            return xtdb.getResultingRelationship(docId, results, METHOD_NAME);
+        } catch (RelationshipNotKnownException | InvalidParameterException | RepositoryErrorException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                    DeleteEntity.class.getName(),
+                    METHOD_NAME,
+                    e);
+        }
     }
 
 
