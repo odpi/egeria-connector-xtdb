@@ -3,7 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -18,7 +18,7 @@ import xtdb.api.tx.Transaction;
 /**
  * Transaction function for updating a relationship's status.
  */
-public class UpdateRelationshipStatus extends AbstractTransactionFunction {
+public class UpdateRelationshipStatus extends UpdateInstanceStatus {
 
     private static final Logger log = LoggerFactory.getLogger(UpdateEntityStatus.class);
 
@@ -58,13 +58,12 @@ public class UpdateRelationshipStatus extends AbstractTransactionFunction {
                 throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
                         relationshipGUID), this.getClass().getName(), METHOD_NAME);
             } else {
-                TxnUtils.validateInstanceIsNotDeleted(existing, relationshipGUID, CLASS_NAME, METHOD_NAME);
-                TxnUtils.validateInstanceCanBeUpdated(existing, relationshipGUID, metadataCollectionId, CLASS_NAME, METHOD_NAME);
-                TxnUtils.validateRequiredProperty(relationshipGUID, TxnUtils.CURRENT_STATUS.getName(), instanceStatus, CLASS_NAME, METHOD_NAME);
-                xtdbDoc = TxnUtils.updateInstanceStatus(userId, existing, instanceStatus);
+                TxnValidations.relationshipFromStore(relationshipGUID, existing, CLASS_NAME, METHOD_NAME);
+                validate(existing, relationshipGUID, metadataCollectionId, instanceStatus, CLASS_NAME, METHOD_NAME);
+                xtdbDoc = updateInstanceStatus(userId, existing, instanceStatus);
             }
         } catch (Exception e) {
-            throw ErrorMessaging.add(txId, e);
+            throw ErrorMessageCache.add(txId, e);
         }
 
     }
@@ -78,6 +77,7 @@ public class UpdateRelationshipStatus extends AbstractTransactionFunction {
      * @param newStatus to apply to the relationship
      * @return Relationship with the new status applied
      * @throws RelationshipNotKnownException if the relationship cannot be found
+     * @throws StatusNotSupportedException if the provided status is not supported by the entity
      * @throws InvalidParameterException if the relationship exists but cannot be updated (deleted, reference copy, etc)
      * @throws RepositoryErrorException on any other error
      */
@@ -85,14 +85,14 @@ public class UpdateRelationshipStatus extends AbstractTransactionFunction {
                                         String userId,
                                         String relationshipGUID,
                                         InstanceStatus newStatus)
-            throws RelationshipNotKnownException, InvalidParameterException, RepositoryErrorException {
+            throws RelationshipNotKnownException, StatusNotSupportedException, InvalidParameterException, RepositoryErrorException {
         String docId = RelationshipMapping.getReference(relationshipGUID);
         Transaction.Builder tx = Transaction.builder();
         tx.invokeFunction(FUNCTION_NAME, docId, userId, newStatus.getOrdinal(), xtdb.getMetadataCollectionId());
         TransactionInstant results = xtdb.runTx(tx.build());
         try {
             return xtdb.getResultingRelationship(docId, results, METHOD_NAME);
-        } catch (RelationshipNotKnownException | InvalidParameterException | RepositoryErrorException e) {
+        } catch (RelationshipNotKnownException | StatusNotSupportedException | InvalidParameterException | RepositoryErrorException e) {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),

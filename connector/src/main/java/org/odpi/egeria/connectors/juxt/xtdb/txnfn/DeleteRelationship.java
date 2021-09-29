@@ -3,7 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -19,11 +19,12 @@ import xtdb.api.tx.Transaction;
 /**
  * Transaction function for soft-deleting a relationship.
  */
-public class DeleteRelationship extends AbstractTransactionFunction {
+public class DeleteRelationship extends DeleteInstance {
 
     private static final Logger log = LoggerFactory.getLogger(DeleteRelationship.class);
 
     public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "deleteRelationship");
+    private static final String CLASS_NAME = DeleteRelationship.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
     private static final String FN = "" +
             "(fn [ctx rid user] " +
@@ -54,11 +55,12 @@ public class DeleteRelationship extends AbstractTransactionFunction {
                 throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
                         obsoleteRelationshipGUID), this.getClass().getName(), METHOD_NAME);
             } else {
-                TxnUtils.validateInstanceIsNotDeleted(existing, obsoleteRelationshipGUID, this.getClass().getName(), METHOD_NAME);
-                xtdbDoc = TxnUtils.deleteInstance(userId, existing);
+                TxnValidations.relationshipFromStore(obsoleteRelationshipGUID, existing, CLASS_NAME, METHOD_NAME);
+                TxnValidations.instanceIsNotDeleted(existing, obsoleteRelationshipGUID, CLASS_NAME, METHOD_NAME);
+                xtdbDoc = deleteInstance(userId, existing);
             }
         } catch (Exception e) {
-            throw ErrorMessaging.add(txId, e);
+            throw ErrorMessageCache.add(txId, e);
         }
 
     }

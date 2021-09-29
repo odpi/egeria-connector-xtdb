@@ -4,13 +4,17 @@ package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
 import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -84,6 +88,42 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
     }
 
     /**
+     * Convert the provided Egeria value into a XTDB comparable form.
+     * @param ipv Egeria value to translate to XTDB-comparable value
+     * @return Object value that XTDB can compare
+     * @throws InvalidParameterException if the value cannot be persisted
+     */
+    public static Object getValueForComparison(InstancePropertyValue ipv) throws InvalidParameterException {
+        final String methodName = "getValueForComparison";
+        Object value = null;
+        if (ipv != null) {
+            InstancePropertyCategory category = ipv.getInstancePropertyCategory();
+            switch (category) {
+                case PRIMITIVE:
+                    value = PrimitivePropertyValueMapping.getPrimitiveValueForComparison((PrimitivePropertyValue) ipv);
+                    break;
+                case ENUM:
+                    value = EnumPropertyValueMapping.getEnumPropertyValueForComparison((EnumPropertyValue) ipv);
+                    break;
+                case ARRAY:
+                    value = ArrayPropertyValueMapping.getArrayPropertyValueForComparison((ArrayPropertyValue) ipv);
+                    break;
+                case MAP:
+                    value = MapPropertyValueMapping.getMapPropertyValueForComparison((MapPropertyValue) ipv);
+                    break;
+                case STRUCT:
+                    value = StructPropertyValueMapping.getStructPropertyValueForComparison((StructPropertyValue) ipv);
+                    break;
+                case UNKNOWN:
+                default:
+                    throw new InvalidParameterException(XtdbOMRSErrorCode.UNMAPPABLE_PROPERTY.getMessageDefinition(
+                            ipv.getTypeName()), InstancePropertyValueMapping.class.getName(), methodName, methodName);
+            }
+        }
+        return value;
+    }
+
+    /**
      * Retrieve a single property value from the provided XTDB representation.
      * @param xtdbConnector connectivity to the repository
      * @param xtdbDoc from which to retrieve the value
@@ -91,16 +131,38 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * @param propertyName of the property
      * @return InstancePropertyValue giving Egeria representation of the value
      */
-    public static InstancePropertyValue getInstancePropertyValueFromDoc(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                                        XtdbDocument xtdbDoc,
-                                                                        String namespace,
-                                                                        String propertyName) {
+    static InstancePropertyValue getInstancePropertyValueFromDoc(XtdbOMRSRepositoryConnector xtdbConnector,
+                                                                 XtdbDocument xtdbDoc,
+                                                                 String namespace,
+                                                                 String propertyName) {
 
         // We will only pull values from the '.json'-qualified portion, given this is a complete JSON serialization
-        Object objValue = xtdbDoc.get(getKeyword(namespace, propertyName + ".json"));
+        Object objValue = xtdbDoc.get(PropertyKeywords.getSerializedPropertyKeyword(namespace, propertyName));
         IPersistentMap embeddedValue = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
         if (embeddedValue != null) {
             return getInstancePropertyValue(xtdbConnector, namespace, propertyName, embeddedValue);
+        }
+        return null;
+
+    }
+
+    /**
+     * Retrieve a single property value from the provided XTDB representation.
+     * @param doc from which to retrieve the value
+     * @param namespace by which the property is qualified
+     * @param propertyName of the property
+     * @return InstancePropertyValue giving Egeria representation of the value
+     * @throws IOException on any error deserializing the value
+     */
+    static InstancePropertyValue getInstancePropertyValueFromMap(IPersistentMap doc,
+                                                                 String namespace,
+                                                                 String propertyName) throws IOException {
+
+        // We will only pull values from the '.json'-qualified portion, given this is a complete JSON serialization
+        Object objValue = doc.valAt(Keyword.intern(PropertyKeywords.getSerializedPropertyKeyword(namespace, propertyName)));
+        IPersistentMap embeddedValue = (objValue instanceof IPersistentMap) ? (IPersistentMap) objValue : null;
+        if (embeddedValue != null) {
+            return getInstancePropertyValue(embeddedValue);
         }
         return null;
 
@@ -112,136 +174,145 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * @param instanceType describing the instance to which this property applies
      * @param builder through which to add the property
      * @param propertyName of the property to add / replace
-     * @param namespace by which the property should be qualified
      * @param value of the property
      */
-    public static void addInstancePropertyValueToDoc(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                     InstanceType instanceType,
-                                                     XtdbDocument.Builder builder,
-                                                     String propertyName,
-                                                     String namespace,
-                                                     InstancePropertyValue value) {
+    static void addInstancePropertyValueToDoc(XtdbOMRSRepositoryConnector xtdbConnector,
+                                              InstanceType instanceType,
+                                              XtdbDocument.Builder builder,
+                                              String propertyName,
+                                              InstancePropertyValue value) {
 
+        final String methodName = "addInstancePropertyValueToDoc";
         // Persist the serialized form in all cases
-        builder.put(getSerializedPropertyKeyword(namespace, propertyName), getEmbeddedSerializedForm(xtdbConnector, instanceType.getTypeDefName(), propertyName, value));
+        PropertyKeywords keywords = TypeDefCache.getPropertyKeywords(instanceType.getTypeDefGUID(), propertyName);
+        if (keywords != null) {
+            builder.put(keywords.getEmbeddedPath(), getEmbeddedSerializedForm(xtdbConnector, instanceType.getTypeDefName(), propertyName, value));
+
+            // And then also persist a searchable form
+            if (value != null) {
+                InstancePropertyCategory category = value.getInstancePropertyCategory();
+                switch (category) {
+                    case PRIMITIVE:
+                        PrimitivePropertyValueMapping.addPrimitivePropertyValueToDoc(
+                                builder,
+                                keywords,
+                                (PrimitivePropertyValue) value
+                        );
+                        break;
+                    case ENUM:
+                        EnumPropertyValueMapping.addEnumPropertyValueToDoc(
+                                builder,
+                                keywords,
+                                (EnumPropertyValue) value
+                        );
+                        break;
+                    case ARRAY:
+                        ArrayPropertyValueMapping.addArrayPropertyValueToDoc(
+                                xtdbConnector,
+                                builder,
+                                keywords,
+                                (ArrayPropertyValue) value
+                        );
+                        break;
+                    case MAP:
+                        MapPropertyValueMapping.addMapPropertyValueToDoc(
+                                xtdbConnector,
+                                builder,
+                                keywords,
+                                (MapPropertyValue) value
+                        );
+                        break;
+                    case STRUCT:
+                        StructPropertyValueMapping.addStructPropertyValueToDoc(
+                                xtdbConnector,
+                                builder,
+                                keywords,
+                                (StructPropertyValue) value
+                        );
+                        break;
+                    case UNKNOWN:
+                    default:
+                        xtdbConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                                "addInstancePropertyValueToDoc",
+                                XtdbOMRSAuditCode.UNMAPPED_TYPE,
+                                null,
+                                "InstancePropertyValueCategory::" + category.name());
+                        break;
+                }
+            } else {
+                // If the value is null, create a null mapping for it (so we explicitly set the property to null for searching)
+                builder.put(keywords.getSearchablePath(), null);
+            }
+        } else {
+            xtdbConnector.logProblem(InstancePropertyValueMapping.class.getName(),
+                    methodName,
+                    XtdbOMRSAuditCode.UNMAPPED_PROPERTY,
+                    null,
+                    propertyName, instanceType.getTypeDefName());
+        }
+
+    }
+
+    /**
+     * Add a single property value to the provided XTDB representation.
+     * @param doc the XTDB map to which to add the property
+     * @param propertyKeywords the property whose value should be set
+     * @param value of the property
+     * @return IPersistentMap containing the updated value
+     * @throws InvalidParameterException if the value cannot be persisted
+     * @throws IOException on any error serializing the value
+     */
+    public static IPersistentMap addInstancePropertyValueToDoc(IPersistentMap doc,
+                                                               PropertyKeywords propertyKeywords,
+                                                               InstancePropertyValue value)
+            throws InvalidParameterException, IOException {
+
+        final String methodName = "addInstancePropertyValueToDoc";
+        // Persist the serialized form in all cases
+        doc = doc.assoc(propertyKeywords.getEmbeddedKeyword(), getEmbeddedSerializedForm(value));
+        Keyword searchablePropertyKeyword = propertyKeywords.getSearchableKeyword();
 
         // And then also persist a searchable form
         if (value != null) {
             InstancePropertyCategory category = value.getInstancePropertyCategory();
             switch (category) {
                 case PRIMITIVE:
-                    PrimitivePropertyValueMapping.addPrimitivePropertyValueToDoc(
-                            xtdbConnector,
-                            instanceType,
-                            builder,
-                            propertyName,
-                            namespace,
-                            (PrimitivePropertyValue) value
-                    );
+                    doc = PrimitivePropertyValueMapping.addPrimitivePropertyValueToDoc(doc,
+                            searchablePropertyKeyword,
+                            (PrimitivePropertyValue) value);
                     break;
                 case ENUM:
-                    EnumPropertyValueMapping.addEnumPropertyValueToDoc(
-                            xtdbConnector,
-                            instanceType,
-                            builder,
-                            propertyName,
-                            namespace,
-                            (EnumPropertyValue) value
-                    );
+                    doc = EnumPropertyValueMapping.addEnumPropertyValueToDoc(doc,
+                            searchablePropertyKeyword,
+                            (EnumPropertyValue) value);
                     break;
                 case ARRAY:
-                    ArrayPropertyValueMapping.addArrayPropertyValueToDoc(
-                            xtdbConnector,
-                            instanceType,
-                            builder,
-                            propertyName,
-                            namespace,
-                            (ArrayPropertyValue) value
-                    );
+                    doc = ArrayPropertyValueMapping.addArrayPropertyValueToDoc(doc,
+                            searchablePropertyKeyword,
+                            (ArrayPropertyValue) value);
                     break;
                 case MAP:
-                    MapPropertyValueMapping.addMapPropertyValueToDoc(
-                            xtdbConnector,
-                            instanceType,
-                            builder,
-                            propertyName,
-                            namespace,
-                            (MapPropertyValue) value
-                    );
+                    doc = MapPropertyValueMapping.addMapPropertyValueToDoc(doc,
+                            searchablePropertyKeyword,
+                            (MapPropertyValue) value);
                     break;
                 case STRUCT:
-                    StructPropertyValueMapping.addStructPropertyValueToDoc(
-                            xtdbConnector,
-                            instanceType,
-                            builder,
-                            propertyName,
-                            namespace,
-                            (StructPropertyValue) value
-                    );
+                    doc = StructPropertyValueMapping.addStructPropertyValueToDoc(doc,
+                            searchablePropertyKeyword,
+                            (StructPropertyValue) value);
                     break;
                 case UNKNOWN:
                 default:
-                    xtdbConnector.logProblem(InstancePropertyValueMapping.class.getName(),
-                            "addInstancePropertyValueToDoc",
-                            XtdbOMRSAuditCode.UNMAPPED_TYPE,
-                            null,
-                            "InstancePropertyValueCategory::" + category.name());
-                    break;
+                    throw new InvalidParameterException(XtdbOMRSErrorCode.UNMAPPABLE_PROPERTY.getMessageDefinition(
+                            value.getTypeName()), InstancePropertyValueMapping.class.getName(), methodName, propertyKeywords.getPropertyName());
             }
         } else {
             // If the value is null, create a null mapping for it (so we explicitly set the property to null for searching)
-            builder.put(getPropertyValueKeyword(xtdbConnector, instanceType, propertyName, namespace), null);
+            doc = doc.assoc(searchablePropertyKeyword, null);
         }
 
-    }
+        return doc;
 
-    /**
-     * Retrieve the keyword to use to store the serialized value of the property.
-     * @param namespace by which to qualify the property
-     * @param propertyName of the property
-     * @return String giving the qualified keyword
-     */
-    protected static String getSerializedPropertyKeyword(String namespace, String propertyName) {
-        return getKeyword(namespace, propertyName + ".json");
-    }
-
-    /**
-     * Retrieve the qualified XTDB name for the value of the property.
-     * @param xtdbConnector connectivity to the repository
-     * @param instanceType of the instance for which this property applies
-     * @param propertyName of the property
-     * @param namespace by which to qualify the property
-     * @return String
-     */
-    protected static String getPropertyValueKeyword(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                    InstanceType instanceType,
-                                                    String propertyName,
-                                                    String namespace) {
-        // Note that different TypeDefinitions may include the same attribute name, but with different types (eg. 'position'
-        // meaning order (int) as well as role (string) -- we must therefore fully-qualify the propertyName with the
-        // name of the typedef in which it is defined -- and that must be done here so that it flows down to any
-        // subclasses as well.
-        Set<String> typesToConsider = new HashSet<>();
-        typesToConsider.add(instanceType.getTypeDefName());
-        Set<String> names = getNamesForProperty(xtdbConnector,
-                propertyName,
-                namespace,
-                typesToConsider,
-                null);
-        String qualified = null;
-        if (names.size() > 1) {
-            xtdbConnector.logProblem(InstancePropertyValueMapping.class.getName(),
-                    "getPropertyValueKeyword",
-                    XtdbOMRSAuditCode.DUPLICATE_PROPERTIES,
-                    null,
-                    instanceType.getTypeDefName(),
-                    propertyName,
-                    names.toString());
-        }
-        for (String name : names) {
-            qualified = name;
-        }
-        return qualified;
     }
 
     /**
@@ -257,6 +328,16 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
     }
 
     /**
+     * Translate the provided JSON representation of a value into an Egeria object.
+     * @param jsonValue to translate
+     * @return InstancePropertyValue
+     * @throws IOException on any error deserializing the value
+     */
+    private static InstancePropertyValue getInstancePropertyValue(IPersistentMap jsonValue) throws IOException {
+        return getDeserializedValue(jsonValue, mapper.getTypeFactory().constructType(InstancePropertyValue.class));
+    }
+
+    /**
      * Retrieve the fully-qualified names for the provided property, everywhere it could appear within a given type.
      * Note that generally the returned Set will only have a single element, however if requested from a sufficiently
      * abstract type (eg. Referenceable) under which different subtypes have the same property defined, the Set will
@@ -268,18 +349,13 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
      * @param value that will be used for comparison, to limit the properties to include based on their type
      * @return {@code Set<String>} of the property references
      */
-    public static Set<String> getNamesForProperty(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                  String propertyName,
-                                                  String namespace,
-                                                  Set<String> limitToTypes,
-                                                  InstancePropertyValue value) {
-        final String methodName = "getNamesForProperty";
-
-        final OMRSRepositoryHelper repositoryHelper = xtdbConnector.getRepositoryHelper();
-        String repositoryName = xtdbConnector.getRepositoryName();
-
+    private static Set<String> getNamesForProperty(XtdbOMRSRepositoryConnector xtdbConnector,
+                                                   String propertyName,
+                                                   String namespace,
+                                                   Set<String> limitToTypes,
+                                                   InstancePropertyValue value) {
         // Start by determining all valid combinations of propertyName in every type name provided in limitToTypes
-        Set<String> validTypesForProperty = repositoryHelper.getAllTypeDefsForProperty(repositoryName, propertyName, methodName);
+        Set<String> validTypesForProperty = TypeDefCache.getAllTypeDefsForProperty(propertyName);
         Set<String> qualifiedNames = new TreeSet<>();
 
         // since the property itself may actually be defined at the super-type level of one of the limited types, we
@@ -287,17 +363,17 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
         // for qualification
         if (validTypesForProperty != null) {
             for (String typeNameWithProperty : validTypesForProperty) {
-                String candidateRef = getFullyQualifiedPropertyNameForValue(namespace, typeNameWithProperty, propertyName);
-                if (!qualifiedNames.contains(candidateRef)) { // short-circuit if we already have this one in the list
+                String searchableKeyword = PropertyKeywords.getSearchableValueKeyword(namespace, typeNameWithProperty, propertyName);
+                if (!qualifiedNames.contains(searchableKeyword)) { // short-circuit if we already have this one in the list
                     for (String limitToType : limitToTypes) {
                         // Only if the type definition by which we are limiting is a subtype of this type definition should
                         // we consider the type definitions' properties
-                        if (repositoryHelper.isTypeOf(repositoryName, limitToType, typeNameWithProperty)) {
+                        if (TypeDefCache.isTypeOf(limitToType, typeNameWithProperty)) {
                             // Only if the property's types align do we continue with ensuring that the type itself should be included
                             // (While this conditional itself will further loop over cached information, it should do so only
                             // in limited cases due to the short-circuiting above)
-                            if (propertyDefMatchesValueType(xtdbConnector, repositoryName, typeNameWithProperty, propertyName, value)) {
-                                qualifiedNames.add(candidateRef);
+                            if (propertyDefMatchesValueType(xtdbConnector, typeNameWithProperty, propertyName, value)) {
+                                qualifiedNames.add(searchableKeyword);
                             }
                         }
                     }
@@ -333,37 +409,15 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
     }
 
     /**
-     * Retrieve a partially-qualified property name that can be used to compare a Lucene match using ends-with.
-     * @param propertyName of the property to reference
-     * @return String match-able ending to the property (without any type qualification)
-     */
-    public static String getEndsWithPropertyNameForMatching(String propertyName) {
-        return "." + propertyName + ".value";
-    }
-
-    /**
-     * Retrieve a fully-qualified property name that can be used for value comparison purposes (ie. searching).
-     * @param namespace under which to qualify the property
-     * @param typeName by which to qualify the property (ie. ensure it is type-specific)
-     * @param propertyName of the property to reference
-     * @return Keyword reference to the property (fully-qualified)
-     */
-    private static String getFullyQualifiedPropertyNameForValue(String namespace, String typeName, String propertyName) {
-        return getKeyword(namespace, typeName + getEndsWithPropertyNameForMatching(propertyName));
-    }
-
-    /**
      * Indicates whether the provided property value is of the same type as the named property in the specified type
      * definition.
      * @param xtdbConnector connectivity to the repository
-     * @param repositoryName of the repository (for logging)
      * @param typeDefName of the type definition in which the property is defined
      * @param propertyName of the property for which to check the type definition
      * @param value that will be used for comparison, to limit the properties to include based on their type
      * @return boolean true if the value's type matches the property definition's type, otherwise false (if they do not match)
      */
     private static boolean propertyDefMatchesValueType(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                       String repositoryName,
                                                        String typeDefName,
                                                        String propertyName,
                                                        InstancePropertyValue value) {
@@ -375,8 +429,10 @@ public abstract class InstancePropertyValueMapping extends AbstractMapping {
 
         // Otherwise, determine the type of this property in the model, and only if they match consider including
         // this property
-        final OMRSRepositoryHelper repositoryHelper = xtdbConnector.getRepositoryHelper();
-        TypeDef typeDef = repositoryHelper.getTypeDefByName(repositoryName, typeDefName);
+        TypeDef typeDef = TypeDefCache.getTypeDefByName(typeDefName);
+        if (typeDef == null) {
+            return false;
+        }
         List<TypeDefAttribute> typeDefProperties = typeDef.getPropertiesDefinition();
         for (TypeDefAttribute typeDefProperty : typeDefProperties) {
             // Start by finding the property

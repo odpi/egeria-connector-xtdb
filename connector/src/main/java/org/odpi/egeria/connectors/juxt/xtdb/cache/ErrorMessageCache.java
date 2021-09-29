@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Copyright Contributors to the ODPi Egeria project. */
-package org.odpi.egeria.connectors.juxt.xtdb.auditlog;
+package org.odpi.egeria.connectors.juxt.xtdb.cache;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentMap;
  * (Basically so we can still throw meaningful errors back to API calls even though the back-end processing
  * happens in a different thread, asynchronously, from the API call itself.)
  */
-public class ErrorMessaging {
+public class ErrorMessageCache {
 
     private static final ConcurrentMap<Long, Exception> map = new ConcurrentHashMap<>();
 

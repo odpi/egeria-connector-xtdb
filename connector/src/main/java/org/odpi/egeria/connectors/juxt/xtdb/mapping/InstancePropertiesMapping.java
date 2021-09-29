@@ -2,12 +2,19 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.AbstractTransactionFunction;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.Classification;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProperties;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,15 +37,14 @@ public class InstancePropertiesMapping {
      * @param xtdbConnector connectivity to the repository
      * @param type of the Egeria instance from which we are retrieving the values
      * @param xtdbDoc from which to retrieve the values
-     * @param namespace by which the properties to retrieve are qualified
      * @return InstanceProperties
      */
     public static InstanceProperties getFromDoc(XtdbOMRSRepositoryConnector xtdbConnector,
                                                 InstanceType type,
-                                                XtdbDocument xtdbDoc,
-                                                String namespace) {
+                                                XtdbDocument xtdbDoc) {
 
         List<String> validProperties = type.getValidInstanceProperties();
+        String namespace = TypeDefCache.getPropertyNamespaceForType(type.getTypeDefGUID());
 
         // Iterate through each of the properties this instance could contain and add them to the map of values
         if (validProperties != null && !validProperties.isEmpty()) {
@@ -59,25 +65,54 @@ public class InstancePropertiesMapping {
     }
 
     /**
+     * Translate the provided XTDB representation into an Egeria representation.
+     * @param type of the Egeria instance from which we are retrieving the values
+     * @param doc from which to map
+     * @return InstanceProperties
+     * @throws IOException on any issue deserializing values
+     */
+    public static InstanceProperties getFromMap(InstanceType type,
+                                                IPersistentMap doc) throws IOException {
+
+        List<String> validProperties = type.getValidInstanceProperties();
+        String namespace = TypeDefCache.getPropertyNamespaceForType(type.getTypeDefGUID());
+
+        // Iterate through each of the properties this instance could contain and add them to the map of values
+        if (validProperties != null && !validProperties.isEmpty()) {
+            Map<String, InstancePropertyValue> values = new TreeMap<>();
+            for (String propertyName : validProperties) {
+                InstancePropertyValue value = InstancePropertyValueMapping.getInstancePropertyValueFromMap(doc, namespace, propertyName);
+                if (value != null) {
+                    values.put(propertyName, value);
+                }
+            }
+            InstanceProperties ip = new InstanceProperties();
+            ip.setInstanceProperties(values);
+            return ip;
+        }
+
+        return null;
+
+    }
+
+    /**
      * Add the provided instance property values to the XTDB document.
      * @param xtdbConnector connectivity to the repository
      * @param builder to which to add the properties
      * @param type of the Egeria instance to which the values are being added
      * @param properties to add
-     * @param namespace by which the properties should be qualified
      */
     public static void addToDoc(XtdbOMRSRepositoryConnector xtdbConnector,
                                 XtdbDocument.Builder builder,
                                 InstanceType type,
-                                InstanceProperties properties,
-                                String namespace) {
+                                InstanceProperties properties) {
 
         Map<String, InstancePropertyValue> propertyMap;
         if (properties != null) {
             propertyMap = properties.getInstanceProperties();
             if (propertyMap != null) {
                 for (Map.Entry<String, InstancePropertyValue> entry : propertyMap.entrySet()) {
-                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(xtdbConnector, type, builder, entry.getKey(), namespace, entry.getValue());
+                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(xtdbConnector, type, builder, entry.getKey(), entry.getValue());
                 }
             } else {
                 propertyMap = new HashMap<>(); // Create an empty map if there is not one, for next set of checks
@@ -93,10 +128,59 @@ public class InstancePropertiesMapping {
             for (String propertyName : allProperties) {
                 if (!propertyMap.containsKey(propertyName)) {
                     // Only explicitly set to null if the earlier processing has not already set a value on the property
-                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(xtdbConnector, type, builder, propertyName, namespace, null);
+                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(xtdbConnector, type, builder, propertyName, null);
                 }
             }
         }
+
+    }
+
+    /**
+     * Add the provided instance property values to the XTDB document map.
+     * @param doc metadata instance in XTDB document map form to which to add the properties
+     * @param typeDefGUID of the Egeria instance to which the values are being added
+     * @param properties full set of properties for the instance
+     * @return IPersistentMap giving the updated instance representation
+     * @throws InvalidParameterException if any of the properties cannot be persisted
+     * @throws IOException on any error serializing the properties
+     */
+    public static IPersistentMap addToMap(IPersistentMap doc,
+                                          String typeDefGUID,
+                                          InstanceProperties properties)
+            throws InvalidParameterException, IOException {
+
+        Map<String, PropertyKeywords> propertyKeywordMap = TypeDefCache.getPropertyKeywordsForTypeDef(typeDefGUID);
+        if (propertyKeywordMap != null) {
+            Map<String, InstancePropertyValue> propertyMap;
+            if (properties != null) {
+                propertyMap = properties.getInstanceProperties();
+                if (propertyMap != null) {
+                    for (Map.Entry<String, InstancePropertyValue> entry : propertyMap.entrySet()) {
+                        PropertyKeywords propertyKeywords = propertyKeywordMap.get(entry.getKey());
+                        doc = InstancePropertyValueMapping.addInstancePropertyValueToDoc(doc,
+                                propertyKeywords,
+                                entry.getValue());
+                    }
+                } else {
+                    propertyMap = new HashMap<>(); // Create an empty map if there is not one, for next set of checks
+                }
+            } else {
+                propertyMap = new HashMap<>();     // Create an empty map if there is not one, for next set of checks
+            }
+            // explicitly set any other properties on the instance to null, so that we can still include them
+            // if sorting, or running an explicit 'IS_NULL' or 'NOT_NULL' search against appropriately
+            for (String propertyName : propertyKeywordMap.keySet()) {
+                if (!propertyMap.containsKey(propertyName)) {
+                    // Only explicitly set to null if the earlier processing has not already set a value on the property
+                    PropertyKeywords propertyKeywords = propertyKeywordMap.get(propertyName);
+                    doc = InstancePropertyValueMapping.addInstancePropertyValueToDoc(doc,
+                            propertyKeywords,
+                            null);
+                }
+            }
+        }
+
+        return doc;
 
     }
 

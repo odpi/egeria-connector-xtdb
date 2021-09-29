@@ -2,9 +2,13 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
+
+import java.io.IOException;
 
 /**
  * Maps the properties of EntityDetails between persistence and objects.
@@ -59,7 +63,7 @@ public class EntityDetailMapping extends EntitySummaryMapping {
         XtdbDocument.Builder builder = super.toDoc();
         // overwrite any internal marker that this is only a proxy
         builder.put(EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER, false);
-        InstancePropertiesMapping.addToDoc(xtdbConnector, builder, instanceHeader.getType(), ((EntityDetail) instanceHeader).getProperties(), ENTITY_PROPERTIES_NS);
+        InstancePropertiesMapping.addToDoc(xtdbConnector, builder, instanceHeader.getType(), ((EntityDetail) instanceHeader).getProperties());
         return builder;
     }
 
@@ -69,8 +73,28 @@ public class EntityDetailMapping extends EntitySummaryMapping {
     @Override
     protected void fromDoc() {
         super.fromDoc();
-        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(xtdbConnector, instanceHeader.getType(), xtdbDoc, ENTITY_PROPERTIES_NS);
+        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(xtdbConnector, instanceHeader.getType(), xtdbDoc);
         ((EntityDetail) instanceHeader).setProperties(ip);
+    }
+
+    /**
+     * Translate the provided XTDB representation into an Egeria representation.
+     * @param doc from which to map
+     * @return EntityDetail the Egeria representation of the XTDB document
+     * @throws IOException on any issue deserializing values
+     * @throws InvalidParameterException for any unmapped properties
+     */
+    public static EntityDetail fromMap(IPersistentMap doc) throws IOException, InvalidParameterException {
+        if (doc == null) {
+            return null;
+        } else {
+            EntityDetail ed = new EntityDetail();
+            EntitySummaryMapping.fromMap(ed, doc);
+            InstanceType entityType = getTypeFromInstance(doc, null);
+            InstanceProperties ip = InstancePropertiesMapping.getFromMap(entityType, doc);
+            ed.setProperties(ip);
+            return ed;
+        }
     }
 
     /**

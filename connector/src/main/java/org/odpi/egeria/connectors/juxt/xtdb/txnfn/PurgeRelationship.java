@@ -3,7 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -22,6 +22,7 @@ public class PurgeRelationship extends AbstractTransactionFunction {
     private static final Logger log = LoggerFactory.getLogger(PurgeRelationship.class);
 
     public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "purgeRelationship");
+    private static final String CLASS_NAME = PurgeRelationship.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
     private static final String FN = "" +
             "(fn [ctx rid force] " +
@@ -49,19 +50,21 @@ public class PurgeRelationship extends AbstractTransactionFunction {
         try {
             if (existing == null) {
                 throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
-                        deletedRelationshipGUID), this.getClass().getName(), METHOD_NAME);
+                        deletedRelationshipGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 if (!force) {
-                    Integer currentStatus = (Integer) existing.valAt(TxnUtils.CURRENT_STATUS);
-                    if (currentStatus == null || currentStatus != InstanceStatus.DELETED.getOrdinal()) {
+                    TxnValidations.relationshipFromStore(deletedRelationshipGUID, existing, CLASS_NAME, METHOD_NAME);
+                    try {
+                        TxnValidations.instanceIsDeleted(existing, deletedRelationshipGUID, CLASS_NAME, METHOD_NAME);
+                    } catch (InvalidParameterException e) {
                         throw new RelationshipNotDeletedException(XtdbOMRSErrorCode.INSTANCE_NOT_DELETED.getMessageDefinition(
-                                deletedRelationshipGUID), this.getClass().getName(), METHOD_NAME);
+                                deletedRelationshipGUID), CLASS_NAME, METHOD_NAME);
                     }
                 }
             }
             xtdbDoc = existing;
         } catch (Exception e) {
-            throw ErrorMessaging.add(txId, e);
+            throw ErrorMessageCache.add(txId, e);
         }
     }
 

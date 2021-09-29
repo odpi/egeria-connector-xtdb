@@ -5,6 +5,7 @@ package org.odpi.egeria.connectors.juxt.xtdb.model.search;
 import clojure.lang.*;
 import org.apache.lucene.queryparser.classic.QueryParserBase;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.InstancePropertyValueMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstancePropertyValue;
@@ -248,7 +249,7 @@ public class TextConditionBuilder {
             List<Object> predicateComparison = new ArrayList<>();
             predicateComparison.add(ENDS_WITH);
             predicateComparison.add(nonNullStringVar);
-            predicateComparison.add(InstancePropertyValueMapping.getEndsWithPropertyNameForMatching(simpleName));
+            predicateComparison.add(PropertyKeywords.getEndsWithPropertyNameForMatching(simpleName));
             intermediateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             if (comparator.equals(PropertyComparisonOperator.NEQ)) {
                 // If the comparison was a not-equals, we need to invert the condition we searched

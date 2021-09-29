@@ -28,6 +28,7 @@ public class Constants {
     public static final Keyword XTDB_PK = Keyword.intern("xt", "id");
     public static final Keyword XTDB_TX_TIME = Keyword.intern(XTDB_API, "tx-time");
     public static final Keyword XTDB_VALID_TIME = Keyword.intern(XTDB_API, "valid-time");
+    public static final Keyword XTDB_DOC = Keyword.intern(XTDB_API, "doc");
 
     // Graph query limits
     public static final int MAX_TRAVERSAL_DEPTH = 40;

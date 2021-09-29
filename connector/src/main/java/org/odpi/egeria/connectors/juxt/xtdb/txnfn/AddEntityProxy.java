@@ -8,8 +8,6 @@ import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityProxyMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityProxy;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import xtdb.api.TransactionInstant;
 import xtdb.api.XtdbDocument;

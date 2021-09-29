@@ -2,11 +2,15 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceHeader;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.Classification;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntitySummary;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -61,7 +65,7 @@ public class EntitySummaryMapping extends InstanceHeaderMapping {
     protected XtdbDocument.Builder toDoc() {
         XtdbDocument.Builder builder = super.toDoc();
         List<Classification> classifications = ((EntitySummary) instanceHeader).getClassifications();
-        ClassificationMapping cm = new ClassificationMapping(xtdbConnector, classifications, N_CLASSIFICATIONS);
+        ClassificationMapping cm = new ClassificationMapping(xtdbConnector, classifications);
         cm.addToXtdbDoc(builder);
         return builder;
     }
@@ -72,9 +76,23 @@ public class EntitySummaryMapping extends InstanceHeaderMapping {
     @Override
     protected void fromDoc() {
         super.fromDoc();
-        ClassificationMapping cm = new ClassificationMapping(xtdbConnector, xtdbDoc, N_CLASSIFICATIONS);
+        ClassificationMapping cm = new ClassificationMapping(xtdbConnector, xtdbDoc);
         List<Classification> classifications = cm.toEgeria();
         ((EntitySummary) instanceHeader).setClassifications(classifications);
+    }
+
+    /**
+     * Translate the provided XTDB representation into an Egeria representation.
+     * @param es into which to map
+     * @param doc from which to map
+     * @throws IOException on any issue deserializing values
+     * @throws InvalidParameterException for any unmapped properties
+     */
+    protected static void fromMap(EntitySummary es,
+                                  IPersistentMap doc) throws IOException, InvalidParameterException {
+        InstanceHeaderMapping.fromMap(es, doc);
+        List<Classification> classifications = ClassificationMapping.fromMap(doc);
+        es.setClassifications(classifications);
     }
 
     /**

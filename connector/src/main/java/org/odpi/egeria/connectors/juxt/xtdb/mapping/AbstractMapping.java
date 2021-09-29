@@ -98,6 +98,26 @@ public abstract class AbstractMapping {
     }
 
     /**
+     * Retrieve an embedded JSON-serialized form of a given object. This will prevent the object from being searchable,
+     * but provides an efficient means to store structured information.
+     * @param value to JSON-serialize
+     * @return IPersistentMap giving the embedded serialized form
+     * @throws IOException on any issue serializing the value
+     */
+    protected static IPersistentMap getEmbeddedSerializedForm(Object value) throws IOException {
+        IPersistentMap subMap = null;
+        if (value != null) {
+            // Serialize the value into JSON (via Jackson)
+            String json = mapper.writeValueAsString(value);
+            // Create a new map {:json "serialized-json-string"}
+            Map<Keyword, String> map = new HashMap<>();
+            map.put(EMBEDDED_JSON, json);
+            subMap = PersistentHashMap.create(map);
+        }
+        return subMap;
+    }
+
+    /**
      * Retrieve the deserialized value given an embedded form. This will prevent the object from being searchable,
      * but provides an efficient means to retrieve structured information.
      * @param xtdbConnector connectivity to the repository
@@ -125,6 +145,26 @@ public abstract class AbstractMapping {
                         javaType.getTypeName(),
                         e.getClass().getName());
             }
+        }
+        return deserialized;
+    }
+
+    /**
+     * Retrieve the deserialized value given an embedded form. This will prevent the object from being searchable,
+     * but provides an efficient means to retrieve structured information.
+     * @param embedded value to JSON-deserialize
+     * @param javaType the type of value to deserialize
+     * @param <T> type of value to deserialize
+     * @return the deserialized value
+     * @throws IOException on any error deserializing the value
+     */
+    protected static <T> T getDeserializedValue(IPersistentMap embedded,
+                                                JavaType javaType) throws IOException {
+        // There must be the ":json" keyword in the map for it to be an embedded serialized form
+        T deserialized = null;
+        if (embedded != null && embedded.containsKey(EMBEDDED_JSON)) {
+            String value = (String) embedded.valAt(EMBEDDED_JSON);
+            deserialized = mapper.readValue(value, javaType);
         }
         return deserialized;
     }

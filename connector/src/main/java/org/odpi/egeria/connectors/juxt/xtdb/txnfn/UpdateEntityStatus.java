@@ -3,15 +3,17 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityDetail;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.StatusNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xtdb.api.TransactionInstant;
@@ -20,7 +22,7 @@ import xtdb.api.tx.Transaction;
 /**
  * Transaction function for updating an entity's status.
  */
-public class UpdateEntityStatus extends AbstractTransactionFunction {
+public class UpdateEntityStatus extends UpdateInstanceStatus {
 
     private static final Logger log = LoggerFactory.getLogger(UpdateEntityStatus.class);
 
@@ -60,14 +62,13 @@ public class UpdateEntityStatus extends AbstractTransactionFunction {
                 throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
                         entityGUID), this.getClass().getName(), METHOD_NAME);
             } else {
-                TxnUtils.validateNonProxyEntity(existing, entityGUID, CLASS_NAME, METHOD_NAME);
-                TxnUtils.validateInstanceIsNotDeleted(existing, entityGUID, CLASS_NAME, METHOD_NAME);
-                TxnUtils.validateInstanceCanBeUpdated(existing, entityGUID, metadataCollectionId, CLASS_NAME, METHOD_NAME);
-                TxnUtils.validateRequiredProperty(entityGUID, TxnUtils.CURRENT_STATUS.getName(), instanceStatus, CLASS_NAME, METHOD_NAME);
-                xtdbDoc = TxnUtils.updateInstanceStatus(userId, existing, instanceStatus);
+                TxnValidations.nonProxyEntity(existing, entityGUID, CLASS_NAME, METHOD_NAME);
+                TxnValidations.entityFromStore(entityGUID, existing, CLASS_NAME, METHOD_NAME);
+                validate(existing, entityGUID, metadataCollectionId, instanceStatus, CLASS_NAME, METHOD_NAME);
+                xtdbDoc = updateInstanceStatus(userId, existing, instanceStatus);
             }
         } catch (Exception e) {
-            throw ErrorMessaging.add(txId, e);
+            throw ErrorMessageCache.add(txId, e);
         }
 
     }
@@ -81,6 +82,7 @@ public class UpdateEntityStatus extends AbstractTransactionFunction {
      * @param newStatus to apply to the entity
      * @return EntityDetail of the entity with the new status applied
      * @throws EntityNotKnownException if the entity cannot be found
+     * @throws StatusNotSupportedException if the provided status is not supported by the entity
      * @throws InvalidParameterException if the entity exists but cannot be updated (deleted, reference copy, etc)
      * @throws RepositoryErrorException on any other error
      */
@@ -88,14 +90,14 @@ public class UpdateEntityStatus extends AbstractTransactionFunction {
                                         String userId,
                                         String entityGUID,
                                         InstanceStatus newStatus)
-            throws EntityNotKnownException, InvalidParameterException, RepositoryErrorException {
+            throws EntityNotKnownException, StatusNotSupportedException, InvalidParameterException, RepositoryErrorException {
         String docId = EntityDetailMapping.getReference(entityGUID);
         Transaction.Builder tx = Transaction.builder();
         tx.invokeFunction(FUNCTION_NAME, docId, userId, newStatus.getOrdinal(), xtdb.getMetadataCollectionId());
         TransactionInstant results = xtdb.runTx(tx.build());
         try {
             return xtdb.getResultingEntity(docId, results, METHOD_NAME);
-        } catch (EntityNotKnownException | InvalidParameterException | RepositoryErrorException e) {
+        } catch (EntityNotKnownException | StatusNotSupportedException | InvalidParameterException | RepositoryErrorException e) {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),

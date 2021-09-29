@@ -33,7 +33,6 @@ public class InstancePropertiesMappingTest {
             Map<String, Object> propertyValue2 = new HashMap<>();
             propertyValue2.put("one", "a");
             propertyValue2.put("two", "b");
-            String namespace = EntityDetailMapping.ENTITY_PROPERTIES_NS;
 
             OMRSRepositoryHelper helper = connector.getRepositoryHelper();
             InstanceProperties properties = helper.addStringPropertyToInstance(MockConnection.SOURCE_NAME,
@@ -54,13 +53,11 @@ public class InstancePropertiesMappingTest {
             InstancePropertiesMapping.addToDoc(connector,
                     builder,
                     type,
-                    properties,
-                    namespace);
+                    properties);
 
             InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(connector,
                     type,
-                    builder.build(),
-                    namespace);
+                    builder.build());
 
             assertEquals(retrieved, properties, "Stored instance properties are expected to be identical when retrieved back again.");
 
@@ -74,8 +71,6 @@ public class InstancePropertiesMappingTest {
     void testEmpty() {
         try {
 
-            String namespace = EntityDetailMapping.ENTITY_PROPERTIES_NS;
-
             OMRSRepositoryHelper helper = connector.getRepositoryHelper();
             InstanceProperties properties = new InstanceProperties();
 
@@ -85,13 +80,11 @@ public class InstancePropertiesMappingTest {
             InstancePropertiesMapping.addToDoc(connector,
                     builder,
                     type,
-                    properties,
-                    namespace);
+                    properties);
 
             InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(connector,
                     type,
-                    builder.build(),
-                    namespace);
+                    builder.build());
 
             assertEquals(retrieved, properties, "Empty instance properties are expected to be empty when retrieved back again.");
 
@@ -105,8 +98,6 @@ public class InstancePropertiesMappingTest {
     void testNull() {
         try {
 
-            String namespace = EntityDetailMapping.ENTITY_PROPERTIES_NS;
-
             OMRSRepositoryHelper helper = connector.getRepositoryHelper();
 
             XtdbDocument.Builder builder = XtdbDocument.builder(docId);
@@ -115,13 +106,11 @@ public class InstancePropertiesMappingTest {
             InstancePropertiesMapping.addToDoc(connector,
                     builder,
                     type,
-                    null,
-                    namespace);
+                    null);
 
             InstanceProperties retrieved = InstancePropertiesMapping.getFromDoc(connector,
                     type,
-                    builder.build(),
-                    namespace);
+                    builder.build());
 
             assertEquals(retrieved, new InstanceProperties(), "Null instance properties are expected to be empty when retrieved back again.");
 

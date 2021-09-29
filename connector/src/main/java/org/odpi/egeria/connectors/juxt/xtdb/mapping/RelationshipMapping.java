@@ -2,13 +2,18 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
 import clojure.lang.IPersistentVector;
+import clojure.lang.Keyword;
 import clojure.lang.PersistentVector;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import xtdb.api.IXtdbDatasource;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
+
+import java.io.IOException;
 
 /**
  * Maps the properties of Relationships between persistence and objects.
@@ -74,8 +79,23 @@ public class RelationshipMapping extends InstanceHeaderMapping {
         EntityProxy one = relationship.getEntityOneProxy();
         EntityProxy two = relationship.getEntityTwoProxy();
         builder.put(ENTITY_PROXIES, PersistentVector.create(EntityProxyMapping.getReference(one.getGUID()), EntityProxyMapping.getReference(two.getGUID())));
-        InstancePropertiesMapping.addToDoc(xtdbConnector, builder, relationship.getType(), relationship.getProperties(), RELATIONSHIP_PROPERTIES_NS);
+        InstancePropertiesMapping.addToDoc(xtdbConnector, builder, relationship.getType(), relationship.getProperties());
         return builder;
+    }
+
+    /**
+     * Translate the provided Egeria representation into a XTDB document map.
+     * @param relationship to translate
+     * @return IPersistentMap representing the XTDB document
+     * @throws InvalidParameterException on any errors identified within the metadata instance
+     * @throws IOException on any error serializing the values
+     */
+    public static IPersistentMap toMap(Relationship relationship) throws InvalidParameterException, IOException {
+        EntityProxy one = relationship.getEntityOneProxy();
+        EntityProxy two = relationship.getEntityTwoProxy();
+        IPersistentMap doc = InstanceHeaderMapping.toMap(relationship);
+        doc = doc.assoc(Keyword.intern(ENTITY_PROXIES), PersistentVector.create(EntityProxyMapping.getReference(one.getGUID()), EntityProxyMapping.getReference(two.getGUID())));
+        return InstancePropertiesMapping.addToMap(doc, relationship.getType().getTypeDefGUID(), relationship.getProperties());
     }
 
     /**
@@ -108,7 +128,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
                 }
             }
         }
-        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(xtdbConnector, instanceHeader.getType(), xtdbDoc, RELATIONSHIP_PROPERTIES_NS);
+        InstanceProperties ip = InstancePropertiesMapping.getFromDoc(xtdbConnector, instanceHeader.getType(), xtdbDoc);
         ((Relationship) instanceHeader).setProperties(ip);
     }
 

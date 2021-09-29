@@ -2,7 +2,9 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
+import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
 import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
 import xtdb.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
@@ -16,9 +18,6 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.ClassificationCondition;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchClassifications;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.search.SearchProperties;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefSummary;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryValidator;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
@@ -59,6 +58,135 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         parentConnector.setRepositoryName(repositoryName);
         this.xtdbRepositoryConnector = parentConnector;
         setAuditLog(auditLog);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addTypeDef(String userId,
+                           TypeDef newTypeDef) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefKnownException,
+            TypeDefConflictException,
+            InvalidTypeDefException,
+            UserNotAuthorizedException {
+        final String methodName = "addTypeDef";
+        super.addTypeDef(userId, newTypeDef);
+        try {
+            TypeDefCache.addTypeDef(newTypeDef);
+        } catch (InvalidParameterException e) {
+            throw new InvalidTypeDefException(XtdbOMRSErrorCode.INVALID_TYPEDEF.getMessageDefinition(newTypeDef.getName()),
+                    this.getClass().getName(), methodName, e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addAttributeTypeDef(String userId,
+                                    AttributeTypeDef newAttributeTypeDef) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefKnownException,
+            TypeDefConflictException,
+            InvalidTypeDefException,
+            UserNotAuthorizedException {
+        super.addAttributeTypeDef(userId, newAttributeTypeDef);
+        TypeDefCache.addAttributeTypeDef(newAttributeTypeDef);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TypeDef updateTypeDef(String userId,
+                                 TypeDefPatch typeDefPatch) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefNotKnownException,
+            PatchErrorException {
+        final String methodName = "updateTypeDef";
+        TypeDef updated = super.updateTypeDef(userId, typeDefPatch);
+        try {
+            TypeDefCache.addTypeDef(updated);
+        } catch (InvalidParameterException e) {
+            throw new PatchErrorException(XtdbOMRSErrorCode.INVALID_TYPEDEF.getMessageDefinition(updated.getName()),
+                    this.getClass().getName(), methodName, e);
+        }
+        return updated;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void deleteTypeDef(String userId,
+                              String obsoleteTypeDefGUID,
+                              String obsoleteTypeDefName) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefNotKnownException,
+            TypeDefInUseException,
+            UserNotAuthorizedException {
+        super.deleteTypeDef(userId, obsoleteTypeDefGUID, obsoleteTypeDefName);
+        TypeDefCache.removeTypeDef(obsoleteTypeDefGUID);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void deleteAttributeTypeDef(String userId,
+                                       String obsoleteTypeDefGUID,
+                                       String obsoleteTypeDefName) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefNotKnownException,
+            TypeDefInUseException,
+            UserNotAuthorizedException {
+        super.deleteAttributeTypeDef(userId, obsoleteTypeDefGUID, obsoleteTypeDefName);
+        TypeDefCache.removeAttributeTypeDef(obsoleteTypeDefGUID);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TypeDef reIdentifyTypeDef(String userId,
+                                     String originalTypeDefGUID,
+                                     String originalTypeDefName,
+                                     String newTypeDefGUID,
+                                     String newTypeDefName) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefNotKnownException,
+            UserNotAuthorizedException {
+        TypeDef updated = super.reIdentifyTypeDef(userId, originalTypeDefGUID, originalTypeDefName, newTypeDefGUID, newTypeDefName);
+        TypeDefCache.addTypeDef(updated);
+        TypeDefCache.removeTypeDef(originalTypeDefGUID);
+        return updated;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AttributeTypeDef reIdentifyAttributeTypeDef(String userId,
+                                                       String originalAttributeTypeDefGUID,
+                                                       String originalAttributeTypeDefName,
+                                                       String newAttributeTypeDefGUID,
+                                                       String newAttributeTypeDefName) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeDefNotKnownException,
+            UserNotAuthorizedException {
+        AttributeTypeDef updated = super.reIdentifyAttributeTypeDef(userId, originalAttributeTypeDefGUID, originalAttributeTypeDefName, newAttributeTypeDefGUID, newAttributeTypeDefName);
+        TypeDefCache.addAttributeTypeDef(updated);
+        TypeDefCache.removeAttributeTypeDef(originalAttributeTypeDefGUID);
+        return updated;
     }
 
     /**
@@ -805,39 +933,6 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     }
 
     /**
-     * Ensure that the entity exists and is able to be updated.
-     * @param entityGUID of entity to be updated
-     * @param methodName of update
-     * @return EntityDetail to be updated
-     * @throws InvalidParameterException one of hte parameters is invalid or null.
-     * @throws RepositoryErrorException there is a problem communicating with the metadata repository where
-     *                                  the metadata collection is stored.
-     * @throws EntityNotKnownException the entity identified by the guid is not found in the metadata collection.
-     */
-    private EntityDetail validateEntityToUpdate(String entityGUID,
-                                                String methodName)  throws
-            InvalidParameterException,
-            RepositoryErrorException,
-            EntityNotKnownException {
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-        repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, entity);
-
-        return entity;
-
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -864,23 +959,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             PropertyErrorException {
-
         final String methodName = "updateEntityProperties";
-        final String propertiesParameterName = "properties";
-
         this.updateInstancePropertiesPropertyValidation(userId, entityGUID, properties, methodName);
-        // TODO: return xtdbRepositoryConnector.updateEntityProperties(userId, entityGUID, properties);
-
-        EntityDetail entity = validateEntityToUpdate(entityGUID, methodName);
-        TypeDef typeDef = super.getTypeDefForInstance(entity, methodName);
-        repositoryValidator.validateNewPropertiesForType(repositoryName, propertiesParameterName, typeDef, properties, methodName);
-
-        EntityDetail updatedEntity = new EntityDetail(entity);
-        updatedEntity.setProperties(properties);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
-
-        return xtdbRepositoryConnector.updateEntity(updatedEntity);
-
+        return UpdateEntityProperties.transact(xtdbRepositoryConnector, userId, entityGUID, properties);
     }
 
     /**
@@ -892,19 +973,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             EntityNotKnownException {
-
         final String methodName = "undoEntityUpdate";
-
         super.manageInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, methodName);
-
-        EntityDetail restoredEntity = xtdbRepositoryConnector.restorePreviousVersionOfEntity(userId, entityGUID);
-
-        // Note: these validations occur _after_ actually persisting the restoration (above)
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, restoredEntity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, restoredEntity, methodName);
-
-        return restoredEntity;
-
+        return UndoEntityUpdate.transact(xtdbRepositoryConnector, userId, entityGUID);
     }
 
     /**
@@ -952,30 +1023,10 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             EntityNotDeletedException {
-
         final String methodName = "restoreEntity";
         final String parameterName = "deletedEntityGUID";
-
         super.manageInstanceParameterValidation(userId, deletedEntityGUID, parameterName, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(deletedEntityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    deletedEntityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, deletedEntityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsDeleted(repositoryName, entity, methodName);
-
-        EntityDetail restoredEntity = new EntityDetail(entity);
-        restoredEntity.setStatus(entity.getStatusOnDelete());
-        restoredEntity.setStatusOnDelete(null);
-        restoredEntity = repositoryHelper.incrementVersion(userId, entity, restoredEntity);
-
-        return xtdbRepositoryConnector.updateEntity(restoredEntity);
-
+        return RestoreEntity.transact(xtdbRepositoryConnector, userId, deletedEntityGUID);
     }
 
     /**
@@ -1022,67 +1073,19 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException {
 
         final String methodName = "classifyEntity";
-        final String classificationParameterName = "classificationName";
-        final String propertiesParameterName = "classificationProperties";
-
         this.validateRepositoryConnector(methodName);
         parentConnector.validateRepositoryIsActive(methodName);
-
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, entity);
-
-        InstanceType entityType = entity.getType();
-
-        repositoryValidator.validateClassification(repositoryName, classificationParameterName, classificationName, entityType.getTypeDefName(), methodName);
-
-        Classification newClassification;
-        try {
-            repositoryValidator.validateClassificationProperties(repositoryName, classificationName, propertiesParameterName, classificationProperties, methodName);
-            if (externalSourceGUID == null) {
-                newClassification = repositoryHelper.getNewClassification(repositoryName,
-                        metadataCollectionId,
-                        InstanceProvenanceType.LOCAL_COHORT,
-                        userId,
-                        classificationName,
-                        entityType.getTypeDefName(),
-                        classificationOrigin == null ? ClassificationOrigin.ASSIGNED : classificationOrigin,
-                        classificationOriginGUID,
-                        classificationProperties);
-            } else {
-                newClassification = repositoryHelper.getNewClassification(repositoryName,
-                        externalSourceGUID,
-                        externalSourceName,
-                        InstanceProvenanceType.EXTERNAL_SOURCE,
-                        userId,
-                        classificationName,
-                        entityType.getTypeDefName(),
-                        classificationOrigin == null ? ClassificationOrigin.ASSIGNED : classificationOrigin,
-                        classificationOriginGUID,
-                        classificationProperties);
-                newClassification.setMetadataCollectionName(externalSourceName);
-                newClassification.setReplicatedBy(metadataCollectionId);
-            }
-        } catch (TypeErrorException e) {
-            throw new ClassificationErrorException(XtdbOMRSErrorCode.INVALID_CLASSIFICATION_FOR_ENTITY.getMessageDefinition(
-                    repositoryName, classificationName, entityType.getTypeDefName()), this.getClass().getName(), methodName, e);
-        }
-
-        EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName, entity, newClassification, methodName);
-
-        return xtdbRepositoryConnector.updateEntity(updatedEntity);
-
+        return ClassifyEntity.transact(xtdbRepositoryConnector,
+                userId,
+                entityGUID,
+                classificationName,
+                externalSourceGUID,
+                externalSourceName,
+                classificationOrigin,
+                classificationOriginGUID,
+                classificationProperties);
     }
 
     /**
@@ -1096,26 +1099,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             ClassificationErrorException {
-
         final String methodName = "declassifyEntity";
-
         super.declassifyEntityParameterValidation(userId, entityGUID, classificationName, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-
-        EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName, entity, classificationName, methodName);
-
-        return xtdbRepositoryConnector.updateEntity(updatedEntity);
-
+        return DeclassifyEntity.transact(xtdbRepositoryConnector, entityGUID, classificationName);
     }
 
     /**
@@ -1131,34 +1117,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException,
             ClassificationErrorException,
             PropertyErrorException {
-
         final String methodName = "updateEntityClassification";
-
         super.classifyEntityParameterValidation(userId, entityGUID, classificationName, properties, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-
-        Classification classification = repositoryHelper.getClassificationFromEntity(repositoryName, entity, classificationName, methodName);
-        Classification newClassification = new Classification(classification);
-        newClassification.setProperties(properties);
-
-        EntityDetail updatedEntity = repositoryHelper.updateClassificationInEntity(repositoryName,
-                userId,
-                entity,
-                newClassification,
-                methodName);
-
-        return xtdbRepositoryConnector.updateEntity(updatedEntity);
-
+        return UpdateEntityClassification.transact(xtdbRepositoryConnector, userId, entityGUID, classificationName, properties);
     }
 
     /**
@@ -1189,8 +1150,11 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 userId,
                 typeDef.getName(),
                 initialProperties);
+        if (initialStatus != null) {
+            relationship.setStatus(initialStatus);
+        }
 
-        return addRelationship(userId, relationship, typeDef, entityOneGUID, entityTwoGUID, initialStatus);
+        return addRelationship(relationship, entityOneGUID, entityTwoGUID);
 
     }
 
@@ -1227,42 +1191,21 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
 
         relationship.setMetadataCollectionName(externalSourceName);
         relationship.setReplicatedBy(metadataCollectionId);
-
-        return addRelationship(userId, relationship, typeDef, entityOneGUID, entityTwoGUID, initialStatus);
-
-    }
-
-    private Relationship addRelationship(String userId,
-                                         Relationship relationship,
-                                         TypeDef typeDef,
-                                         String entityOneGUID,
-                                         String entityTwoGUID,
-                                         InstanceStatus initialStatus) throws
-            InvalidParameterException,
-            RepositoryErrorException,
-            EntityNotKnownException {
-
-        final String methodName = "addRelationship";
-
-        EntityProxy entityOneProxy = getEntityProxy(userId, entityOneGUID, methodName);
-        repositoryValidator.validateEntityFromStore(repositoryName, entityOneGUID, entityOneProxy, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entityOneProxy, methodName);
-
-        EntityProxy entityTwoProxy = getEntityProxy(userId, entityTwoGUID, methodName);
-        repositoryValidator.validateEntityFromStore(repositoryName, entityTwoGUID, entityTwoProxy, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entityTwoProxy, methodName);
-
-        repositoryValidator.validateRelationshipEnds(repositoryName, entityOneProxy, entityTwoProxy, typeDef, methodName);
-
-        relationship.setEntityOneProxy(entityOneProxy);
-        relationship.setEntityTwoProxy(entityTwoProxy);
-
         if (initialStatus != null) {
             relationship.setStatus(initialStatus);
         }
 
-        return xtdbRepositoryConnector.createRelationship(relationship);
+        return addRelationship(relationship, entityOneGUID, entityTwoGUID);
 
+    }
+
+    private Relationship addRelationship(Relationship relationship,
+                                         String entityOneGUID,
+                                         String entityTwoGUID) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException {
+        return AddRelationship.transact(xtdbRepositoryConnector, relationship, entityOneGUID, entityTwoGUID);
     }
 
     /**
@@ -1277,7 +1220,6 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RelationshipNotKnownException,
             StatusNotSupportedException {
         final String methodName = "updateRelationshipStatus";
-        final String statusParameterName = "newStatus";
         this.updateInstanceStatusParameterValidation(userId, relationshipGUID, newStatus, methodName);
         return UpdateRelationshipStatus.transact(xtdbRepositoryConnector, userId, relationshipGUID, newStatus);
     }
@@ -1293,29 +1235,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             PropertyErrorException {
-
         final String methodName = "updateRelationshipProperties";
-        final String propertiesParameterName = "properties";
-
         this.updateInstancePropertiesPropertyValidation(userId, relationshipGUID, properties, methodName);
-
-        Relationship relationship = this.getRelationship(userId, relationshipGUID);
-
-        repositoryValidator.validateRelationshipFromStore(repositoryName, relationshipGUID, relationship, methodName);
-        repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, relationship, methodName);
-        repositoryValidator.validateRelationshipCanBeUpdated(repositoryName, metadataCollectionId, relationship, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, relationship);
-
-        TypeDef typeDef = super.getTypeDefForInstance(relationship, methodName);
-
-        repositoryValidator.validateNewPropertiesForType(repositoryName, propertiesParameterName, typeDef, properties, methodName);
-
-        Relationship updatedRelationship = new Relationship(relationship);
-        updatedRelationship.setProperties(properties);
-        updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
-
-        return xtdbRepositoryConnector.updateRelationship(updatedRelationship);
-
+        return UpdateRelationshipProperties.transact(xtdbRepositoryConnector, userId, relationshipGUID, properties);
     }
 
     /**
@@ -1327,19 +1249,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             RelationshipNotKnownException {
-
         final String methodName = "undoRelationshipUpdate";
-
         this.manageInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, methodName);
-
-        Relationship restoredRelationship = xtdbRepositoryConnector.restorePreviousVersionOfRelationship(userId, relationshipGUID);
-
-        // Note: these validations occur _after_ actually persisting the restoration (above)
-        repositoryValidator.validateRelationshipFromStore(repositoryName, relationshipGUID, restoredRelationship, methodName);
-        repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, restoredRelationship, methodName);
-
-        return restoredRelationship;
-
+        return UndoRelationshipUpdate.transact(xtdbRepositoryConnector, userId, relationshipGUID);
     }
 
     /**
@@ -1387,30 +1299,10 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             RelationshipNotDeletedException {
-
         final String methodName = "restoreRelationship";
         final String parameterName = "deletedRelationshipGUID";
-
         this.manageInstanceParameterValidation(userId, deletedRelationshipGUID, parameterName, methodName);
-
-        Relationship relationship = xtdbRepositoryConnector.getRelationship(deletedRelationshipGUID, null);
-
-        repositoryValidator.validateRelationshipFromStore(repositoryName, deletedRelationshipGUID, relationship, methodName);
-        repositoryValidator.validateRelationshipIsDeleted(repositoryName, relationship, methodName);
-
-        Relationship restoredRelationship = new Relationship(relationship);
-        restoredRelationship.setStatus(relationship.getStatusOnDelete());
-        restoredRelationship.setStatusOnDelete(null);
-        restoredRelationship = repositoryHelper.incrementVersion(userId, relationship, restoredRelationship);
-
-        restoredRelationship = xtdbRepositoryConnector.updateRelationship(restoredRelationship);
-
-        // Note: these validations are called _after_ the relationship restoration has already been persisted
-        repositoryValidator.validateRelationshipFromStore(repositoryName, deletedRelationshipGUID, restoredRelationship, methodName);
-        repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, restoredRelationship, methodName);
-
-        return restoredRelationship;
-
+        return RestoreRelationship.transact(xtdbRepositoryConnector, userId, deletedRelationshipGUID);
     }
 
     /**
@@ -1426,58 +1318,10 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             UserNotAuthorizedException {
-
         final String methodName = "reIdentifyEntity";
         final String newInstanceParameterName = "newEntityGUID";
-
         this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, entityGUID, Constants.ENTITY_GUID, newEntityGUID, newInstanceParameterName, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
-
-        EntityDetail deletedEntity = new EntityDetail(entity);
-        deletedEntity.setStatusOnDelete(entity.getStatus());
-        deletedEntity.setStatus(InstanceStatus.DELETED);
-        deletedEntity = repositoryHelper.incrementVersion(userId, entity, deletedEntity);
-
-        EntityDetail updatedEntity = new EntityDetail(entity);
-        updatedEntity.setGUID(newEntityGUID);
-        updatedEntity.setReIdentifiedFromGUID(entityGUID);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
-
-        Transaction.Builder tx = Transaction.builder();
-
-        // 1. Retrieve all the homed relationships that refer to the existing GUID as a proxy
-        List<Relationship> relationships = xtdbRepositoryConnector.findHomedRelationshipsForEntity(entity, userId);
-
-        // 2. Update each of these relationships' proxy references to the new GUID
-        EntityProxy ep = repositoryHelper.getNewEntityProxy(repositoryName, updatedEntity);
-        for (Relationship relationship : relationships) {
-            if (relationship.getEntityOneProxy().getGUID().equals(entityGUID)) {
-                relationship.setEntityOneProxy(ep);
-            } else if (relationship.getEntityTwoProxy().getGUID().equals(entityGUID)) {
-                relationship.setEntityTwoProxy(ep);
-            }
-            xtdbRepositoryConnector.addUpdateRelationshipStatements(tx, relationship);
-        }
-
-        // 3. Delete the original entity GUID
-        xtdbRepositoryConnector.addCreateEntityStatements(tx, deletedEntity);
-
-        // 4. Create the new entity GUID as a new entity
-        xtdbRepositoryConnector.addCreateEntityStatements(tx, updatedEntity);
-        xtdbRepositoryConnector.runTx(tx.build());
-
-        return updatedEntity;
-
+        return ReIdentifyEntity.transact(xtdbRepositoryConnector, userId, entityGUID, newEntityGUID);
     }
 
     /**
@@ -1494,34 +1338,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException,
             ClassificationErrorException,
             EntityNotKnownException {
-
         final String methodName = "reTypeEntity";
-        final String currentTypeDefParameterName = "currentTypeDefSummary";
-        final String newTypeDefParameterName = "newTypeDefSummary";
-
         super.reTypeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, TypeDefCategory.ENTITY_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityCanBeUpdated(repositoryName, metadataCollectionId, entity, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, entity, currentTypeDefParameterName, currentTypeDefParameterName, currentTypeDefSummary.getGUID(), currentTypeDefSummary.getName());
-        repositoryValidator.validatePropertiesForType(repositoryName, newTypeDefParameterName, newTypeDefSummary, entity.getProperties(), methodName);
-        repositoryValidator.validateClassificationList(repositoryName, Constants.ENTITY_GUID, entity.getClassifications(), newTypeDefSummary.getName(), methodName);
-
-        EntityDetail updatedEntity = new EntityDetail(entity);
-        InstanceType newInstanceType = repositoryHelper.getNewInstanceType(repositoryName, newTypeDefSummary);
-        updatedEntity.setType(newInstanceType);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
-
-        return xtdbRepositoryConnector.updateEntity(updatedEntity);
-
+        return ReTypeEntity.transact(xtdbRepositoryConnector, userId, entityGUID, newTypeDefSummary);
     }
 
     /**
@@ -1577,37 +1396,10 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             UserNotAuthorizedException {
-
         final String methodName = "reIdentifyRelationship";
         final String newInstanceParameterName = "newRelationshipGUID";
-
         this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, relationshipGUID, Constants.RELATIONSHIP_GUID, newRelationshipGUID, newInstanceParameterName, methodName);
-
-        Relationship relationship = this.getRelationship(userId, relationshipGUID);
-
-        repositoryValidator.validateRelationshipCanBeUpdated(repositoryName, metadataCollectionId, relationship, methodName);
-
-        Relationship deletedRelationship = new Relationship(relationship);
-        deletedRelationship.setStatusOnDelete(relationship.getStatusOnDelete());
-        deletedRelationship.setStatus(InstanceStatus.DELETED);
-        deletedRelationship = repositoryHelper.incrementVersion(userId, relationship, deletedRelationship);
-
-        Relationship updatedRelationship = new Relationship(relationship);
-        updatedRelationship.setGUID(newRelationshipGUID);
-        updatedRelationship.setReIdentifiedFromGUID(relationshipGUID);
-        updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
-
-        Transaction.Builder tx = Transaction.builder();
-
-        // 1. Delete the original relationship GUID
-        xtdbRepositoryConnector.addUpdateRelationshipStatements(tx, deletedRelationship);
-
-        // 2. Create the new relationship GUID as a new relationship
-        xtdbRepositoryConnector.addCreateRelationshipStatements(tx, updatedRelationship);
-        xtdbRepositoryConnector.runTx(tx.build());
-
-        return updatedRelationship;
-
+        return ReIdentifyRelationship.transact(xtdbRepositoryConnector, userId, relationshipGUID, newRelationshipGUID);
     }
 
     /**
@@ -1623,26 +1415,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException,
             PropertyErrorException,
             RelationshipNotKnownException {
-
         final String methodName = "reTypeRelationship";
-        final String currentTypeDefParameterName = "currentTypeDefSummary";
-        final String newTypeDefParameterName = "newTypeDefSummary";
-
         super.reTypeInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, TypeDefCategory.RELATIONSHIP_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
-
-        Relationship relationship = this.getRelationship(userId, relationshipGUID);
-
-        repositoryValidator.validateRelationshipCanBeUpdated(repositoryName, metadataCollectionId, relationship, methodName);
-        repositoryValidator.validateInstanceType(repositoryName, relationship, currentTypeDefParameterName, currentTypeDefParameterName, currentTypeDefSummary.getGUID(), currentTypeDefSummary.getName());
-        repositoryValidator.validatePropertiesForType(repositoryName, newTypeDefParameterName, newTypeDefSummary, relationship.getProperties(), methodName);
-
-        Relationship updatedRelationship = new Relationship(relationship);
-        InstanceType newInstanceType = repositoryHelper.getNewInstanceType(repositoryName, newTypeDefSummary);
-        updatedRelationship.setType(newInstanceType);
-        updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
-
-        return xtdbRepositoryConnector.updateRelationship(updatedRelationship);
-
+        return ReTypeRelationship.transact(xtdbRepositoryConnector, userId, relationshipGUID, newTypeDefSummary);
     }
 
     /**

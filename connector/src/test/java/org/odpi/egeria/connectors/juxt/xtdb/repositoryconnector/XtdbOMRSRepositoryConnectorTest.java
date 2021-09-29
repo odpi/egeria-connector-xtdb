@@ -3,9 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import clojure.lang.IPersistentVector;
-import org.odpi.egeria.connectors.juxt.xtdb.txnfn.AddEntityProxy;
-import org.odpi.egeria.connectors.juxt.xtdb.txnfn.PurgeEntity;
-import org.odpi.egeria.connectors.juxt.xtdb.txnfn.PurgeRelationship;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
 import xtdb.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.xtdb.mocks.MockConnection;
@@ -213,7 +211,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(previousVersions.size(), 2, "Two previous versions of the entity were expected.");
 
             // Restore
-            EntityDetail previous = connector.restorePreviousVersionOfEntity(MockConnection.USERNAME, original.getGUID());
+            EntityDetail previous = UndoEntityUpdate.transact(connector, MockConnection.USERNAME, original.getGUID());
             EntityDetail rolledBack = new EntityDetail(original);
             rolledBack.setVersion(3L);
             rolledBack.setUpdatedBy(MockConnection.USERNAME);
@@ -331,7 +329,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(previousVersions.size(), 2, "Two previous versions of the relationship were expected.");
 
             // Restore
-            Relationship previous = connector.restorePreviousVersionOfRelationship(MockConnection.USERNAME, original.getGUID());
+            Relationship previous = UndoRelationshipUpdate.transact(connector, MockConnection.USERNAME, original.getGUID());
             Relationship rolledBack = new Relationship(original);
             rolledBack.setVersion(3L);
             rolledBack.setUpdatedBy(MockConnection.USERNAME);

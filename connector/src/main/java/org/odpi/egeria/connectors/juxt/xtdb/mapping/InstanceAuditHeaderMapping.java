@@ -2,8 +2,9 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
-import clojure.lang.IPersistentMap;
-import clojure.lang.PersistentVector;
+import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -11,6 +12,7 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefLink;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
@@ -44,6 +46,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
     public static final String UPDATE_TIME = getKeyword(N_UPDATE_TIME);
     public static final String CURRENT_STATUS = getKeyword(N_CURRENT_STATUS);
     public static final String STATUS_ON_DELETE = getKeyword(N_STATUS_ON_DELETE);
+    public static final String TYPE = getKeyword(N_TYPE);
     public static final String TYPE_DEF_GUIDS = getKeyword(N_TYPE + ".guids");
     public static final String TYPE_DEF_CATEGORY = getKeyword(N_TYPE + ".category");
     public static final String VERSION = getKeyword(N_VERSION);
@@ -95,8 +98,9 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
      * Translate the provided Egeria representation into a XTDB document.
      * @param builder for the XTDB document
      * @param iah Egeria representation from which to map
+     * @throws IOException on any error serializing the provided values
      */
-    protected void buildDoc(XtdbDocument.Builder builder, InstanceAuditHeader iah) {
+    protected static void buildDoc(XtdbDocument.Builder builder, InstanceAuditHeader iah) throws IOException {
         buildDoc(builder, iah, null);
     }
 
@@ -106,8 +110,11 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
      * @param iah Egeria representation from which to map
      * @param namespace by which to qualify the properties
      * @return the latest change date in the header (updateTime or if empty createTime)
+     * @throws IOException on any error serializing the provided values
      */
-    protected Date buildDoc(XtdbDocument.Builder builder, InstanceAuditHeader iah, String namespace) {
+    public static Date buildDoc(XtdbDocument.Builder builder,
+                                InstanceAuditHeader iah,
+                                String namespace) throws IOException {
 
         Date updateTime = iah.getUpdateTime();
         Date createTime = iah.getCreateTime();
@@ -138,14 +145,95 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         }
         builder.put(getKeyword(namespace, N_TYPE + ".guids"), PersistentVector.create(typeList));
         builder.put(getKeyword(namespace, N_TYPE + ".category"), type.getTypeDefCategory().getOrdinal());
-        builder.put(getKeyword(namespace, N_TYPE), getEmbeddedSerializedForm(xtdbConnector, INSTANCE_AUDIT_HEADER, N_TYPE, type));
+        builder.put(getKeyword(namespace, N_TYPE), getEmbeddedSerializedForm(type));
         builder.put(getKeyword(namespace, N_INSTANCE_PROVENANCE_TYPE), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()));
         builder.put(getKeyword(namespace, N_CURRENT_STATUS), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()));
         builder.put(getKeyword(namespace, N_STATUS_ON_DELETE), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatusOnDelete()));
-        builder.put(getKeyword(namespace, N_MAPPING_PROPERTIES), getEmbeddedSerializedForm(xtdbConnector, INSTANCE_AUDIT_HEADER, N_MAPPING_PROPERTIES, iah.getMappingProperties()));
+        builder.put(getKeyword(namespace, N_MAPPING_PROPERTIES), getEmbeddedSerializedForm(iah.getMappingProperties()));
 
         return updateTime == null ? createTime : updateTime;
 
+    }
+
+    /**
+     * Translate the provided Egeria representation into a XTDB document map.
+     * @param doc for the XTDB document
+     * @param iah Egeria representation from which to map
+     * @param namespace by which to qualify the properties
+     * @return a tuple containing the timestamp of the create / update followed by the updated document map itself
+     * @throws IOException on any error serializing the provided values
+     */
+    public static IPersistentVector addToMap(IPersistentMap doc,
+                                             InstanceAuditHeader iah,
+                                             String namespace) throws IOException {
+
+        Date updateTime = iah.getUpdateTime();
+        Date createTime = iah.getCreateTime();
+
+        doc = addTypeDetailsToMap(doc, iah.getType(), namespace);
+        doc = doc
+                .assoc(Keyword.intern(getKeyword(namespace, N_HEADER_VERSION)), iah.getHeaderVersion())
+                .assoc(Keyword.intern(getKeyword(namespace, N_METADATA_COLLECTION_ID)), iah.getMetadataCollectionId())
+                .assoc(Keyword.intern(getKeyword(namespace, N_METADATA_COLLECTION_NAME)), iah.getMetadataCollectionName())
+                .assoc(Keyword.intern(getKeyword(namespace, N_REPLICATED_BY)), iah.getReplicatedBy())
+                .assoc(Keyword.intern(getKeyword(namespace, N_INSTANCE_LICENSE)), iah.getInstanceLicense())
+                .assoc(Keyword.intern(getKeyword(namespace, N_CREATED_BY)), iah.getCreatedBy())
+                .assoc(Keyword.intern(getKeyword(namespace, N_UPDATED_BY)), iah.getUpdatedBy())
+                .assoc(Keyword.intern(getKeyword(namespace, N_MAINTAINED_BY)), iah.getMaintainedBy())
+                .assoc(Keyword.intern(getKeyword(namespace, N_CREATE_TIME)), createTime)
+                .assoc(Keyword.intern(getKeyword(namespace, N_UPDATE_TIME)), updateTime)
+                .assoc(Keyword.intern(getKeyword(namespace, N_VERSION)), iah.getVersion())
+                .assoc(Keyword.intern(getKeyword(namespace, N_INSTANCE_PROVENANCE_TYPE)), EnumPropertyValueMapping.getOrdinalForInstanceProvenanceType(iah.getInstanceProvenanceType()))
+                .assoc(Keyword.intern(getKeyword(namespace, N_CURRENT_STATUS)), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatus()))
+                .assoc(Keyword.intern(getKeyword(namespace, N_STATUS_ON_DELETE)), EnumPropertyValueMapping.getOrdinalForInstanceStatus(iah.getStatusOnDelete()))
+                .assoc(Keyword.intern(getKeyword(namespace, N_MAPPING_PROPERTIES)), getEmbeddedSerializedForm(iah.getMappingProperties()));
+
+        return Tuple.create(updateTime == null ? createTime : updateTime, doc);
+
+    }
+
+    /**
+     * Translate the provided Egeria type information into a XTDB document map.
+     * @param doc for the XTDB document
+     * @param type to update into the document
+     * @param namespace by which to qualify the properties
+     * @return IPersistentMap containing the updated XTDB document
+     * @throws IOException on any error serializing the provided values
+     */
+    public static IPersistentMap addTypeDetailsToMap(IPersistentMap doc,
+                                                     InstanceType type,
+                                                     String namespace) throws IOException {
+
+        // Note that for the type, we will break things out a bit to optimise search:
+        // - a list of all type GUIDs for this type: its actual type and all of its supertypes (under 'type.guids')
+        // Then we'll also serialize the full InstanceType information into the N_TYPE property itself.
+        List<String> typeList = new ArrayList<>();
+        typeList.add(type.getTypeDefGUID());
+        List<TypeDefLink> superTypes = type.getTypeDefSuperTypes();
+        if (superTypes != null) {
+            for (TypeDefLink superType : superTypes) {
+                typeList.add(superType.getGUID());
+            }
+        }
+
+        return doc
+                .assoc(Keyword.intern(getKeyword(namespace, N_TYPE) + ".guids"), PersistentVector.create(typeList))
+                .assoc(Keyword.intern(getKeyword(namespace, N_TYPE) + ".category"), type.getTypeDefCategory().getOrdinal())
+                .assoc(Keyword.intern(getKeyword(namespace, N_TYPE)), getEmbeddedSerializedForm(type));
+
+    }
+
+    /**
+     * Retrieve the instance type details from the provided XTDB document map.
+     * @param doc for the XTDB document
+     * @param namespace by which the properties are qualified
+     * @return InstanceType
+     * @throws IOException on any error deserializing the value
+     */
+    public static InstanceType getTypeFromInstance(IPersistentMap doc,
+                                                   String namespace) throws IOException {
+        IPersistentMap typeValue = (IPersistentMap) doc.valAt(Keyword.intern(getKeyword(namespace, N_TYPE)));
+        return getDeserializedValue(typeValue, mapper.getTypeFactory().constructType(InstanceType.class));
     }
 
     /**
@@ -228,6 +316,82 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                             property,
                             INSTANCE_AUDIT_HEADER);
                     break;
+            }
+
+        }
+
+    }
+
+    /**
+     * Translate the provided XTDB representation into an Egeria representation.
+     * @param iah into which to map
+     * @param doc from which to map
+     * @param namespace by which the properties are qualified
+     * @throws IOException on any issue deserializing values
+     * @throws InvalidParameterException for any unmapped properties
+     */
+    @SuppressWarnings("unchecked")
+    protected static void fromMap(InstanceAuditHeader iah,
+                                  IPersistentMap doc,
+                                  String namespace) throws IOException, InvalidParameterException {
+
+        final String methodName = "fromMap";
+        for (String propertyName : KNOWN_PROPERTIES) {
+            Keyword property = Keyword.intern(getKeyword(namespace, propertyName));
+            Object objValue = doc.valAt(property);
+            String value = objValue == null ? null : objValue.toString();
+            switch (propertyName) {
+                case N_HEADER_VERSION:
+                    iah.setHeaderVersion(objValue == null ? 0 : (Long) objValue);
+                    break;
+                case N_TYPE:
+                    iah.setType(getDeserializedValue((IPersistentMap)objValue, mapper.getTypeFactory().constructType(InstanceType.class)));
+                    break;
+                case N_INSTANCE_PROVENANCE_TYPE:
+                    iah.setInstanceProvenanceType(EnumPropertyValueMapping.getInstanceProvenanceTypeFromOrdinal((Integer) objValue));
+                    break;
+                case N_METADATA_COLLECTION_ID:
+                    iah.setMetadataCollectionId(value);
+                    break;
+                case N_METADATA_COLLECTION_NAME:
+                    iah.setMetadataCollectionName(value);
+                    break;
+                case N_REPLICATED_BY:
+                    iah.setReplicatedBy(value);
+                    break;
+                case N_INSTANCE_LICENSE:
+                    iah.setInstanceLicense(value);
+                    break;
+                case N_CREATED_BY:
+                    iah.setCreatedBy(value);
+                    break;
+                case N_UPDATED_BY:
+                    iah.setUpdatedBy(value);
+                    break;
+                case N_MAINTAINED_BY:
+                    iah.setMaintainedBy(objValue == null ? null : (List<String>) objValue);
+                    break;
+                case N_CREATE_TIME:
+                    iah.setCreateTime(objValue == null ? null : (Date) objValue);
+                    break;
+                case N_UPDATE_TIME:
+                    iah.setUpdateTime(objValue == null ? null : (Date) objValue);
+                    break;
+                case N_VERSION:
+                    iah.setVersion(objValue == null ? -1 : (Long) objValue);
+                    break;
+                case N_CURRENT_STATUS:
+                    iah.setStatus(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
+                    break;
+                case N_STATUS_ON_DELETE:
+                    iah.setStatusOnDelete(EnumPropertyValueMapping.getInstanceStatusFromOrdinal((Integer) objValue));
+                    break;
+                case N_MAPPING_PROPERTIES:
+                    iah.setMappingProperties(getDeserializedValue((IPersistentMap)objValue, mapper.getTypeFactory().constructMapType(Map.class, String.class, Serializable.class)));
+                    break;
+                default:
+                    throw new InvalidParameterException(XtdbOMRSErrorCode.UNMAPPABLE_PROPERTY.getMessageDefinition(
+                            propertyName), InstanceAuditHeaderMapping.class.getName(), methodName, "property");
             }
 
         }

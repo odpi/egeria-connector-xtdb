@@ -2,6 +2,11 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
+import clojure.lang.Keyword;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -25,20 +30,27 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
 
     /**
      * Add the provided enum value to the XTDB document.
-     * @param xtdbConnector connectivity to the repository
-     * @param instanceType of the instance for which this value applies
      * @param builder to which to add the property value
-     * @param propertyName of the property
-     * @param namespace by which to qualify the property
+     * @param keywords of the property
      * @param value of the property
      */
-    public static void addEnumPropertyValueToDoc(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                 InstanceType instanceType,
-                                                 XtdbDocument.Builder builder,
-                                                 String propertyName,
-                                                 String namespace,
+    public static void addEnumPropertyValueToDoc(XtdbDocument.Builder builder,
+                                                 PropertyKeywords keywords,
                                                  EnumPropertyValue value) {
-        builder.put(getPropertyValueKeyword(xtdbConnector, instanceType, propertyName, namespace), getEnumPropertyValueForComparison(value));
+        builder.put(keywords.getSearchablePath(), getEnumPropertyValueForComparison(value));
+    }
+
+    /**
+     * Add the provided enum value to the XTDB map.
+     * @param doc the XTDB map to which to add the property
+     * @param propertyKeyword the property whose value should be set, fully-qualified with namespace and type name
+     * @param value of the property
+     * @return IPersistentMap of the updated XTDB doc
+     */
+    public static IPersistentMap addEnumPropertyValueToDoc(IPersistentMap doc,
+                                                           Keyword propertyKeyword,
+                                                           EnumPropertyValue value) {
+        return doc.assoc(propertyKeyword, getEnumPropertyValueForComparison(value));
     }
 
     /**
@@ -75,6 +87,26 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
     }
 
     /**
+     * Convert the provided ordinal into its InstanceProvenanceType.
+     * @param ordinal to convert
+     * @return InstanceProvenanceType
+     * @throws InvalidParameterException if there is no such enumeration
+     */
+    public static InstanceProvenanceType getInstanceProvenanceTypeFromOrdinal(Integer ordinal) throws InvalidParameterException {
+        final String methodName = "getInstanceProvenanceTypeFromOrdinal";
+        if (ordinal != null) {
+            for (InstanceProvenanceType b : InstanceProvenanceType.values()) {
+                if (b.getOrdinal() == ordinal) {
+                    return b;
+                }
+            }
+            throw new InvalidParameterException(XtdbOMRSErrorCode.UNKNOWN_ENUMERATED_VALUE.getMessageDefinition(
+                    ordinal.toString(), "InstanceProvenanceType"), EnumPropertyValueMapping.class.getName(), methodName, "ordinal");
+        }
+        return null;
+    }
+
+    /**
      * Convert the provided InstanceProvenanceType into its symbolic name.
      * @param ipt to convert
      * @return Integer
@@ -103,6 +135,26 @@ public class EnumPropertyValueMapping extends InstancePropertyValueMapping {
                     null,
                     "InstanceStatus",
                     ordinal.toString());
+        }
+        return null;
+    }
+
+    /**
+     * Convert the provided ordinal into its InstanceStatus.
+     * @param ordinal to convert
+     * @return InstanceStatus
+     * @throws InvalidParameterException if there is no such enumeration
+     */
+    public static InstanceStatus getInstanceStatusFromOrdinal(Integer ordinal) throws InvalidParameterException {
+        final String methodName = "getInstanceStatusFromOrdinal";
+        if (ordinal != null) {
+            for (InstanceStatus b : InstanceStatus.values()) {
+                if (b.getOrdinal() == ordinal) {
+                    return b;
+                }
+            }
+            throw new InvalidParameterException(XtdbOMRSErrorCode.UNKNOWN_ENUMERATED_VALUE.getMessageDefinition(
+                    ordinal.toString(), "InstanceStatus"), EnumPropertyValueMapping.class.getName(), methodName, "ordinal");
         }
         return null;
     }

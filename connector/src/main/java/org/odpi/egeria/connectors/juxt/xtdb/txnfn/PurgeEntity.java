@@ -3,7 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.InstanceAuditHeaderMapping;
@@ -13,6 +13,7 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotDeletedException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class PurgeEntity extends AbstractTransactionFunction {
     private static final Logger log = LoggerFactory.getLogger(PurgeEntity.class);
 
     public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "purgeEntity");
+    private static final String CLASS_NAME = PurgeEntity.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
 
     // Query to retrieve ALL relationships that point to this entity, irrespective of status or
@@ -68,25 +70,27 @@ public class PurgeEntity extends AbstractTransactionFunction {
         try {
             if (existing == null) {
                 throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
-                        deletedEntityGUID), this.getClass().getName(), METHOD_NAME);
+                        deletedEntityGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 // If all we have is an EntityProxy, do not remove it and respond that we have no such entity
                 // (Purging the EntityProxy would mean invalidating any relationships that use that EntityProxy: if such
                 // relationship removal is intended, it should come through from the same source that has purged the entity,
                 // otherwise this may simply be a cleanup of the locally-cached reference copy, but not an actual purge of
                 // the entity from the home repository -- in which case we may still want to retain relationships.)
-                TxnUtils.validateNonProxyEntity(existing, deletedEntityGUID, this.getClass().getName(), METHOD_NAME);
+                TxnValidations.nonProxyEntity(existing, deletedEntityGUID, this.getClass().getName(), METHOD_NAME);
                 if (!force) {
-                    Integer currentStatus = (Integer) existing.valAt(TxnUtils.CURRENT_STATUS);
-                    if (currentStatus == null || currentStatus != InstanceStatus.DELETED.getOrdinal()) {
+                    TxnValidations.entityFromStore(deletedEntityGUID, existing, CLASS_NAME, METHOD_NAME);
+                    try {
+                        TxnValidations.instanceIsDeleted(existing, deletedEntityGUID, CLASS_NAME, METHOD_NAME);
+                    } catch (InvalidParameterException e) {
                         throw new EntityNotDeletedException(XtdbOMRSErrorCode.INSTANCE_NOT_DELETED.getMessageDefinition(
-                                deletedEntityGUID), this.getClass().getName(), METHOD_NAME);
+                                deletedEntityGUID), CLASS_NAME, METHOD_NAME);
                     }
                 }
             }
             xtdbDoc = existing;
         } catch (Exception e) {
-            throw ErrorMessaging.add(txId, e);
+            throw ErrorMessageCache.add(txId, e);
         }
     }
 

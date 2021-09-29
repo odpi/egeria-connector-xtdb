@@ -524,20 +524,27 @@ public class XtdbOMRSMetadataCollectionTest {
     void undoEntityUpdate() {
         try {
 
+            EntityDetail original = mc.getEntityDetail(username, glossaryGuid);
             EntityDetail result = mc.undoEntityUpdate(username, glossaryGuid);
             assertNotNull(result, "Expected the Glossary to be updated.");
             assertEquals(result.getGUID(), glossaryGuid, "Expected updated Glossary to have matching GUID.");
             assertEquals(result.getVersion(), 3L, "Expected the version to be further incremented by the undo operation.");
+            assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
+            assertNull(result.getProperties().getInstanceProperties().get(displayNameProperty), "Expected undone Glossary update should no longer have a display name.");
 
+            original = mc.getEntityDetail(username, categoryGuid);
             result = mc.undoEntityUpdate(username, categoryGuid);
             assertNotNull(result, "Expected the GlossaryCategory to be updated.");
             assertEquals(result.getGUID(), categoryGuid, "Expected updated GlossaryCategory to have matching GUID.");
             assertEquals(result.getVersion(), 3L, "Expected the version to be further incremented by the undo operation.");
+            assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
 
+            original = mc.getEntityDetail(username, ctrlTermGuid);
             result = mc.undoEntityUpdate(username, ctrlTermGuid);
             assertNotNull(result, "Expected the ControlledGlossaryTerm to be updated.");
             assertEquals(result.getGUID(), ctrlTermGuid, "Expected updated ControlledGlossaryTerm to have matching GUID.");
             assertEquals(result.getVersion(), 5L, "Expected the version to be further incremented by the undo operation.");
+            assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -642,10 +649,10 @@ public class XtdbOMRSMetadataCollectionTest {
 
             List<EntityDetail> results = mc.getEntityDetailHistory(username, glossaryGuid, null, null, 0, 100, HistorySequencingOrder.BACKWARDS);
             assertTrue(results != null && !results.isEmpty(), "Expected the Glossary's history to be retrieved.");
-            // Note that we expect 4 here rather than 3, as even though the Glossary itself has
+            // Note that we expect 5 here rather than 3, as even though the Glossary itself has
             // only 3 enumerated versions, the fact that its classification has 2 enumerated versions
-            // (both applicable to the same Glossary version), means there will be a total of 4 visible versions
-            assertEquals(results.size(), 4, "Expected 4 historical versions of the Glossary.");
+            // (both applicable to the same Glossary version), means there will be a total of 5 visible versions
+            assertEquals(results.size(), 5, "Expected 5 historical versions of the Glossary.");
             assertTrue(results.get(0).getVersion() > results.get(1).getVersion(), "Expected results to be sorted in reverse-chronological order.");
 
             results = mc.getEntityDetailHistory(username, categoryGuid, null, null, 0, 100, HistorySequencingOrder.FORWARDS);

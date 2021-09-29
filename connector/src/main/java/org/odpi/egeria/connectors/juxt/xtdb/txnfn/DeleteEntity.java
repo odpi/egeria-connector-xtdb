@@ -3,7 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
 import clojure.lang.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.ErrorMessaging;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.InstanceAuditHeaderMapping;
@@ -23,11 +23,12 @@ import xtdb.api.tx.Transaction;
 /**
  * Transaction function for soft-deleting an entity.
  */
-public class DeleteEntity extends AbstractTransactionFunction {
+public class DeleteEntity extends DeleteInstance {
 
     private static final Logger log = LoggerFactory.getLogger(DeleteEntity.class);
 
     public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "deleteEntity");
+    private static final String CLASS_NAME = DeleteEntity.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
 
     // Query to retrieve all non-deleted relationships that point to this entity,
@@ -80,12 +81,13 @@ public class DeleteEntity extends AbstractTransactionFunction {
                 throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
                         obsoleteEntityGUID), this.getClass().getName(), METHOD_NAME);
             } else {
-                TxnUtils.validateNonProxyEntity(existing, obsoleteEntityGUID, this.getClass().getName(), METHOD_NAME);
-                TxnUtils.validateInstanceIsNotDeleted(existing, obsoleteEntityGUID, this.getClass().getName(), METHOD_NAME);
-                xtdbDoc = TxnUtils.deleteInstance(userId, existing);
+                TxnValidations.nonProxyEntity(existing, obsoleteEntityGUID, CLASS_NAME, METHOD_NAME);
+                TxnValidations.entityFromStore(obsoleteEntityGUID, existing, CLASS_NAME, METHOD_NAME);
+                TxnValidations.instanceIsNotDeleted(existing, obsoleteEntityGUID, CLASS_NAME, METHOD_NAME);
+                xtdbDoc = deleteInstance(userId, existing);
             }
         } catch (Exception e) {
-            throw ErrorMessaging.add(txId, e);
+            throw ErrorMessageCache.add(txId, e);
         }
 
     }
