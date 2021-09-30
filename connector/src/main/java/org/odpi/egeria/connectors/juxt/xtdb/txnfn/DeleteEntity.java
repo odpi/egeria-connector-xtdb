@@ -48,7 +48,8 @@ public class DeleteEntity extends DeleteInstance {
             "          tx-id (:tx-id db)" +
             "          relationships (xtdb.api/q db " + RELN_QUERY + " eid)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          deleted (.doc (" + DeleteEntity.class.getCanonicalName() + ". tx-id existing user eid))]" +
+            "          deleted (.doc (" + DeleteEntity.class.getCanonicalName() + ". tx-id existing user eid))" +
+            getTxnTimeCalculation("deleted") + "]" +
             // For each of the relationships that was found, check the metadataCollectionId of it to determine
             // whether to delete the relationship (homed in this repo, same as entity) or to purge it (reference copy)
             // by delegating to the appropriate transaction function for those operations
@@ -58,7 +59,7 @@ public class DeleteEntity extends DeleteInstance {
             "                              [:xtdb.api/fn " + DeleteRelationship.FUNCTION_NAME + " rid user]" +
             "                              [:xtdb.api/fn " + PurgeRelationship.FUNCTION_NAME + " rid true]))))" +
             // And of course also persist the soft-deleted entity itself as part of this transaction
-            "               [:xtdb.api/put deleted])))";
+            "               [:xtdb.api/put deleted txt])))";
 
     private final IPersistentMap xtdbDoc;
 

@@ -19,15 +19,19 @@ import xtdb.api.tx.Transaction;
 public class AddEntityProxy extends AbstractTransactionFunction {
 
     public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "addEntityProxy");
+    private static final String CLASS_NAME = AddEntityProxy.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
-    // Only create the proxy if some other entity with this GUID (proxy or otherwise) does not yet
-    // exist
+    // Only create the proxy if:
+    // - some other entity with this GUID does not yet exist
+    // - a proxy with this GUID exists, but it is only a proxy (in which case we will upsert)
     private static final String FN = "" +
             "(fn [ctx eid proxy] " +
             "    (let [db (xtdb.api/db ctx)" +
-            "          existing (xtdb.api/entity db eid)]" +
-            "         (when-not (some? existing)" +
-            "          [[:xtdb.api/put proxy]])))";
+            "          existing (xtdb.api/entity db eid)" +
+            "          proxy-only (get existing :" + EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER + ")" +
+            "          create (if (some? proxy-only) proxy-only true)" +
+            getTxnTimeCalculation("proxy") + "]" +
+            "         (when create [[:xtdb.api/put proxy txt]])))";
 
     /**
      * Default constructor.
@@ -56,7 +60,7 @@ public class AddEntityProxy extends AbstractTransactionFunction {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }

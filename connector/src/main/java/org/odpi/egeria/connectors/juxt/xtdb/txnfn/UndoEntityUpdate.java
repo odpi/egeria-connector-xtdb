@@ -36,8 +36,9 @@ public class UndoEntityUpdate extends UndoInstanceUpdate {
             "(fn [ctx eid user mid] " +
             "    (with-open [history (xtdb.api/open-entity-history (xtdb.api/db ctx) eid :desc {:with-docs? true})]" +
             "      (let [tx-id (:xtdb.api/tx-id (xtdb.api/indexing-tx ctx))" +
-            "            updated (.doc (" + UndoEntityUpdate.class.getCanonicalName() + ". tx-id history user eid mid))]" +
-            "           [[:xtdb.api/put updated]])))";
+            "            updated (.doc (" + UndoEntityUpdate.class.getCanonicalName() + ". tx-id history user eid mid))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "           [[:xtdb.api/put updated txt]])))";
 
     private final IPersistentMap xtdbDoc;
 

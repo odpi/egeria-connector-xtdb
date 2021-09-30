@@ -33,8 +33,9 @@ public class RestoreEntity extends RestoreInstance {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          restored (.doc (" + RestoreEntity.class.getCanonicalName() + ". tx-id existing user eid mid))]" +
-            "         [[:xtdb.api/put restored]]))";
+            "          restored (.doc (" + RestoreEntity.class.getCanonicalName() + ". tx-id existing user eid mid))" +
+            getTxnTimeCalculation("restored") + "]" +
+            "         [[:xtdb.api/put restored txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

@@ -31,8 +31,9 @@ public class ReLinkRelationship extends AbstractTransactionFunction {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db rid)" +
-            "          relinked (.doc (" + ReLinkRelationship.class.getCanonicalName() + ". tx-id existing rid eid nid))]" +
-            "         [[:xtdb.api/put relinked]]))";
+            "          relinked (.doc (" + ReLinkRelationship.class.getCanonicalName() + ". tx-id existing rid eid nid))" +
+            getTxnTimeCalculation("relinked") + "]" +
+            "         [[:xtdb.api/put relinked txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

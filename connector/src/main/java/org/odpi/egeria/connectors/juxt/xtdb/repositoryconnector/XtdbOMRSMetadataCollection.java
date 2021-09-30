@@ -5,7 +5,6 @@ package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
 import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
-import xtdb.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
@@ -943,8 +942,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             StatusNotSupportedException {
-        final String methodName = "updateEntityStatus";
-        this.updateInstanceStatusParameterValidation(userId, entityGUID, newStatus, methodName);
+        this.updateInstanceStatusParameterValidation(userId, entityGUID, newStatus, "updateEntityStatus");
         return UpdateEntityStatus.transact(xtdbRepositoryConnector, userId, entityGUID, newStatus);
     }
 
@@ -959,8 +957,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             PropertyErrorException {
-        final String methodName = "updateEntityProperties";
-        this.updateInstancePropertiesPropertyValidation(userId, entityGUID, properties, methodName);
+        this.updateInstancePropertiesPropertyValidation(userId, entityGUID, properties, "updateEntityProperties");
         return UpdateEntityProperties.transact(xtdbRepositoryConnector, userId, entityGUID, properties);
     }
 
@@ -973,8 +970,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             EntityNotKnownException {
-        final String methodName = "undoEntityUpdate";
-        super.manageInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, methodName);
+        super.manageInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, "undoEntityUpdate");
         return UndoEntityUpdate.transact(xtdbRepositoryConnector, userId, entityGUID);
     }
 
@@ -989,9 +985,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             EntityNotKnownException {
-        final String methodName = "deleteEntity";
-        final String parameterName = "obsoleteEntityGUID";
-        super.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, obsoleteEntityGUID, parameterName, methodName);
+        super.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, obsoleteEntityGUID, "obsoleteEntityGUID", "deleteEntity");
         return DeleteEntity.transact(xtdbRepositoryConnector, userId, obsoleteEntityGUID);
     }
 
@@ -1007,9 +1001,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             EntityNotDeletedException {
-        final String methodName = "purgeEntity";
-        final String parameterName = "deletedEntityGUID";
-        this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedEntityGUID, parameterName, methodName);
+        this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedEntityGUID, "deletedEntityGUID", "purgeEntity");
         PurgeEntity.transactWithValidation(xtdbRepositoryConnector, deletedEntityGUID);
     }
 
@@ -1023,9 +1015,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             EntityNotDeletedException {
-        final String methodName = "restoreEntity";
-        final String parameterName = "deletedEntityGUID";
-        super.manageInstanceParameterValidation(userId, deletedEntityGUID, parameterName, methodName);
+        super.manageInstanceParameterValidation(userId, deletedEntityGUID, "deletedEntityGUID", "restoreEntity");
         return RestoreEntity.transact(xtdbRepositoryConnector, userId, deletedEntityGUID);
     }
 
@@ -1099,8 +1089,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             ClassificationErrorException {
-        final String methodName = "declassifyEntity";
-        super.declassifyEntityParameterValidation(userId, entityGUID, classificationName, methodName);
+        super.declassifyEntityParameterValidation(userId, entityGUID, classificationName, "declassifyEntity");
         return DeclassifyEntity.transact(xtdbRepositoryConnector, entityGUID, classificationName);
     }
 
@@ -1117,8 +1106,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException,
             ClassificationErrorException,
             PropertyErrorException {
-        final String methodName = "updateEntityClassification";
-        super.classifyEntityParameterValidation(userId, entityGUID, classificationName, properties, methodName);
+        super.classifyEntityParameterValidation(userId, entityGUID, classificationName, properties, "updateEntityClassification");
         return UpdateEntityClassification.transact(xtdbRepositoryConnector, userId, entityGUID, classificationName, properties);
     }
 
@@ -1140,9 +1128,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             StatusNotSupportedException,
             UserNotAuthorizedException {
 
-        final String methodName = "addRelationship";
-
-        TypeDef typeDef = super.addRelationshipParameterValidation(userId, relationshipTypeGUID, initialProperties, entityOneGUID, entityTwoGUID, initialStatus, methodName);
+        TypeDef typeDef = super.addRelationshipParameterValidation(userId, relationshipTypeGUID, initialProperties, entityOneGUID, entityTwoGUID, initialStatus, "addRelationship");
 
         Relationship relationship = repositoryHelper.getNewRelationship(repositoryName,
                 metadataCollectionId,
@@ -1178,9 +1164,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             StatusNotSupportedException,
             UserNotAuthorizedException {
 
-        final String methodName = "addExternalRelationship";
-
-        TypeDef typeDef = super.addRelationshipParameterValidation(userId, relationshipTypeGUID, initialProperties, entityOneGUID, entityTwoGUID, initialStatus, methodName);
+        TypeDef typeDef = super.addRelationshipParameterValidation(userId, relationshipTypeGUID, initialProperties, entityOneGUID, entityTwoGUID, initialStatus, "addExternalRelationship");
 
         Relationship relationship = repositoryHelper.getNewRelationship(repositoryName,
                 externalSourceGUID,
@@ -1219,8 +1203,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             StatusNotSupportedException {
-        final String methodName = "updateRelationshipStatus";
-        this.updateInstanceStatusParameterValidation(userId, relationshipGUID, newStatus, methodName);
+        this.updateInstanceStatusParameterValidation(userId, relationshipGUID, newStatus, "updateRelationshipStatus");
         return UpdateRelationshipStatus.transact(xtdbRepositoryConnector, userId, relationshipGUID, newStatus);
     }
 
@@ -1235,8 +1218,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             PropertyErrorException {
-        final String methodName = "updateRelationshipProperties";
-        this.updateInstancePropertiesPropertyValidation(userId, relationshipGUID, properties, methodName);
+        this.updateInstancePropertiesPropertyValidation(userId, relationshipGUID, properties, "updateRelationshipProperties");
         return UpdateRelationshipProperties.transact(xtdbRepositoryConnector, userId, relationshipGUID, properties);
     }
 
@@ -1249,8 +1231,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             RelationshipNotKnownException {
-        final String methodName = "undoRelationshipUpdate";
-        this.manageInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, methodName);
+        this.manageInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, "undoRelationshipUpdate");
         return UndoRelationshipUpdate.transact(xtdbRepositoryConnector, userId, relationshipGUID);
     }
 
@@ -1265,9 +1246,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             RelationshipNotKnownException {
-        final String methodName = "deleteRelationship";
-        final String parameterName = "obsoleteRelationshipGUID";
-        this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, obsoleteRelationshipGUID, parameterName, methodName);
+        this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, obsoleteRelationshipGUID, "obsoleteRelationshipGUID", "deleteRelationship");
         return DeleteRelationship.transact(xtdbRepositoryConnector, userId, obsoleteRelationshipGUID);
     }
 
@@ -1283,9 +1262,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             RelationshipNotDeletedException {
-        final String methodName = "purgeRelationship";
-        final String parameterName = "deletedRelationshipGUID";
-        this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedRelationshipGUID, parameterName, methodName);
+        this.manageInstanceParameterValidation(userId, typeDefGUID, typeDefName, deletedRelationshipGUID, "deletedRelationshipGUID", "purgeRelationship");
         PurgeRelationship.transactWithValidation(xtdbRepositoryConnector, deletedRelationshipGUID);
     }
 
@@ -1299,9 +1276,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             RelationshipNotDeletedException {
-        final String methodName = "restoreRelationship";
-        final String parameterName = "deletedRelationshipGUID";
-        this.manageInstanceParameterValidation(userId, deletedRelationshipGUID, parameterName, methodName);
+        this.manageInstanceParameterValidation(userId, deletedRelationshipGUID, "deletedRelationshipGUID", "restoreRelationship");
         return RestoreRelationship.transact(xtdbRepositoryConnector, userId, deletedRelationshipGUID);
     }
 
@@ -1318,9 +1293,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             EntityNotKnownException,
             UserNotAuthorizedException {
-        final String methodName = "reIdentifyEntity";
-        final String newInstanceParameterName = "newEntityGUID";
-        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, entityGUID, Constants.ENTITY_GUID, newEntityGUID, newInstanceParameterName, methodName);
+        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, entityGUID, Constants.ENTITY_GUID, newEntityGUID, "newEntityGUID", "reIdentifyEntity");
         return ReIdentifyEntity.transact(xtdbRepositoryConnector, userId, entityGUID, newEntityGUID);
     }
 
@@ -1338,8 +1311,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException,
             ClassificationErrorException,
             EntityNotKnownException {
-        final String methodName = "reTypeEntity";
-        super.reTypeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, TypeDefCategory.ENTITY_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
+        super.reTypeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, TypeDefCategory.ENTITY_DEF, currentTypeDefSummary, newTypeDefSummary, "reTypeEntity");
         return ReTypeEntity.transact(xtdbRepositoryConnector, userId, entityGUID, newTypeDefSummary);
     }
 
@@ -1357,30 +1329,8 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             EntityNotKnownException {
-
-        final String methodName = "reHomeEntity";
-
-        super.reHomeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, typeDefGUID, typeDefName, homeMetadataCollectionId, newHomeMetadataCollectionId, methodName);
-
-        EntityDetail entity;
-        try {
-            entity = xtdbRepositoryConnector.getEntity(entityGUID, null, false);
-        } catch (EntityProxyOnlyException e) {
-            throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_PROXY_ONLY.getMessageDefinition(
-                    entityGUID, repositoryName), this.getClass().getName(), methodName, e);
-        }
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityCanBeRehomed(repositoryName, metadataCollectionId, entity, methodName);
-
-        EntityDetail updatedEntity = new EntityDetail(entity);
-        updatedEntity.setMetadataCollectionId(newHomeMetadataCollectionId);
-        updatedEntity.setMetadataCollectionName(newHomeMetadataCollectionName);
-        updatedEntity.setInstanceProvenanceType(InstanceProvenanceType.LOCAL_COHORT);
-        updatedEntity = repositoryHelper.incrementVersion(userId, entity, updatedEntity);
-
-        return xtdbRepositoryConnector.updateEntity(updatedEntity);
-
+        super.reHomeInstanceParameterValidation(userId, entityGUID, Constants.ENTITY_GUID, typeDefGUID, typeDefName, homeMetadataCollectionId, newHomeMetadataCollectionId, "reHomeEntity");
+        return ReHomeEntity.transact(xtdbRepositoryConnector, userId, entityGUID, newHomeMetadataCollectionId, newHomeMetadataCollectionName);
     }
 
     /**
@@ -1396,9 +1346,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException,
             UserNotAuthorizedException {
-        final String methodName = "reIdentifyRelationship";
-        final String newInstanceParameterName = "newRelationshipGUID";
-        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, relationshipGUID, Constants.RELATIONSHIP_GUID, newRelationshipGUID, newInstanceParameterName, methodName);
+        this.reIdentifyInstanceParameterValidation(userId, typeDefGUID, typeDefName, relationshipGUID, Constants.RELATIONSHIP_GUID, newRelationshipGUID, "newRelationshipGUID", "reIdentifyRelationship");
         return ReIdentifyRelationship.transact(xtdbRepositoryConnector, userId, relationshipGUID, newRelationshipGUID);
     }
 
@@ -1415,8 +1363,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException,
             PropertyErrorException,
             RelationshipNotKnownException {
-        final String methodName = "reTypeRelationship";
-        super.reTypeInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, TypeDefCategory.RELATIONSHIP_DEF, currentTypeDefSummary, newTypeDefSummary, methodName);
+        super.reTypeInstanceParameterValidation(userId, relationshipGUID, Constants.RELATIONSHIP_GUID, TypeDefCategory.RELATIONSHIP_DEF, currentTypeDefSummary, newTypeDefSummary, "reTypeRelationship");
         return ReTypeRelationship.transact(xtdbRepositoryConnector, userId, relationshipGUID, newTypeDefSummary);
     }
 
@@ -1434,33 +1381,18 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             RelationshipNotKnownException {
-
         final String methodName = "reHomeRelationship";
         final String guidParameterName = "typeDefGUID";
         final String nameParameterName = "typeDefName";
         final String newHomeParameterName = "newHomeMetadataCollectionId";
-
         this.validateRepositoryConnector(methodName);
         parentConnector.validateRepositoryIsActive(methodName);
-
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, Constants.RELATIONSHIP_GUID, relationshipGUID, methodName);
         repositoryValidator.validateTypeDefIds(repositoryName, guidParameterName, nameParameterName, typeDefGUID, typeDefName, methodName);
         repositoryValidator.validateHomeMetadataGUID(repositoryName, Constants.HOME_METADATA_COLLECTION_ID, homeMetadataCollectionId, methodName);
         repositoryValidator.validateHomeMetadataGUID(repositoryName, newHomeParameterName, newHomeMetadataCollectionId, methodName);
-
-        Relationship relationship = this.getRelationship(userId, relationshipGUID);
-
-        repositoryValidator.validateRelationshipCanBeRehomed(repositoryName, metadataCollectionId, relationship, methodName);
-
-        Relationship updatedRelationship = new Relationship(relationship);
-        updatedRelationship.setMetadataCollectionId(newHomeMetadataCollectionId);
-        updatedRelationship.setMetadataCollectionName(newHomeMetadataCollectionName);
-        updatedRelationship.setInstanceProvenanceType(InstanceProvenanceType.LOCAL_COHORT);
-        updatedRelationship = repositoryHelper.incrementVersion(userId, relationship, updatedRelationship);
-
-        return xtdbRepositoryConnector.updateRelationship(updatedRelationship);
-
+        return ReHomeRelationship.transact(xtdbRepositoryConnector, userId, relationshipGUID, newHomeMetadataCollectionId, newHomeMetadataCollectionName);
     }
 
     /**
@@ -1471,19 +1403,14 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                         EntityDetail entity) throws
             InvalidParameterException,
             RepositoryErrorException,
-            EntityConflictException {
-
+            EntityConflictException,
+            HomeEntityException {
         final String methodName = "saveEntityReferenceCopy";
         final String instanceParameterName = "entity";
-
         this.validateRepositoryConnector(methodName);
         parentConnector.validateRepositoryIsActive(methodName);
         repositoryValidator.validateReferenceInstanceHeader(repositoryName, metadataCollectionId, instanceParameterName, entity, methodName);
-
-        // Note: the validation immediately above will throw an InvalidParameterException if this is a non-reference copy,
-        // so HomeEntityException will never actually be thrown
-        xtdbRepositoryConnector.saveReferenceCopy(entity);
-
+        SaveEntityReferenceCopy.transact(xtdbRepositoryConnector, entity);
     }
 
     /**
@@ -1556,37 +1483,6 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     }
 
     /**
-     * Ensure that the entity to be classified already exists, or is a reference copy.
-     * @param entity to be validated
-     * @param methodName of reference copy action
-     * @return EntityDetail to be handled as a reference copy
-     * @throws RepositoryErrorException there is a problem communicating with the metadata repository where
-     *                                  the metadata collection is stored.
-     */
-    private EntityDetail validateEntityToClassify(EntityDetail entity,
-                                                  String methodName) throws
-            RepositoryErrorException {
-
-        this.validateRepositoryConnector(methodName);
-        parentConnector.validateRepositoryIsActive(methodName);
-
-        EntityDetail retrievedEntity = null;
-        try {
-            retrievedEntity = xtdbRepositoryConnector.getEntity(entity.getGUID(), null, false);
-        } catch (EntityProxyOnlyException e) {
-            log.debug("Entity with GUID {} only a proxy, continuing...", entity.getGUID());
-        }
-
-        if ((retrievedEntity == null) && (!metadataCollectionId.equals(entity.getMetadataCollectionId()))) {
-            // If the entity is a reference copy then it can be stored in the repository.
-            retrievedEntity = entity;
-        }
-
-        return retrievedEntity;
-
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -1598,41 +1494,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException,
             EntityConflictException,
             PropertyErrorException {
-
-        final String methodName = "saveClassificationReferenceCopy";
-        final String classificationParameterName = "classification";
-        final String propertiesParameterName = "classification.getProperties()";
-
-        EntityDetail retrievedEntity = validateEntityToClassify(entity, methodName);
-        if (retrievedEntity != null) {
-            try {
-                repositoryValidator.validateEntityFromStore(repositoryName, entity.getGUID(), retrievedEntity, methodName);
-                repositoryValidator.validateEntityIsNotDeleted(repositoryName, retrievedEntity, methodName);
-                repositoryValidator.validateInstanceType(repositoryName, entity);
-
-                InstanceType entityType = entity.getType();
-
-                repositoryValidator.validateClassification(repositoryName, classificationParameterName, classification.getName(), entityType.getTypeDefName(), methodName);
-                repositoryValidator.validateClassificationProperties(repositoryName, classification.getName(), propertiesParameterName, classification.getProperties(), methodName);
-
-                EntityDetail updatedEntity = repositoryHelper.addClassificationToEntity(repositoryName,
-                        retrievedEntity,
-                        classification,
-                        methodName);
-
-                if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
-                    xtdbRepositoryConnector.updateEntity(updatedEntity);
-                } else {
-                    xtdbRepositoryConnector.saveReferenceCopy(updatedEntity);
-                }
-            } catch (EntityNotKnownException e) {
-                // Ignore since the entity has been removed since the classification was added
-                log.debug("Entity with GUID {} was not known, so classification not stored.", entity.getGUID());
-            } catch (ClassificationErrorException e) {
-                throw new TypeErrorException(e);
-            }
-        }
-
+        SaveClassificationReferenceCopy.transact(xtdbRepositoryConnector, entity, classification);
     }
 
     /**
@@ -1644,31 +1506,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                                  Classification classification) throws
             EntityConflictException,
             RepositoryErrorException {
-
-        final String methodName = "purgeClassificationReferenceCopy";
-
-        EntityDetail retrievedEntity = validateEntityToClassify(entity, methodName);
-        if (retrievedEntity != null) {
-            try {
-                EntityDetail updatedEntity = repositoryHelper.deleteClassificationFromEntity(repositoryName,
-                        entity,
-                        classification.getName(),
-                        methodName);
-
-                if (metadataCollectionId.equals(entity.getMetadataCollectionId())) {
-                    updatedEntity = repositoryHelper.incrementVersion(userId, retrievedEntity, updatedEntity);
-                    xtdbRepositoryConnector.updateEntity(updatedEntity);
-                } else {
-                    xtdbRepositoryConnector.saveReferenceCopy(entity);
-                }
-
-            } catch (ClassificationErrorException e) {
-                // Do nothing: this simply means the repository did not have the classification reference copy stored
-                // anyway, so nothing to remove (no-op)
-                log.debug("Entity with GUID {} had no classification {}, nothing to purge.", entity.getGUID(), classification.getName());
-            }
-        }
-
+        PurgeClassificationReferenceCopy.transact(xtdbRepositoryConnector, entity, classification);
     }
 
     /**
@@ -1680,41 +1518,10 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             RelationshipConflictException,
+            HomeRelationshipException,
             UserNotAuthorizedException {
-
-        final String methodName = "saveRelationshipReferenceCopy";
-        final String instanceParameterName = "relationship";
-
-        super.referenceInstanceParameterValidation(userId, relationship, instanceParameterName, methodName);
-
-        // Note: we will first check whether each proxy already exists prior to forcing its creation (as the creation
-        // will force the 'proxy' flag to true, even if the entity already exists (which we do not want to happen)
-        EntityDetail one = null;
-        try {
-            one = getEntityDetail(userId, relationship.getEntityOneProxy().getGUID());
-            log.debug("EntityProxyOne is already known and not a proxy, will not overwrite it.");
-        } catch (EntityNotKnownException | EntityProxyOnlyException e) {
-            log.debug("EntityProxyOne is either not known or only a proxy, will overwrite it.");
-        }
-        EntityDetail two = null;
-        try {
-            two = getEntityDetail(userId, relationship.getEntityTwoProxy().getGUID());
-            log.debug("EntityProxyTwo is already known and not a proxy, will not overwrite it.");
-        } catch (EntityNotKnownException | EntityProxyOnlyException e) {
-            log.debug("EntityProxyTwo is either not known or only a proxy, will overwrite it.");
-        }
-
-        // Only create entity proxies if the above retrievals indicated that they do not yet exist
-        Transaction.Builder tx = Transaction.builder();
-        if (one == null) {
-            xtdbRepositoryConnector.addCreateEntityProxyStatements(tx, relationship.getEntityOneProxy());
-        }
-        if (two == null) {
-            xtdbRepositoryConnector.addCreateEntityProxyStatements(tx, relationship.getEntityTwoProxy());
-        }
-        xtdbRepositoryConnector.addSaveReferenceCopyStatements(tx, relationship);
-        xtdbRepositoryConnector.runTx(tx.build());
-
+        super.referenceInstanceParameterValidation(userId, relationship, "relationship", "saveRelationshipReferenceCopy");
+        SaveRelationshipReferenceCopy.transact(xtdbRepositoryConnector, relationship);
     }
 
     /**

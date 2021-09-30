@@ -657,8 +657,8 @@ public class XtdbOMRSMetadataCollectionTest {
 
             results = mc.getEntityDetailHistory(username, categoryGuid, null, null, 0, 100, HistorySequencingOrder.FORWARDS);
             assertTrue(results != null && !results.isEmpty(), "Expected the GlossaryCategory's history to be retrieved.");
-            assertEquals(results.size(), 3, "Expected 3 historical versions of the GlossaryCategory.");
-            assertTrue(results.get(0).getVersion() < results.get(1).getVersion(), "Expected results to be sorted in chronological order.");
+            assertEquals(results.size(), 4, "Expected 4 historical versions of the GlossaryCategory.");
+            assertTrue(results.get(0).getVersion() < results.get(3).getVersion(), "Expected results to be sorted in chronological order.");
 
             results = mc.getEntityDetailHistory(username, ctrlTermGuid, null, null, 0, 100, HistorySequencingOrder.BACKWARDS);
             assertTrue(results != null && !results.isEmpty(), "Expected the ControlledGlossaryTerm's history to be retrieved.");

@@ -5,34 +5,33 @@ package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 import clojure.lang.*;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
-import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.Relationship;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefSummary;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.RelationshipNotKnownException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xtdb.api.TransactionInstant;
 import xtdb.api.tx.Transaction;
 
 /**
- * Transaction function for changing a relationship's type.
+ * Transaction function for updating a relationship's home repository.
  */
-public class ReTypeRelationship extends ReTypeInstance {
+public class ReHomeRelationship extends ReHomeInstance {
 
-    private static final Logger log = LoggerFactory.getLogger(ReTypeRelationship.class);
+    private static final Logger log = LoggerFactory.getLogger(ReHomeRelationship.class);
 
-    public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "reTypeRelationship");
-    private static final String CLASS_NAME = ReTypeRelationship.class.getName();
+    public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "reHomeRelationship");
+    private static final String CLASS_NAME = ReHomeRelationship.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
     private static final String FN = "" +
-            "(fn [ctx rid user tname mid] " +
+            "(fn [ctx eid user mid nmid nmname] " +
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
-            "          existing (xtdb.api/entity db rid)" +
-            "          updated (.doc (" + ReTypeRelationship.class.getCanonicalName() + ". tx-id existing user rid tname mid))" +
+            "          existing (xtdb.api/entity db eid)" +
+            "          updated (.doc (" + ReHomeRelationship.class.getCanonicalName() + ". tx-id existing user eid mid nmid nmname))" +
             getTxnTimeCalculation("updated") + "]" +
             "         [[:xtdb.api/put updated txt]]))";
 
@@ -41,30 +40,31 @@ public class ReTypeRelationship extends ReTypeInstance {
     /**
      * Constructor used to execute the transaction function.
      * @param txId the transaction ID of this function invocation
-     * @param existing XTDB document to update
+     * @param existing XTDB document to re-home
      * @param userId doing the update
-     * @param relationshipGUID of the relationship to update
-     * @param newTypeDefName unique identifier of the new type to apply
+     * @param relationshipGUID of the relationship to re-home
      * @param metadataCollectionId of the metadata collection in which the transaction is running
+     * @param newMetadataCollectionId in which to re-home to the relationship
+     * @param newMetadataCollectionName in which to re-home the relationship
      * @throws Exception on any error
      */
-    public ReTypeRelationship(Long txId,
-                        PersistentHashMap existing,
-                        String userId,
-                        String relationshipGUID,
-                        String newTypeDefName,
-                        String metadataCollectionId)
+    public ReHomeRelationship(Long txId,
+                              PersistentHashMap existing,
+                              String userId,
+                              String relationshipGUID,
+                              String metadataCollectionId,
+                              String newMetadataCollectionId,
+                              String newMetadataCollectionName)
             throws Exception {
 
         try {
             if (existing == null) {
                 throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
-                        relationshipGUID), this.getClass().getName(), METHOD_NAME);
+                        relationshipGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 TxnValidations.relationshipFromStore(relationshipGUID, existing, CLASS_NAME, METHOD_NAME);
-                TypeDef typeDef = TypeDefCache.getTypeDefByName(newTypeDefName);
-                validate(existing, relationshipGUID, typeDef, metadataCollectionId, CLASS_NAME, METHOD_NAME);
-                xtdbDoc = reTypeInstance(userId, existing, typeDef);
+                validate(existing, metadataCollectionId, CLASS_NAME, METHOD_NAME);
+                xtdbDoc = reHomeInstance(userId, existing, newMetadataCollectionId, newMetadataCollectionName);
             }
         } catch (Exception e) {
             throw ErrorMessageCache.add(txId, e);
@@ -73,31 +73,31 @@ public class ReTypeRelationship extends ReTypeInstance {
     }
 
     /**
-     * Change the type of the provided relatinship instance in the XTDB repository by pushing the transaction
+     * Change the home repository of the provided relationship instance in the XTDB repository by pushing the transaction
      * down into the repository itself.
      * @param xtdb connectivity
      * @param userId doing the update
-     * @param relationshipGUID of the relationship on which to change the type
-     * @param newTypeDef to apply to the relationship
-     * @return Relationship the relationship with the new type applied
+     * @param relationshipGUID of the relationship on which to change the home repository
+     * @param newMetadataCollectionId in which to re-home to the relationship
+     * @param newMetadataCollectionName in which to re-home the relationship
+     * @return Relationship the relationship with the new home repository applied
      * @throws RelationshipNotKnownException if the relationship cannot be found
-     * @throws PropertyErrorException the properties in the instance are incompatible with the requested type
-     * @throws InvalidParameterException if the relationship exists but cannot be updated (deleted, reference copy, etc)
-     * @throws TypeErrorException the requested type is not known or supported by the repository
+     * @throws InvalidParameterException if the relationship exists but cannot be re-homed (i.e. not a reference copy)
      * @throws RepositoryErrorException on any other error
      */
     public static Relationship transact(XtdbOMRSRepositoryConnector xtdb,
                                         String userId,
                                         String relationshipGUID,
-                                        TypeDefSummary newTypeDef)
-            throws RelationshipNotKnownException, PropertyErrorException, TypeErrorException, InvalidParameterException, RepositoryErrorException {
+                                        String newMetadataCollectionId,
+                                        String newMetadataCollectionName)
+            throws RelationshipNotKnownException, InvalidParameterException, RepositoryErrorException {
         String docId = RelationshipMapping.getReference(relationshipGUID);
         Transaction.Builder tx = Transaction.builder();
-        tx.invokeFunction(FUNCTION_NAME, docId, userId, newTypeDef.getName(), xtdb.getMetadataCollectionId());
+        tx.invokeFunction(FUNCTION_NAME, docId, userId, xtdb.getMetadataCollectionId(), newMetadataCollectionId, newMetadataCollectionName);
         TransactionInstant results = xtdb.runTx(tx.build());
         try {
             return xtdb.getResultingRelationship(docId, results, METHOD_NAME);
-        } catch (RelationshipNotKnownException | PropertyErrorException | TypeErrorException | InvalidParameterException | RepositoryErrorException e) {
+        } catch (RelationshipNotKnownException | InvalidParameterException | RepositoryErrorException e) {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
@@ -112,7 +112,7 @@ public class ReTypeRelationship extends ReTypeInstance {
      * @return IPersistentMap giving the updated document in its entirety
      */
     public IPersistentMap doc() {
-        log.debug("Relationship being persisted: {}", xtdbDoc);
+        log.debug("Entity being persisted: {}", xtdbDoc);
         return xtdbDoc;
     }
 

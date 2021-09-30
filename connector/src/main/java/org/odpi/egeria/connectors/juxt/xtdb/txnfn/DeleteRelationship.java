@@ -31,8 +31,9 @@ public class DeleteRelationship extends DeleteInstance {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db rid)" +
-            "          deleted (.doc (" + DeleteRelationship.class.getCanonicalName() + ". tx-id existing user rid))]" +
-            "         [[:xtdb.api/put deleted]]))";
+            "          deleted (.doc (" + DeleteRelationship.class.getCanonicalName() + ". tx-id existing user rid))" +
+            getTxnTimeCalculation("deleted") + "]" +
+            "         [[:xtdb.api/put deleted txt]]))";
 
     private final IPersistentMap xtdbDoc;
 
@@ -53,7 +54,7 @@ public class DeleteRelationship extends DeleteInstance {
         try {
             if (existing == null) {
                 throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
-                        obsoleteRelationshipGUID), this.getClass().getName(), METHOD_NAME);
+                        obsoleteRelationshipGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 TxnValidations.relationshipFromStore(obsoleteRelationshipGUID, existing, CLASS_NAME, METHOD_NAME);
                 TxnValidations.instanceIsNotDeleted(existing, obsoleteRelationshipGUID, CLASS_NAME, METHOD_NAME);
@@ -89,7 +90,7 @@ public class DeleteRelationship extends DeleteInstance {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }

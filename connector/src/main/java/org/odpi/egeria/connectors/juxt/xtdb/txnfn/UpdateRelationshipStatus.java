@@ -30,8 +30,9 @@ public class UpdateRelationshipStatus extends UpdateInstanceStatus {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db rid)" +
-            "          updated (.doc (" + UpdateRelationshipStatus.class.getCanonicalName() + ". tx-id existing user rid mid status))]" +
-            "         [[:xtdb.api/put updated]]))";
+            "          updated (.doc (" + UpdateRelationshipStatus.class.getCanonicalName() + ". tx-id existing user rid mid status))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "         [[:xtdb.api/put updated txt]]))";
 
     private final IPersistentMap xtdbDoc;
 
@@ -96,7 +97,7 @@ public class UpdateRelationshipStatus extends UpdateInstanceStatus {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }

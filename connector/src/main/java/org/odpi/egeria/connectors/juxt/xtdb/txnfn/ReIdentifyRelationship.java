@@ -35,7 +35,8 @@ public class ReIdentifyRelationship extends ReIdentifyInstance {
             "          updates (.tuple (" + ReIdentifyRelationship.class.getCanonicalName() + ". tx-id existing user eid nid mid))]" +
             // Expand the resulting 'updates' tuple into distinct update statements
             "         (vec (for [doc updates]" +
-            "                   [:xtdb.api/put doc]))))";
+            "                   (let [" + getTxnTimeCalculation("doc") + "]" +
+            "                        [:xtdb.api/put doc txt])))))";
 
     private final IPersistentVector xtdbTuple;
 
@@ -60,7 +61,7 @@ public class ReIdentifyRelationship extends ReIdentifyInstance {
         try {
             if (existing == null) {
                 throw new RelationshipNotKnownException(XtdbOMRSErrorCode.RELATIONSHIP_NOT_KNOWN.getMessageDefinition(
-                        relationshipGUID), this.getClass().getName(), METHOD_NAME);
+                        relationshipGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 TxnValidations.relationshipFromStore(relationshipGUID, existing, CLASS_NAME, METHOD_NAME);
                 validate(existing, relationshipGUID, metadataCollectionId, CLASS_NAME, METHOD_NAME);
@@ -100,7 +101,7 @@ public class ReIdentifyRelationship extends ReIdentifyInstance {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }

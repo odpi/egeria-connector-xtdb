@@ -234,6 +234,12 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
         ReIdentifyRelationship.create(tx);
         ReTypeEntity.create(tx);
         ReTypeRelationship.create(tx);
+        ReHomeEntity.create(tx);
+        ReHomeRelationship.create(tx);
+        SaveEntityReferenceCopy.create(tx);
+        SaveClassificationReferenceCopy.create(tx);
+        SaveRelationshipReferenceCopy.create(tx);
+        PurgeClassificationReferenceCopy.create(tx);
         // Null for the timeout here means use the default (which is therefore configurable directly by
         // the XTDB configurationProperties of the connector)
         Transaction txn = tx.build();
@@ -381,16 +387,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
     }
 
     /**
-     * Retrieve the statements that need to be executed against XTDB to create (persist) the entity proxy provided.
-     * @param tx the transaction through which to create the entity proxy
-     * @param entity to create
-     */
-    public void addCreateEntityProxyStatements(Transaction.Builder tx, EntityProxy entity) {
-        EntityProxyMapping epm = new EntityProxyMapping(this, entity);
-        put(tx, epm.toXTDB());
-    }
-
-    /**
      * Create the provided entity instance in the XTDB repository.
      * @param entity to create
      * @return EntityDetail that was created
@@ -411,15 +407,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
     public void addCreateEntityStatements(Transaction.Builder tx, EntityDetail entity) {
         EntityDetailMapping edm = new EntityDetailMapping(this, entity);
         put(tx, edm.toXTDB());
-    }
-
-    /**
-     * Update the provided entity instance in the XTDB repository.
-     * @param entity to update
-     * @return EntityDetail that was updated
-     */
-    public EntityDetail updateEntity(EntityDetail entity) {
-        return createEntity(entity);
     }
 
     /**
@@ -1354,48 +1341,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
     }
 
     /**
-     * Create the provided relationship instance in the XTDB repository.
-     * @param relationship to create
-     * @return Relationship that was created
-     */
-    public Relationship createRelationship(Relationship relationship) {
-        Transaction.Builder tx = Transaction.builder();
-        addCreateRelationshipStatements(tx, relationship);
-        TransactionInstant results = runTx(tx.build());
-        log.debug(Constants.WRITE_RESULTS, results);
-        return relationship;
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to create (persist) the relationship provided.
-     * @param tx the transaction through which to create the relationship
-     * @param relationship to be created
-     */
-    public void addCreateRelationshipStatements(Transaction.Builder tx, Relationship relationship) {
-        RelationshipMapping rm = new RelationshipMapping(this, relationship);
-        put(tx, rm.toXTDB());
-    }
-
-    /**
-     * Update the provided relationship instance in the XTDB repository.
-     * @param relationship to update
-     * @return Relationship that was updated
-     */
-    public Relationship updateRelationship(Relationship relationship) {
-        return createRelationship(relationship);
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to update the provided relationship instance in the
-     * XTDB repository.
-     * @param tx the transaction through which to do the relationship update
-     * @param relationship to update
-     */
-    public void addUpdateRelationshipStatements(Transaction.Builder tx, Relationship relationship) {
-        addCreateRelationshipStatements(tx, relationship);
-    }
-
-    /**
      * Retrieve the requested relationship from the XTDB repository.
      * @param guid of the relationship to retrieve
      * @param asOfTime view of the relationship at this particular point in time
@@ -1639,74 +1584,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
         }
 
         return results;
-
-    }
-
-    /**
-     * Save the provided entity as a reference copy. This is only possible if there is no existing entity with the same
-     * GUID, or if there is an existing entity with this GUID and its metadataCollectionId matches. Any other scenario
-     * is an error for a reference copy.
-     * @param entity to save as a reference copy
-     * @throws EntityConflictException the entity conflicts with an existing entity (different metadata collection IDs)
-     */
-    public void saveReferenceCopy(EntityDetail entity) throws EntityConflictException {
-
-        final String methodName = "saveReferenceCopy";
-
-        String rcGuid = entity.getGUID();
-        String rcMetadataCollectionId = entity.getMetadataCollectionId();
-
-        // Retrieve it as a Summary, since we do not care whether it is a Proxy or a full Detail for this operation
-        EntitySummary existingEntity = getEntitySummary(rcGuid);
-        if (existingEntity == null) {
-            createEntity(entity);
-        } else {
-            String exMetadataCollectionId = existingEntity.getMetadataCollectionId();
-            if (!rcMetadataCollectionId.equals(exMetadataCollectionId)) {
-                throw new EntityConflictException(
-                        XtdbOMRSErrorCode.METADATA_COLLECTION_CONFLICT.getMessageDefinition(
-                                entity.getGUID(), repositoryName
-                        ),
-                        this.getClass().getName(),
-                        methodName
-                );
-            } else {
-                updateEntity(entity);
-            }
-        }
-
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to save the provided relationship as a reference
-     * copy. This is only possible if there is no existing relationship with the same GUID, or if there is an existing
-     * relationship with this GUID and its metadataCollectionId matches. Any other scenario is an error for a reference
-     * copy.
-     * @param tx the transaction through which to save the reference copy
-     * @param relationship to save as a reference copy
-     * @throws RelationshipConflictException the relationship conflicts with an existing relationship (different metadata collection IDs)
-     * @throws RepositoryErrorException if any issue closing an open XTDB resource
-     */
-    public void addSaveReferenceCopyStatements(Transaction.Builder tx, Relationship relationship) throws RelationshipConflictException, RepositoryErrorException {
-
-        final String methodName = "addSaveReferenceCopyStatements";
-
-        String rcGuid = relationship.getGUID();
-        String rcMetadataCollectionId = relationship.getMetadataCollectionId();
-
-        Relationship existingRelationship = getRelationship(rcGuid, null);
-        if (existingRelationship == null) {
-            addCreateRelationshipStatements(tx, relationship);
-        } else {
-            String exMetadataCollectionId = existingRelationship.getMetadataCollectionId();
-            if (!rcMetadataCollectionId.equals(exMetadataCollectionId)) {
-                throw new RelationshipConflictException(
-                        XtdbOMRSErrorCode.METADATA_COLLECTION_CONFLICT.getMessageDefinition(
-                                relationship.getGUID(), repositoryName), this.getClass().getName(), methodName);
-            } else {
-                addUpdateRelationshipStatements(tx, relationship);
-            }
-        }
 
     }
 

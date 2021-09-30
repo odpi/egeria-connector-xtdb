@@ -9,7 +9,6 @@ import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityDetail;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceProperties;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.PropertyErrorException;
@@ -34,8 +33,9 @@ public class UpdateEntityProperties extends UpdateInstanceProperties {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          updated (.doc (" + UpdateEntityProperties.class.getCanonicalName() + ". tx-id existing user eid mid properties))]" +
-            "         [[:xtdb.api/put updated]]))";
+            "          updated (.doc (" + UpdateEntityProperties.class.getCanonicalName() + ". tx-id existing user eid mid properties))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "         [[:xtdb.api/put updated txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

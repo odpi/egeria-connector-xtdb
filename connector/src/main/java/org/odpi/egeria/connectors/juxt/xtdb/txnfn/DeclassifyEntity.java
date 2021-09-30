@@ -29,8 +29,9 @@ public class DeclassifyEntity extends AbstractTransactionFunction {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          updated (.doc (" + DeclassifyEntity.class.getCanonicalName() + ". tx-id existing eid cname))]" +
-            "         [[:xtdb.api/put updated]]))";
+            "          updated (.doc (" + DeclassifyEntity.class.getCanonicalName() + ". tx-id existing eid cname))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "         [[:xtdb.api/put updated txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

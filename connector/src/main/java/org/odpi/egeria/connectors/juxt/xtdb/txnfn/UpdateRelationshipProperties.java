@@ -33,8 +33,9 @@ public class UpdateRelationshipProperties extends UpdateInstanceProperties {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db rid)" +
-            "          updated (.doc (" + UpdateRelationshipProperties.class.getCanonicalName() + ". tx-id existing user rid mid properties))]" +
-            "         [[:xtdb.api/put updated]]))";
+            "          updated (.doc (" + UpdateRelationshipProperties.class.getCanonicalName() + ". tx-id existing user rid mid properties))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "         [[:xtdb.api/put updated txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

@@ -34,8 +34,9 @@ public class ClassifyEntity extends AbstractTransactionFunction {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          updated (.doc (" + ClassifyEntity.class.getCanonicalName() + ". tx-id existing user eid mid cname ext-guid ext-name corigin corigin-guid properties))]" +
-            "         [[:xtdb.api/put updated]]))";
+            "          updated (.doc (" + ClassifyEntity.class.getCanonicalName() + ". tx-id existing user eid mid cname ext-guid ext-name corigin corigin-guid properties))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "         [[:xtdb.api/put updated txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

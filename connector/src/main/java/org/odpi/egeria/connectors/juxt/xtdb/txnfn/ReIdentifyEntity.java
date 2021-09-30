@@ -10,13 +10,10 @@ import org.odpi.egeria.connectors.juxt.xtdb.mapping.InstanceAuditHeaderMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityDetail;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.StatusNotSupportedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xtdb.api.TransactionInstant;
@@ -52,7 +49,8 @@ public class ReIdentifyEntity extends ReIdentifyInstance {
             "                                 [:xtdb.api/fn " + ReLinkRelationship.FUNCTION_NAME + " rid eid nid]))" +
             // And also expand the resulting 'updates' tuple into distinct update statements
             "                      (vec (for [doc updates]" +
-            "                                 [:xtdb.api/put doc]))))))";
+            "                                (let [" + getTxnTimeCalculation("doc") + "]" +
+            "                                     [:xtdb.api/put doc txt])))))))";
 
     private final IPersistentVector xtdbTuple;
 
@@ -77,7 +75,7 @@ public class ReIdentifyEntity extends ReIdentifyInstance {
         try {
             if (existing == null) {
                 throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
-                        entityGUID), this.getClass().getName(), METHOD_NAME);
+                        entityGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 TxnValidations.nonProxyEntity(existing, entityGUID, CLASS_NAME, METHOD_NAME);
                 TxnValidations.entityFromStore(entityGUID, existing, CLASS_NAME, METHOD_NAME);
@@ -118,7 +116,7 @@ public class ReIdentifyEntity extends ReIdentifyInstance {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }

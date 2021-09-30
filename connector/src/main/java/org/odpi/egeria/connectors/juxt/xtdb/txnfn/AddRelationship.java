@@ -35,8 +35,9 @@ public class AddRelationship extends AbstractTransactionFunction {
             "          tx-id (:tx-id db)" +
             "          proxy1 (xtdb.api/entity db eid1)" +
             "          proxy2 (xtdb.api/entity db eid2)" +
-            "          created (.doc (" + AddRelationship.class.getCanonicalName() + ". tx-id eid1 eid2 proxy1 proxy2 relationship))]" +
-            "         [[:xtdb.api/put created]]))";
+            "          created (.doc (" + AddRelationship.class.getCanonicalName() + ". tx-id eid1 eid2 proxy1 proxy2 relationship))" +
+            getTxnTimeCalculation("created") + "]" +
+            "         [[:xtdb.api/put created txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

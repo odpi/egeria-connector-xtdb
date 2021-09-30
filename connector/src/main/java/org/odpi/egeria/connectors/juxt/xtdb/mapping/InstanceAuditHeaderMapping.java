@@ -42,11 +42,11 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
 
     // Note that these have no namespace, and therefore not useful on classifications (only entity, relationship)
     public static final String METADATA_COLLECTION_ID = getKeyword(N_METADATA_COLLECTION_ID);
+    public static final String METADATA_COLLECTION_NAME = getKeyword(N_METADATA_COLLECTION_NAME);
     public static final String CREATE_TIME = getKeyword(N_CREATE_TIME);
     public static final String UPDATE_TIME = getKeyword(N_UPDATE_TIME);
     public static final String CURRENT_STATUS = getKeyword(N_CURRENT_STATUS);
     public static final String STATUS_ON_DELETE = getKeyword(N_STATUS_ON_DELETE);
-    public static final String TYPE = getKeyword(N_TYPE);
     public static final String TYPE_DEF_GUIDS = getKeyword(N_TYPE + ".guids");
     public static final String TYPE_DEF_CATEGORY = getKeyword(N_TYPE + ".category");
     public static final String VERSION = getKeyword(N_VERSION);

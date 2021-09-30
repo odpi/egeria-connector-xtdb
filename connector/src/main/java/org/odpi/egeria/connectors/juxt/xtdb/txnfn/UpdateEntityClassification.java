@@ -33,8 +33,9 @@ public class UpdateEntityClassification extends UpdateInstanceProperties {
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
             "          existing (xtdb.api/entity db eid)" +
-            "          updated (.doc (" + UpdateEntityClassification.class.getCanonicalName() + ". tx-id existing user eid mid cname properties))]" +
-            "         [[:xtdb.api/put updated]]))";
+            "          updated (.doc (" + UpdateEntityClassification.class.getCanonicalName() + ". tx-id existing user eid mid cname properties))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "         [[:xtdb.api/put updated txt]]))";
 
     private final IPersistentMap xtdbDoc;
 

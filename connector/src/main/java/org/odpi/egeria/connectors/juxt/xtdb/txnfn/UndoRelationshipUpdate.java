@@ -32,8 +32,9 @@ public class UndoRelationshipUpdate extends UndoInstanceUpdate {
             "(fn [ctx rid user mid] " +
             "    (with-open [history (xtdb.api/open-entity-history (xtdb.api/db ctx) rid :desc {:with-docs? true})]" +
             "      (let [tx-id (:xtdb.api/tx-id (xtdb.api/indexing-tx ctx))" +
-            "            updated (.doc (" + UndoRelationshipUpdate.class.getCanonicalName() + ". tx-id history user rid mid))]" +
-            "           [[:xtdb.api/put updated]])))";
+            "            updated (.doc (" + UndoRelationshipUpdate.class.getCanonicalName() + ". tx-id history user rid mid))" +
+            getTxnTimeCalculation("updated") + "]" +
+            "           [[:xtdb.api/put updated txt]])))";
 
     private final IPersistentMap xtdbDoc;
 

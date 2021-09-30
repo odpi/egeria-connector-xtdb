@@ -9,7 +9,6 @@ import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.InstanceAuditHeaderMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotDeletedException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityNotKnownException;
@@ -77,7 +76,7 @@ public class PurgeEntity extends AbstractTransactionFunction {
                 // relationship removal is intended, it should come through from the same source that has purged the entity,
                 // otherwise this may simply be a cleanup of the locally-cached reference copy, but not an actual purge of
                 // the entity from the home repository -- in which case we may still want to retain relationships.)
-                TxnValidations.nonProxyEntity(existing, deletedEntityGUID, this.getClass().getName(), METHOD_NAME);
+                TxnValidations.nonProxyEntity(existing, deletedEntityGUID, CLASS_NAME, METHOD_NAME);
                 if (!force) {
                     TxnValidations.entityFromStore(deletedEntityGUID, existing, CLASS_NAME, METHOD_NAME);
                     try {
@@ -116,7 +115,7 @@ public class PurgeEntity extends AbstractTransactionFunction {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }
@@ -143,7 +142,7 @@ public class PurgeEntity extends AbstractTransactionFunction {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }

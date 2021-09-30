@@ -21,7 +21,8 @@ public class ErrorMessageCache {
      * @return Exception error that was added
      */
     public static Exception add(Long txId, Exception error) {
-        return map.put(txId, error);
+        map.put(txId, error);
+        return error;
     }
 
     /**

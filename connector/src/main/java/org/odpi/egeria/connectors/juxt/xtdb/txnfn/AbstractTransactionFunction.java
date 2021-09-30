@@ -27,6 +27,21 @@ public abstract class AbstractTransactionFunction {
     private static final Logger log = LoggerFactory.getLogger(AbstractTransactionFunction.class);
 
     /**
+     * Create the let statements necessary to capture the valid time that should be used when
+     * submitting the transaction.
+     * @param docVar the name of the variable containing the document map to check for valid time details
+     * @return String snippet of Clojure that can be embedded within a 'let'
+     */
+    protected static String getTxnTimeCalculation(String docVar) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(" txt-classification (").append(Keywords.LAST_CLASSIFICATION_CHANGE).append(" ").append(docVar).append(")");
+        sb.append(" txt-update (").append(Keywords.UPDATE_TIME).append(" ").append(docVar).append(")");
+        sb.append(" txt-tmp (if (< 0 (compare txt-classification txt-update)) txt-classification txt-update)");
+        sb.append(" txt (if (some? txt-tmp) txt-tmp ").append("(").append(Keywords.CREATE_TIME).append(" ").append(docVar).append("))");
+        return sb.toString();
+    }
+
+    /**
      * Create the transaction function within XTDB.
      * @param tx transaction through which to create the function
      * @param name of the transaction function
@@ -136,6 +151,15 @@ public abstract class AbstractTransactionFunction {
      */
     public static String getMetadataCollectionId(IPersistentMap instance) {
         return (String) instance.valAt(Keywords.METADATA_COLLECTION_ID);
+    }
+
+    /**
+     * Retrieve the instanceProvenanceType from the provided metadata instance.
+     * @param instance of metadata
+     * @return Integer unique ordinal of the metadata instance's instanceProvenanceType
+     */
+    public static Integer getInstanceProvenanceType(IPersistentMap instance) {
+        return (Integer) instance.valAt(Keywords.INSTANCE_PROVENANCE_TYPE);
     }
 
 }
