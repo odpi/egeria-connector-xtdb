@@ -28,7 +28,9 @@ public abstract class AbstractTransactionFunction {
 
     /**
      * Create the let statements necessary to capture the valid time that should be used when
-     * submitting the transaction.
+     * submitting the transaction. Logic is as follows:
+     * Prefer the later of update time and last classification change, and if neither of those is
+     * available fall back to create time
      * @param docVar the name of the variable containing the document map to check for valid time details
      * @return String snippet of Clojure that can be embedded within a 'let'
      */

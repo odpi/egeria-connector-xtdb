@@ -5,38 +5,35 @@ package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 import clojure.lang.*;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityDetailMapping;
-import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntityProxyMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityProxy;
+import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.EntityDetail;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import xtdb.api.TransactionInstant;
 import xtdb.api.XtdbDocument;
 import xtdb.api.tx.Transaction;
 
 /**
- * Transaction function for adding an EntityProxy.
+ * Transaction function for adding an entity.
  */
-public class AddEntityProxy extends AbstractTransactionFunction {
+public class AddEntity extends AbstractTransactionFunction {
 
-    public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "addEntityProxy");
-    private static final String CLASS_NAME = AddEntityProxy.class.getName();
+    public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "addEntity");
+    private static final String CLASS_NAME = AddEntity.class.getName();
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
-    // Only create the proxy if:
-    // - some other entity with this GUID does not yet exist
-    // - a proxy with this GUID exists, but it is only a proxy (in which case we will upsert)
+    // Always upsert the entity:
+    // - creates it if it does not yet exist
+    // - "upgrades" a proxy if a proxy with the same GUID already exists
+    // - replaces any existing full entity definition (if it exists)
     private static final String FN = "" +
-            "(fn [ctx eid proxy] " +
+            "(fn [ctx eid full] " +
             "    (let [db (xtdb.api/db ctx)" +
-            "          existing (xtdb.api/entity db eid)" +
-            "          proxy-only (get existing :" + EntityProxyMapping.ENTITY_PROXY_ONLY_MARKER + ")" +
-            "          create (if (some? proxy-only) proxy-only true)" +
-            getTxnTimeCalculation("proxy") + "]" +
-            "         (when create [[:xtdb.api/put proxy txt]])))";
+            getTxnTimeCalculation("full") + "]" +
+            "         [[:xtdb.api/put full txt]]))";
 
     /**
      * Default constructor.
      */
-    private AddEntityProxy() {
+    private AddEntity() {
         // Nothing to do here, logic is entirely handled through the Clojure
     }
 
@@ -44,18 +41,19 @@ public class AddEntityProxy extends AbstractTransactionFunction {
      * Create the provided entity instance in the XTDB repository by pushing down the transaction.
      * @param xtdb connectivity
      * @param entity to create
+     * @return EntityDetail the entity that was created
      * @throws RepositoryErrorException on any error
      */
-    public static void transact(XtdbOMRSRepositoryConnector xtdb,
-                                EntityProxy entity) throws RepositoryErrorException {
+    public static EntityDetail transact(XtdbOMRSRepositoryConnector xtdb,
+                                        EntityDetail entity) throws RepositoryErrorException {
         String docId = EntityDetailMapping.getReference(entity.getGUID());
-        EntityProxyMapping epm = new EntityProxyMapping(xtdb, entity);
-        XtdbDocument proxyDoc = epm.toXTDB();
+        EntityDetailMapping edm = new EntityDetailMapping(xtdb, entity);
+        XtdbDocument doc = edm.toXTDB();
         Transaction.Builder tx = Transaction.builder();
-        tx.invokeFunction(FUNCTION_NAME, docId, proxyDoc.toMap());
+        tx.invokeFunction(FUNCTION_NAME, docId, doc.toMap());
         TransactionInstant results = xtdb.runTx(tx.build());
         try {
-            xtdb.validateCommit(results, METHOD_NAME);
+            return xtdb.getResultingEntity(docId, results, METHOD_NAME);
         } catch (RepositoryErrorException e) {
             throw e;
         } catch (Exception e) {

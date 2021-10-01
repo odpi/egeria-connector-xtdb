@@ -2,7 +2,7 @@
 # Copyright Contributors to the Egeria project.
 ---
 logging:
-  level: INFO
+  level: WARN
 
 imageDefaults:
   registry: docker.io
@@ -25,8 +25,8 @@ image:
     pullPolicy: Always
 
 xtdb:
-  version: 1.18.1
-  connectorversion: "3.1"
+  version: 1.19.0-beta1
+  connectorversion: "3.2"
   connectorurl: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-xtdb&v=RELEASE&c=jar-with-dependencies"
   proxyserver: xtdb
 

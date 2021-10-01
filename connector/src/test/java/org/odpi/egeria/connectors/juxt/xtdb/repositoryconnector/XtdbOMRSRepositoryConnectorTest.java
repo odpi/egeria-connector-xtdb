@@ -165,7 +165,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             original.setClassifications(classifications);
 
             // Create
-            EntityDetail result = connector.createEntity(original);
+            EntityDetail result = AddEntity.transact(connector, original);
             assertEquals(result, original, "Expected resulting entity to be identical to sent entity.");
 
             // Read
@@ -364,7 +364,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             profile1.setProperties(ip1);
 
-            EntityDetail result = connector.createEntity(profile1);
+            EntityDetail result = AddEntity.transact(connector, profile1);
             assertNotNull(result, "Expected an ActorProfile to be created.");
 
             EntityDetail profile2 = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
@@ -381,7 +381,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             profile2.setProperties(ip2);
 
-            result = connector.createEntity(profile2);
+            result = AddEntity.transact(connector, profile2);
             assertNotNull(result, "Expected an ActorProfile to be created.");
 
             List<EntityDetail> results = connector.findEntities("5a2f38dc-d69d-4a6f-ad26-ac86f118fa35",
@@ -451,7 +451,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             category1.setProperties(ip1);
 
-            EntityDetail result = connector.createEntity(category1);
+            EntityDetail result = AddEntity.transact(connector, category1);
             assertNotNull(result, "Expected a category to be created.");
 
             EntityDetail category2 = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
@@ -468,7 +468,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             category2.setProperties(ip2);
 
-            result = connector.createEntity(category2);
+            result = AddEntity.transact(connector, category2);
             assertNotNull(result, "Expected a category to be created.");
 
             EntityDetail glossary = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
@@ -485,7 +485,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             glossary.setProperties(ip3);
 
-            result = connector.createEntity(glossary);
+            result = AddEntity.transact(connector, glossary);
             assertNotNull(result, "Expected a glossary to be created.");
 
             Relationship one = helper.getSkeletonRelationship(MockConnection.SOURCE_NAME,

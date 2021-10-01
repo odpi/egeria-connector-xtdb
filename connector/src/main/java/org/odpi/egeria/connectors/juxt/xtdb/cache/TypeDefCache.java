@@ -30,7 +30,6 @@ public class TypeDefCache {
     private static final ConcurrentMap<String, Set<String>> knownPropertyToTypeDefNames = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, String> nameToGUID = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, InstanceType> knownInstanceTypes = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<String, List<TypeDefLink>> typeDefSuperTypes = new ConcurrentHashMap<>();
 
     /**
      * Cache the provided type definition for use across threads.
@@ -108,8 +107,49 @@ public class TypeDefCache {
      * @param typeDefGUID for which to retrieve qualified property keywords
      * @return {@code Map<String, PropertyMapping>} keyed by unqualified property name with the qualified property keywords as the value
      */
-    public static Map<String, PropertyKeywords> getPropertyKeywordsForTypeDef(String typeDefGUID) {
+    private static Map<String, PropertyKeywords> getPropertyKeywords(String typeDefGUID) {
         return typeDefToPropertyKeywords.get(typeDefGUID);
+    }
+
+    /**
+     * Retrieve a list of all supertypes of the provided type definition.
+     * @param typeDefGUID unique identifier of the type definition for which to retrieve all supertypes
+     * @return {@code List<TypeDefLink>} of all supertypes
+     */
+    public static List<TypeDefLink> getAllSuperTypes(String typeDefGUID) {
+        List<TypeDefLink> supers = new ArrayList<>();
+        TypeDef start = getTypeDef(typeDefGUID);
+        if (start != null) {
+            TypeDefLink superTypeLink = start.getSuperType();
+            while (superTypeLink != null) {
+                TypeDef superType = getTypeDef(superTypeLink.getGUID());
+                supers.add(superTypeLink);
+                superTypeLink = superType.getSuperType();
+            }
+        }
+        return Collections.unmodifiableList(supers);
+    }
+
+    /**
+     * Retrieve a map of all property keywords for the provided type definition.
+     * @param typeDefGUID unique identifier of the type definition for which to retrieve all properties
+     * @return {@code Map<String, PropertyKeywords>} keyed by unqualified (simple) property name with the qualified property keywords as the value
+     */
+    public static Map<String, PropertyKeywords> getAllPropertyKeywordsForTypeDef(String typeDefGUID) {
+        Map<String, PropertyKeywords> map = new LinkedHashMap<>();
+        List<TypeDefLink> supers = getAllSuperTypes(typeDefGUID);
+        for (int i = supers.size(); i > 0; i--) {
+            TypeDefLink typeDefLink = supers.get(i - 1);
+            Map<String, PropertyKeywords> superMap = getPropertyKeywords(typeDefLink.getGUID());
+            if (superMap != null) {
+                map.putAll(superMap);
+            }
+        }
+        Map<String, PropertyKeywords> direct = getPropertyKeywords(typeDefGUID);
+        if (direct != null) {
+            map.putAll(direct);
+        }
+        return Collections.unmodifiableMap(map);
     }
 
     /**
@@ -119,12 +159,8 @@ public class TypeDefCache {
      * @return PropertyKeywords
      */
     public static PropertyKeywords getPropertyKeywords(String typeDefGUID, String propertyName) {
-        Map<String, PropertyKeywords> map = getPropertyKeywordsForTypeDef(typeDefGUID);
-        if (map != null) {
-            return map.get(propertyName);
-        } else {
-            return null;
-        }
+        Map<String, PropertyKeywords> map = getAllPropertyKeywordsForTypeDef(typeDefGUID);
+        return map.get(propertyName);
     }
 
     /**
@@ -168,9 +204,9 @@ public class TypeDefCache {
     }
 
     /**
-     * Return the GUIDs of all type definitions that define the supplied property name.
+     * Return the names of all type definitions that define the supplied property name.
      * @param propertyName property name to query.
-     * @return set of GUIDs of the TypeDefs that define a property with this name
+     * @return set of names of the TypeDefs that define a property with this name
      */
     public static Set<String> getAllTypeDefsForProperty(String propertyName) {
         if (propertyName == null) {
@@ -224,9 +260,9 @@ public class TypeDefCache {
             instanceType.setTypeDefVersion(typeDef.getVersion());
             instanceType.setTypeDefDescription(typeDef.getDescription());
             instanceType.setTypeDefDescriptionGUID(typeDef.getDescriptionGUID());
-            instanceType.setTypeDefSuperTypes(typeDefSuperTypes.get(typeDefGUID));
+            instanceType.setTypeDefSuperTypes(getAllSuperTypes(typeDefGUID));
 
-            Map<String, PropertyKeywords> properties = getPropertyKeywordsForTypeDef(typeDef.getGUID());
+            Map<String, PropertyKeywords> properties = getAllPropertyKeywordsForTypeDef(typeDef.getGUID());
 
             if (!properties.isEmpty()) {
                 instanceType.setValidInstanceProperties(properties.values()
@@ -282,7 +318,7 @@ public class TypeDefCache {
             if (entityDef == null) {
                 return false;
             }
-            List<TypeDefLink> actualEntityDefs = new ArrayList<>(typeDefSuperTypes.get(entityDef.getGUID()));
+            List<TypeDefLink> actualEntityDefs = new ArrayList<>(getAllSuperTypes(entityDef.getGUID()));
             actualEntityDefs.add(entityDef);
             Set<String> actualEntityNames = actualEntityDefs.stream().map(TypeDefLink::getName).collect(Collectors.toSet());
 
@@ -345,7 +381,7 @@ public class TypeDefCache {
      */
     private static void cacheTypeDefDetails(TypeDef type) throws InvalidParameterException {
         String namespace = getPropertyNamespaceForType(type);
-        cacheAllPropertyDetails(type, namespace);
+        cachePropertiesInType(type, namespace);
         // as this is lazily-built, clear it if there has been a type change
         knownInstanceTypes.remove(type.getName());
     }
@@ -363,52 +399,21 @@ public class TypeDefCache {
             // ... but the removal operation at least is idempotent (no need to first check it is present in the Set)
             knownPropertyToTypeDefNames.get(propertyName).remove(typeDefName);
         }
-        typeDefSuperTypes.remove(typeDefGUID);
         knownInstanceTypes.remove(typeDefName);
     }
 
     /**
-     * Recurse through all properties of the supplied TypeDef and cache them accordingly.
-     * @param type type definition whose properties to cache
-     * @param namespace by which to qualify the property root keywords
-     * @throws InvalidParameterException if there is a property that is unknown or that overlaps with a property of the same name in a supertype
-     */
-    private static void cacheAllPropertyDetails(TypeDef type,
-                                                String namespace) throws InvalidParameterException {
-
-        Map<String, PropertyKeywords> propertyMap = new LinkedHashMap<>();
-        List<TypeDefLink> supertypes = new ArrayList<>();
-
-        // Start by adding all properties that are directly defined in this type
-        cachePropertyKeywordsInType(propertyMap, type, namespace);
-
-        // Then traverse the supertypes to add all their properties
-        TypeDefLink superTypeLink = type.getSuperType();
-        while (superTypeLink != null) {
-            supertypes.add(superTypeLink);
-            TypeDef superType = getTypeDef(superTypeLink.getGUID());
-            cachePropertyKeywordsInType(propertyMap, superType, namespace);
-            superTypeLink = superType.getSuperType();
-        }
-
-        String typeDefGUID = type.getGUID();
-        typeDefSuperTypes.put(typeDefGUID, Collections.unmodifiableList(supertypes));
-        typeDefToPropertyKeywords.put(typeDefGUID, Collections.unmodifiableMap(propertyMap));
-
-    }
-
-    /**
      * Cache all property details within the type into our caches.
-     * @param propertyMap into which to add the properties discovered
      * @param type to check for properties
      * @param namespace to use for qualification
-     * @throws InvalidParameterException if there is a property that is unknown or that overlaps with a property of the same name in a supertype
+     * @throws InvalidParameterException if there is a property that is unknown or that overlaps with another property
      */
-    private static void cachePropertyKeywordsInType(Map<String, PropertyKeywords> propertyMap,
-                                                    TypeDef type,
-                                                    String namespace) throws InvalidParameterException {
+    private static void cachePropertiesInType(TypeDef type,
+                                              String namespace) throws InvalidParameterException {
 
-        final String methodName = "addPropertyKeywordsInType";
+        final String methodName = "cachePropertiesInType";
+
+        Map<String, PropertyKeywords> propertyMap = new LinkedHashMap<>();
 
         String typeDefName = type.getName();
         List<TypeDefAttribute> properties = type.getPropertiesDefinition();
@@ -430,6 +435,8 @@ public class TypeDefCache {
             }
 
         }
+
+        typeDefToPropertyKeywords.put(type.getGUID(), Collections.unmodifiableMap(propertyMap));
 
     }
 

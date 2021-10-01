@@ -213,6 +213,7 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
         // every startup (these should all be idempotent operations if the functions already exist)
         Transaction.Builder tx = Transaction.builder();
         AddEntityProxy.create(tx);
+        AddEntity.create(tx);
         UpdateEntityStatus.create(tx);
         UpdateEntityProperties.create(tx);
         UndoEntityUpdate.create(tx);
@@ -384,29 +385,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
             // of what the object looks like before the write itself has completed
             return null;
         }
-    }
-
-    /**
-     * Create the provided entity instance in the XTDB repository.
-     * @param entity to create
-     * @return EntityDetail that was created
-     */
-    public EntityDetail createEntity(EntityDetail entity) {
-        Transaction.Builder tx = Transaction.builder();
-        addCreateEntityStatements(tx, entity);
-        TransactionInstant results = runTx(tx.build());
-        log.debug(Constants.WRITE_RESULTS, results);
-        return entity;
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to create (persist) the entity provided.
-     * @param tx the transaction through which to create the entity
-     * @param entity to be created
-     */
-    public void addCreateEntityStatements(Transaction.Builder tx, EntityDetail entity) {
-        EntityDetailMapping edm = new EntityDetailMapping(this, entity);
-        put(tx, edm.toXTDB());
     }
 
     /**
@@ -2241,44 +2219,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector impleme
      */
     public IXtdb getXtdbAPI() {
         return xtdbAPI;
-    }
-
-    /**
-     * Add a write operation to the transaction (applicable for any write operation, since it is append-only).
-     * Note: this should be used rather than calling '.put' directly against the transaction builder, as this method
-     * will set the historical date based on the information within the document itself (if any), allowing us to have
-     * a historical view for things like reference copies.
-     * @param tx the transaction through which to do the write operation
-     * @param xtdbDoc the document to write to the repository
-     */
-    public static void put(Transaction.Builder tx, XtdbDocument xtdbDoc) {
-        // Explicitly set the transaction time to match what is in the instance itself,
-        // preferring update time if it is available and otherwise falling back to create time
-        // (and if that is not available, falling back to allowing XTDB to manage it itself)
-        Date txnTime = null;
-        // Since classifications do not update the entity updateTime itself, we need to also
-        // scan the entity's last classification change, to potentially apply a validity against
-        // the entire entity document (including all of its classifications) based on these classification changes
-        Object latestClassificationChange = xtdbDoc.get(ClassificationMapping.N_LAST_CLASSIFICATION_CHANGE);
-        if (latestClassificationChange instanceof Date) {
-            txnTime = ((Date) latestClassificationChange);
-        }
-        Object timeFromDoc = xtdbDoc.get(InstanceAuditHeaderMapping.UPDATE_TIME);
-        if (timeFromDoc instanceof Date) {
-            Date updateTime = ((Date) timeFromDoc);
-            // If both the classification update and an entity property update exist, take the latest one for validity
-            if (txnTime == null || txnTime.before(updateTime)) {
-                txnTime = updateTime;
-            }
-        } else {
-            timeFromDoc = xtdbDoc.get(InstanceAuditHeaderMapping.CREATE_TIME);
-            if (timeFromDoc instanceof Date) {
-                txnTime = ((Date) timeFromDoc);
-            } else {
-                txnTime = new Date();
-            }
-        }
-        tx.put(xtdbDoc, txnTime);
     }
 
     /**

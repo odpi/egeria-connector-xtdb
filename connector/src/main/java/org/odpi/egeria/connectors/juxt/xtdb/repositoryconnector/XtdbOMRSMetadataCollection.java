@@ -875,7 +875,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             newEntity.setStatus(initialStatus);
         }
 
-        return xtdbRepositoryConnector.createEntity(newEntity);
+        return addEntity(newEntity);
 
     }
 
@@ -915,8 +915,13 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             newEntity.setStatus(initialStatus);
         }
 
-        return xtdbRepositoryConnector.createEntity(newEntity);
+        return addEntity(newEntity);
 
+    }
+
+    private EntityDetail addEntity(EntityDetail entity) throws
+            RepositoryErrorException {
+        return AddEntity.transact(xtdbRepositoryConnector, entity);
     }
 
     /**

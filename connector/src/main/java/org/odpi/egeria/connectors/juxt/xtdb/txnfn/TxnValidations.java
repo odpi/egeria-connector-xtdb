@@ -672,7 +672,7 @@ public class TxnValidations {
                                          String methodName)
             throws RepositoryErrorException, PropertyErrorException {
 
-        if (properties == null) {
+        if (properties == null || properties.getInstanceProperties() == null || properties.getInstanceProperties().isEmpty()) {
             return;
         }
 
@@ -689,9 +689,9 @@ public class TxnValidations {
             typeDefCategoryName = typeDef.getCategory().getName();
         }
 
-        Map<String, PropertyKeywords> propertyKeywords = TypeDefCache.getPropertyKeywordsForTypeDef(typeDef.getGUID());
+        Map<String, PropertyKeywords> propertyKeywords = TypeDefCache.getAllPropertyKeywordsForTypeDef(typeDef.getGUID());
 
-        if (propertyKeywords == null || propertyKeywords.isEmpty()) {
+        if (propertyKeywords.isEmpty()) {
             // Properties have been provided but there are none in the type definition...
             throw new PropertyErrorException(XtdbOMRSErrorCode.NO_PROPERTIES_FOR_TYPE.getMessageDefinition(typeDefCategoryName,
                     typeDefName),

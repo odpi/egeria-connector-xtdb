@@ -4,14 +4,10 @@ package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
 import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDef;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefAttribute;
-import org.odpi.openmetadata.repositoryservices.ffdc.OMRSErrorCode;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.TypeErrorException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -197,22 +193,20 @@ public class EntityProxyMapping extends EntitySummaryMapping {
                     InstanceProperties entityProperties = entity.getProperties();
 
                     if (entityProperties != null) {
-                        Map<String, PropertyKeywords> properties = TypeDefCache.getPropertyKeywordsForTypeDef(typeDefGUID);
+                        Map<String, PropertyKeywords> properties = TypeDefCache.getAllPropertyKeywordsForTypeDef(typeDefGUID);
                         InstanceProperties uniqueAttributes = new InstanceProperties();
 
                         uniqueAttributes.setEffectiveFromTime(entityProperties.getEffectiveFromTime());
                         uniqueAttributes.setEffectiveToTime(entityProperties.getEffectiveToTime());
 
-                        if (properties != null) {
-                            List<TypeDefAttribute> propertiesDefinition = properties.values().stream().map(PropertyKeywords::getAttribute).collect(Collectors.toList());
-                            for (TypeDefAttribute typeDefAttribute : propertiesDefinition) {
-                                if (typeDefAttribute != null) {
-                                    String propertyName = typeDefAttribute.getAttributeName();
-                                    if ((typeDefAttribute.isUnique()) && (propertyName != null)) {
-                                        InstancePropertyValue propertyValue = entityProperties.getPropertyValue(propertyName);
-                                        if (propertyValue != null) {
-                                            uniqueAttributes.setProperty(propertyName, propertyValue);
-                                        }
+                        List<TypeDefAttribute> propertiesDefinition = properties.values().stream().map(PropertyKeywords::getAttribute).collect(Collectors.toList());
+                        for (TypeDefAttribute typeDefAttribute : propertiesDefinition) {
+                            if (typeDefAttribute != null) {
+                                String propertyName = typeDefAttribute.getAttributeName();
+                                if ((typeDefAttribute.isUnique()) && (propertyName != null)) {
+                                    InstancePropertyValue propertyValue = entityProperties.getPropertyValue(propertyName);
+                                    if (propertyValue != null) {
+                                        uniqueAttributes.setProperty(propertyName, propertyValue);
                                     }
                                 }
                             }

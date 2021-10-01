@@ -5,8 +5,6 @@ package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 import clojure.lang.IPersistentMap;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
-import org.odpi.egeria.connectors.juxt.xtdb.txnfn.AbstractTransactionFunction;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.Classification;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
@@ -149,23 +147,19 @@ public class InstancePropertiesMapping {
                                           InstanceProperties properties)
             throws InvalidParameterException, IOException {
 
-        Map<String, PropertyKeywords> propertyKeywordMap = TypeDefCache.getPropertyKeywordsForTypeDef(typeDefGUID);
-        if (propertyKeywordMap != null) {
-            Map<String, InstancePropertyValue> propertyMap;
-            if (properties != null) {
-                propertyMap = properties.getInstanceProperties();
-                if (propertyMap != null) {
-                    for (Map.Entry<String, InstancePropertyValue> entry : propertyMap.entrySet()) {
-                        PropertyKeywords propertyKeywords = propertyKeywordMap.get(entry.getKey());
-                        doc = InstancePropertyValueMapping.addInstancePropertyValueToDoc(doc,
-                                propertyKeywords,
-                                entry.getValue());
-                    }
-                } else {
-                    propertyMap = new HashMap<>(); // Create an empty map if there is not one, for next set of checks
+        Map<String, PropertyKeywords> propertyKeywordMap = TypeDefCache.getAllPropertyKeywordsForTypeDef(typeDefGUID);
+        Map<String, InstancePropertyValue> propertyMap;
+        if (properties != null) {
+            propertyMap = properties.getInstanceProperties();
+            if (propertyMap != null) {
+                for (Map.Entry<String, InstancePropertyValue> entry : propertyMap.entrySet()) {
+                    PropertyKeywords propertyKeywords = propertyKeywordMap.get(entry.getKey());
+                    doc = InstancePropertyValueMapping.addInstancePropertyValueToDoc(doc,
+                            propertyKeywords,
+                            entry.getValue());
                 }
             } else {
-                propertyMap = new HashMap<>();     // Create an empty map if there is not one, for next set of checks
+                propertyMap = new HashMap<>(); // Create an empty map if there is not one, for next set of checks
             }
             // explicitly set any other properties on the instance to null, so that we can still include them
             // if sorting, or running an explicit 'IS_NULL' or 'NOT_NULL' search against appropriately

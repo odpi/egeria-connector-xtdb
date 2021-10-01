@@ -4,12 +4,8 @@ package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
 import clojure.lang.IPersistentMap;
 import clojure.lang.Keyword;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
-import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
 import xtdb.api.XtdbDocument;
-import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.PrimitiveDefCategory;
 
@@ -77,10 +73,18 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
                         value = new Date((Long) longForm);
                     }
                     break;
+                case OM_PRIMITIVE_TYPE_BOOLEAN:
+                    // Clojure's representation of boolean is a bit tricky, in that it only recognizes the
+                    // precise Boolean.FALSE value as false, not (for example) new Boolean(false).
+                    // So here we explicitly encode it to those static Boolean constants accordingly
+                    Object bool = ppv.getPrimitiveValue();
+                    if (bool instanceof Boolean) {
+                        value = (Boolean)bool ? Boolean.TRUE : Boolean.FALSE;
+                    }
+                    break;
                 case OM_PRIMITIVE_TYPE_STRING:
                     // Note: further translation of strings into regexes is only necessary for queries, so that will be
                     // done in the XtdbQuery class directly.
-                case OM_PRIMITIVE_TYPE_BOOLEAN:
                 case OM_PRIMITIVE_TYPE_BIGINTEGER:
                 case OM_PRIMITIVE_TYPE_BIGDECIMAL:
                 case OM_PRIMITIVE_TYPE_DOUBLE:
