@@ -80,7 +80,7 @@ public class DeleteEntity extends DeleteInstance {
         try {
             if (existing == null) {
                 throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
-                        obsoleteEntityGUID), this.getClass().getName(), METHOD_NAME);
+                        obsoleteEntityGUID), CLASS_NAME, METHOD_NAME);
             } else {
                 TxnValidations.nonProxyEntity(existing, obsoleteEntityGUID, CLASS_NAME, METHOD_NAME);
                 TxnValidations.entityFromStore(obsoleteEntityGUID, existing, CLASS_NAME, METHOD_NAME);
@@ -117,7 +117,7 @@ public class DeleteEntity extends DeleteInstance {
             throw e;
         } catch (Exception e) {
             throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    DeleteEntity.class.getName(),
+                    CLASS_NAME,
                     METHOD_NAME,
                     e);
         }
