@@ -2,8 +2,8 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
-import clojure.lang.IPersistentVector;
-import xtdb.api.tx.Transaction;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.HomeEntityException;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.xtdb.mocks.MockConnection;
 import org.odpi.openmetadata.adapters.repositoryservices.ConnectorConfigurationFactory;
@@ -19,7 +19,6 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.auditlogstore.
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryHelper;
-import org.odpi.openmetadata.repositoryservices.ffdc.exception.EntityConflictException;
 import org.odpi.openmetadata.repositoryservices.localrepository.repositorycontentmanager.OMRSRepositoryContentHelper;
 import org.odpi.openmetadata.repositoryservices.localrepository.repositorycontentmanager.OMRSRepositoryContentManager;
 import org.odpi.openmetadata.repositoryservices.localrepository.repositorycontentmanager.OMRSRepositoryContentValidator;
@@ -166,7 +165,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             original.setClassifications(classifications);
 
             // Create
-            EntityDetail result = connector.createEntity(original);
+            EntityDetail result = AddEntity.transact(connector, original);
             assertEquals(result, original, "Expected resulting entity to be identical to sent entity.");
 
             // Read
@@ -182,7 +181,6 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(summary, asSummary, "Expected entity, when retrieved as a summary, to be identical to the summary representation of the original entity.");
 
             // Update
-            EntityDetail update = new EntityDetail(retrieved);
             InstanceProperties ip2 = helper.addStringPropertyToInstance(MockConnection.SOURCE_NAME,
                     null,
                     "displayName",
@@ -193,14 +191,11 @@ public class XtdbOMRSRepositoryConnectorTest {
                     "qualifiedName",
                     "some-term",
                     this.getClass().getName());
-            update.setProperties(ip2);
-            update.setVersion(2L);
-            update.setUpdatedBy(MockConnection.USERNAME);
-            Date updatedTime = new Date();
-            update.setUpdateTime(updatedTime);
 
-            EntityDetail updated = connector.updateEntity(update);
-            assertEquals(updated, update, "Expected resulting entity from update to be identical to sent entity for update.");
+            EntityDetail updated = UpdateEntityProperties.transact(connector, MockConnection.USERNAME, retrieved.getGUID(), ip2);
+            assertNotNull(updated, "Expected entity resulting from the update to be non-null.");
+            assertNotNull(updated.getProperties(), "Expected updated entity to have properties.");
+            assertEquals(updated.getProperties().getInstanceProperties().get("displayName").valueAsString(), "some-term", "Expected resulting entity from update to have the updated displayName.");
 
             retrieved = connector.getEntity(original.getGUID(), null, false);
             assertEquals(retrieved, updated, "Expected retrieved updated entity to be identical to the updated entity sent to be stored.");
@@ -210,7 +205,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(previousVersions.size(), 2, "Two previous versions of the entity were expected.");
 
             // Restore
-            EntityDetail previous = connector.restorePreviousVersionOfEntity(MockConnection.USERNAME, original.getGUID());
+            EntityDetail previous = UndoEntityUpdate.transact(connector, MockConnection.USERNAME, original.getGUID());
             EntityDetail rolledBack = new EntityDetail(original);
             rolledBack.setVersion(3L);
             rolledBack.setUpdatedBy(MockConnection.USERNAME);
@@ -224,7 +219,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, previous, "Expected retrieved restored entity to be identical to the restored entity that was returned.");
 
             // Purge
-            connector.purgeEntity(original.getGUID());
+            PurgeEntity.transactWithoutValidation(connector, original.getGUID());
 
             retrieved = connector.getEntity(original.getGUID(), null, false);
             assertNull(retrieved, "Expected the entity to no longer exist after it has been purged.");
@@ -262,7 +257,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     assetProperties,
                     null);
 
-            connector.createEntityProxy(asset);
+            AddEntityProxy.transact(connector, asset);
 
             InstanceProperties termProperties = helper.addStringPropertyToInstance(MockConnection.SOURCE_NAME,
                     null,
@@ -278,7 +273,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     termProperties,
                     null);
 
-            connector.createEntityProxy(term);
+            AddEntityProxy.transact(connector, term);
 
             original.setEntityOneProxy(asset);
             original.setEntityTwoProxy(term);
@@ -292,7 +287,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             original.setProperties(relationshipProperties);
 
             // Create
-            Relationship result = connector.createRelationship(original);
+            Relationship result = AddRelationship.transact(connector, original, original.getEntityOneProxy().getGUID(), original.getEntityTwoProxy().getGUID());
             assertEquals(result, original, "Expected resulting relationship to be identical to sent relationship.");
 
             // Read
@@ -300,7 +295,6 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, original, "Expected retrieved relationship to be identical to the relationship sent to be stored.");
 
             // Update
-            Relationship update = new Relationship(retrieved);
             InstanceProperties ip2 = helper.addStringPropertyToInstance(MockConnection.SOURCE_NAME,
                     null,
                     "steward",
@@ -311,14 +305,11 @@ public class XtdbOMRSRepositoryConnectorTest {
                     "description",
                     "some-description",
                     this.getClass().getName());
-            update.setProperties(ip2);
-            update.setVersion(2L);
-            update.setUpdatedBy(MockConnection.USERNAME);
-            Date updatedTime = new Date();
-            update.setUpdateTime(updatedTime);
 
-            Relationship updated = connector.updateRelationship(update);
-            assertEquals(updated, update, "Expected resulting relationship from update to be identical to sent relationship for update.");
+            Relationship updated = UpdateRelationshipProperties.transact(connector, MockConnection.USERNAME, retrieved.getGUID(), ip2);
+            assertNotNull(updated, "Expected entity resulting from the update to be non-null.");
+            assertNotNull(updated.getProperties(), "Expected updated entity to have properties.");
+            assertEquals(updated.getProperties().getInstanceProperties().get("description").valueAsString(), "some-description", "Expected resulting entity from update to have the updated displayName.");
 
             retrieved = connector.getRelationship(original.getGUID(), null);
             assertEquals(retrieved, updated, "Expected retrieved updated relationship to be identical to the updated relationship sent to be stored.");
@@ -328,7 +319,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(previousVersions.size(), 2, "Two previous versions of the relationship were expected.");
 
             // Restore
-            Relationship previous = connector.restorePreviousVersionOfRelationship(MockConnection.USERNAME, original.getGUID());
+            Relationship previous = UndoRelationshipUpdate.transact(connector, MockConnection.USERNAME, original.getGUID());
             Relationship rolledBack = new Relationship(original);
             rolledBack.setVersion(3L);
             rolledBack.setUpdatedBy(MockConnection.USERNAME);
@@ -342,7 +333,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             assertEquals(retrieved, previous, "Expected retrieved restored relationship to be identical to the restored relationship that was returned.");
 
             // Purge
-            connector.purgeRelationship(original.getGUID());
+            PurgeRelationship.transactWithoutValidation(connector, original.getGUID());
 
             retrieved = connector.getRelationship(original.getGUID(), null);
             assertNull(retrieved, "Expected the relationship to no longer exist after it has been purged.");
@@ -373,7 +364,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             profile1.setProperties(ip1);
 
-            EntityDetail result = connector.createEntity(profile1);
+            EntityDetail result = AddEntity.transact(connector, profile1);
             assertNotNull(result, "Expected an ActorProfile to be created.");
 
             EntityDetail profile2 = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
@@ -390,7 +381,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             profile2.setProperties(ip2);
 
-            result = connector.createEntity(profile2);
+            result = AddEntity.transact(connector, profile2);
             assertNotNull(result, "Expected an ActorProfile to be created.");
 
             List<EntityDetail> results = connector.findEntities("5a2f38dc-d69d-4a6f-ad26-ac86f118fa35",
@@ -460,7 +451,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             category1.setProperties(ip1);
 
-            EntityDetail result = connector.createEntity(category1);
+            EntityDetail result = AddEntity.transact(connector, category1);
             assertNotNull(result, "Expected a category to be created.");
 
             EntityDetail category2 = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
@@ -477,7 +468,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             category2.setProperties(ip2);
 
-            result = connector.createEntity(category2);
+            result = AddEntity.transact(connector, category2);
             assertNotNull(result, "Expected a category to be created.");
 
             EntityDetail glossary = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
@@ -494,7 +485,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             glossary.setProperties(ip3);
 
-            result = connector.createEntity(glossary);
+            result = AddEntity.transact(connector, glossary);
             assertNotNull(result, "Expected a glossary to be created.");
 
             Relationship one = helper.getSkeletonRelationship(MockConnection.SOURCE_NAME,
@@ -507,7 +498,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             one.setEntityOneProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, glossary));
             one.setEntityTwoProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category1));
 
-            Relationship first = connector.createRelationship(one);
+            Relationship first = AddRelationship.transact(connector, one, one.getEntityOneProxy().getGUID(), one.getEntityTwoProxy().getGUID());
             assertNotNull(first, "Expected a CategoryAnchor relationship to be created.");
 
             Relationship two = helper.getSkeletonRelationship(MockConnection.SOURCE_NAME,
@@ -520,7 +511,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             two.setEntityOneProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category1));
             two.setEntityTwoProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category2));
 
-            Relationship second = connector.createRelationship(two);
+            Relationship second = AddRelationship.transact(connector, two, two.getEntityOneProxy().getGUID(), two.getEntityTwoProxy().getGUID());
             assertNotNull(second, "Expected a CategoryHierarchyLink relationship to be created.");
 
             Relationship three = helper.getSkeletonRelationship(MockConnection.SOURCE_NAME,
@@ -534,7 +525,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             three.setEntityTwoProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category1));
             three.setStatus(InstanceStatus.DELETED);
 
-            Relationship third = connector.createRelationship(three);
+            Relationship third = AddRelationship.transact(connector, three, three.getEntityOneProxy().getGUID(), three.getEntityTwoProxy().getGUID());
             assertNotNull(third, "Expected a CategoryHierarchyLink relationship to be created.");
             Relationship retrieved = connector.getRelationship(three.getGUID(), null);
             assertNotNull(retrieved, "Expected to be able to retrieve the relationship back again.");
@@ -592,7 +583,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     0,
                     MockConnection.USERNAME);
             assertNotNull(results, "Expected some search results.");
-            assertEquals(results.size(), 2, "Expected precisely two search results.");
+            assertEquals(results.size(), 3, "Expected precisely three search results.");
 
             results = connector.findRelationships("c628938e-815e-47db-8d1c-59bb2e84e028",
                     null,
@@ -605,7 +596,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     0,
                     MockConnection.USERNAME);
             assertNotNull(results, "Expected some search results.");
-            assertEquals(results.size(), 1, "Expected precisely one search result.");
+            assertEquals(results.size(), 2, "Expected precisely two search results.");
 
             results = connector.findRelationships(null,
                     null,
@@ -618,7 +609,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     0,
                     MockConnection.USERNAME);
             assertNotNull(results, "Expected some search results.");
-            assertTrue(results.size() >= 2, "Expected at least two search results.");
+            assertTrue(results.size() >= 3, "Expected at least three search results.");
 
             // Note that this should not return any results, as there are no properties (let alone
             // any string properties) on the CategoryAnchor relationship type being searched.
@@ -695,7 +686,7 @@ public class XtdbOMRSRepositoryConnectorTest {
                     this.getClass().getName());
             entityRC.setProperties(ip1);
 
-            connector.saveReferenceCopy(entityRC);
+            SaveEntityReferenceCopy.transact(connector, entityRC);
 
             EntityDetail retrieved = connector.getEntity(entityRC.getGUID(), null, false);
             assertEquals(retrieved, entityRC, "Expected retrieved reference copy to be identical to saved reference copy.");
@@ -705,7 +696,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             entityRCUpdate.setUpdateTime(new Date());
             entityRCUpdate.setUpdatedBy(MockConnection.USERNAME);
 
-            connector.saveReferenceCopy(entityRCUpdate);
+            SaveEntityReferenceCopy.transact(connector, entityRCUpdate);
 
             retrieved = connector.getEntity(entityRC.getGUID(), null, false);
             assertEquals(retrieved, entityRCUpdate, "Expected retrieved reference copy to be identical to saved reference copy after update.");
@@ -715,7 +706,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             entityInvalid.setMetadataCollectionId(MockConnection.METADATA_COLLECTION_ID);
             entityInvalid.setMetadataCollectionName(MockConnection.METADATA_COLLECTION_NAME);
 
-            assertThrows(EntityConflictException.class, () -> connector.saveReferenceCopy(entityInvalid));
+            assertThrows(HomeEntityException.class, () -> SaveEntityReferenceCopy.transact(connector, entityInvalid));
 
             EntityDetail category1 = helper.getSkeletonEntity(MockConnection.SOURCE_NAME,
                     externalMetadataCollectionId,
@@ -755,12 +746,7 @@ public class XtdbOMRSRepositoryConnectorTest {
             relationshipRC.setEntityOneProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, glossary));
             relationshipRC.setEntityTwoProxy(helper.getNewEntityProxy(MockConnection.SOURCE_NAME, category1));
 
-            Transaction.Builder tx = Transaction.builder();
-            connector.addSaveReferenceCopyStatements(tx, relationshipRC);
-            Transaction built = tx.build();
-            IPersistentVector txVector = built.toVector();
-            assertNotNull(txVector, "Expected there to be a vector containing the built transaction.");
-            assertEquals(txVector.length(), 1, "Expected the vector to have precisely one item within it.");
+            SaveRelationshipReferenceCopy.transact(connector, relationshipRC);
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.migration;
 
+import org.odpi.egeria.connectors.juxt.xtdb.migration.model.Upgrade2To3;
 import xtdb.api.IXtdb;
 import org.odpi.egeria.connectors.juxt.xtdb.migration.model.UpgradeInitialTo2;
 import org.odpi.egeria.connectors.juxt.xtdb.model.PersistenceLayer;
@@ -56,6 +57,9 @@ public class Migrator {
                     if (currentVersion == -1) {
                         UpgradeInitialTo2 upgradeInitialTo2 = new UpgradeInitialTo2(xtdbAPI, batchSize);
                         upgradeInitialTo2.migrate();
+                    } else if (currentVersion == 2) {
+                        Upgrade2To3 upgrade2To3 = new Upgrade2To3(xtdbAPI, batchSize);
+                        upgrade2To3.migrate();
                     }
 
                 }

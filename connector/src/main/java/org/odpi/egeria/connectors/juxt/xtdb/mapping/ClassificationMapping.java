@@ -2,14 +2,16 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
-import clojure.lang.IPersistentMap;
-import clojure.lang.IPersistentVector;
-import clojure.lang.PersistentVector;
+import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.ClassificationErrorException;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -37,6 +39,8 @@ import java.util.*;
  */
 public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
+    private static final String NAMESPACE = getKeyword(EntitySummaryMapping.N_CLASSIFICATIONS);
+
     private static final String CLASSIFICATION = "classification";
 
     private static final String N_CLASSIFICATION_TYPE = "type";
@@ -45,6 +49,8 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
     public static final String CLASSIFICATION_PROPERTIES_NS = "classificationProperties";
     public static final String N_LAST_CLASSIFICATION_CHANGE = "lastClassificationChange";
+
+    public static final String LAST_CLASSIFICATION_CHANGE = getKeyword(N_LAST_CLASSIFICATION_CHANGE);
 
     private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
@@ -56,34 +62,27 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
     private List<Classification> classifications;
     private XtdbDocument xtdbDoc;
-    private final String namespace;
 
     /**
      * Construct a mapping from a Classification (to map to a XTDB representation).
      * @param xtdbConnector connectivity to XTDB
      * @param classifications from which to map
-     * @param namespace under which to qualify the classifications
      */
     public ClassificationMapping(XtdbOMRSRepositoryConnector xtdbConnector,
-                                 List<Classification> classifications,
-                                 String namespace) {
+                                 List<Classification> classifications) {
         super(xtdbConnector);
         this.classifications = classifications;
-        this.namespace = namespace;
     }
 
     /**
      * Construct a mapping from a XTDB map (to map to an Egeria representation).
      * @param xtdbConnector connectivity to XTDB
      * @param xtdbDoc from which to map
-     * @param namespace under which the classifications are qualified
      */
     public ClassificationMapping(XtdbOMRSRepositoryConnector xtdbConnector,
-                                 XtdbDocument xtdbDoc,
-                                 String namespace) {
+                                 XtdbDocument xtdbDoc) {
         super(xtdbConnector);
         this.xtdbDoc = xtdbDoc;
-        this.namespace = namespace;
     }
 
     /**
@@ -102,32 +101,173 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
     public void addToXtdbDoc(XtdbDocument.Builder builder) {
 
         if (classifications != null) {
-            Date latestChange = null;
-            List<String> classificationNames = new ArrayList<>();
-            for (Classification classification : classifications) {
-                String classificationName = classification.getName();
-                classificationNames.add(classificationName);
-                String qualifiedNamespace = getNamespaceForClassification(classificationName);
-                Date latestClassification = super.buildDoc(builder, classification, qualifiedNamespace);
-                if (latestChange == null || latestChange.before(latestClassification)) {
-                    latestChange = latestClassification;
+            String lastClassificationName = null;
+            try {
+                Date latestChange = null;
+                List<String> classificationNames = new ArrayList<>();
+                for (Classification classification : classifications) {
+                    String classificationName = classification.getName();
+                    lastClassificationName = classificationName;
+                    classificationNames.add(classificationName);
+                    String qualifiedNamespace = getNamespaceForClassification(classificationName);
+                    Date latestClassification = InstanceAuditHeaderMapping.buildDoc(builder, classification, qualifiedNamespace);
+                    if (latestChange == null || latestChange.before(latestClassification)) {
+                        latestChange = latestClassification;
+                    }
+                    builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
+                    builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
+                    InstancePropertiesMapping.addToDoc(xtdbConnector, builder, classification.getType(), classification.getProperties());
                 }
-                builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID), classification.getClassificationOriginGUID());
-                builder.put(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()));
-                InstancePropertiesMapping.addToDoc(xtdbConnector, builder, classification.getType(), classification.getProperties(), getNamespaceForProperties(qualifiedNamespace));
+                // Add the list of classification names, for easing search
+                builder.put(NAMESPACE, PersistentVector.create(classificationNames));
+                // Add the latest change to any classification for internal tracking of validity
+                builder.put(getKeyword(N_LAST_CLASSIFICATION_CHANGE), latestChange);
+            } catch (IOException e) {
+                xtdbConnector.logProblem(ClassificationMapping.class.getName(),
+                        "addToXtdbDoc",
+                        XtdbOMRSAuditCode.SERIALIZATION_FAILURE,
+                        e,
+                        "<unknown>",
+                        lastClassificationName,
+                        e.getClass().getName());
             }
-            // Add the list of classification names, for easing search
-            builder.put(getKeyword(namespace), PersistentVector.create(classificationNames));
-            // Add the latest change to any classification for internal tracking of validity
-            builder.put(getKeyword(N_LAST_CLASSIFICATION_CHANGE), latestChange);
         }
 
     }
 
     /**
+     * Add the details of the provided classification to the XTDB document map.
+     * @param doc document map into which to add the classification details
+     * @param classification to add into the doc
+     * @return IPersistentMap the updated document map
+     * @throws IOException on any error serializing the classification
+     * @throws InvalidParameterException on any type-related property error
+     */
+    public static IPersistentMap addToMap(IPersistentMap doc,
+                                          Classification classification)
+            throws IOException, InvalidParameterException {
+
+        // Setup relative to any existing classifications (upsert)
+        IPersistentVector classificationNames = (IPersistentVector) doc.valAt(Keyword.intern(NAMESPACE));
+        String classificationName = classification.getName();
+        if (classificationNames == null) {
+            classificationNames = PersistentVector.create(classificationName);
+        } else {
+            boolean alreadyThere = false;
+            for (int i = 0; i < classificationNames.length() && !alreadyThere; i++) {
+                String existingName = (String) classificationNames.nth(i);
+                if (existingName.equals(classificationName)) {
+                    alreadyThere = true;
+                }
+            }
+            if (!alreadyThere) {
+                classificationNames = classificationNames.cons(classificationName);
+            }
+        }
+        String qualifiedNamespace = getNamespaceForClassification(classificationName);
+        IPersistentVector tuple = InstanceAuditHeaderMapping.addToMap(doc, classification, qualifiedNamespace);
+        Date timestamp = (Date) tuple.nth(0);
+        doc = (IPersistentMap) tuple.nth(1);
+        doc = InstancePropertiesMapping.addToMap(doc, classification.getType().getTypeDefGUID(), classification.getProperties());
+        // Add the list of classification names, for easing search
+        return doc
+                .assoc(Keyword.intern(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN_GUID)), classification.getClassificationOriginGUID())
+                .assoc(Keyword.intern(getKeyword(qualifiedNamespace, N_CLASSIFICATION_ORIGIN)), getSymbolicNameForClassificationOrigin(classification.getClassificationOrigin()))
+                .assoc(Keyword.intern(NAMESPACE), classificationNames)
+                .assoc(Keyword.intern(getKeyword(N_LAST_CLASSIFICATION_CHANGE)), timestamp);
+
+    }
+
+    /**
+     * Remove all details of the provided classification name from the XTDB document map.
+     * @param doc document map from which to remove the classification details
+     * @param classificationName to remove from the doc
+     * @return IPersistentMap the updated document map
+     * @throws ClassificationErrorException if the provided document map does not contain the specified classification
+     */
+    @SuppressWarnings("unchecked")
+    public static IPersistentMap removeFromMap(IPersistentMap doc,
+                                               String classificationName) throws ClassificationErrorException {
+
+        final String methodName = "removeFromMap";
+        IPersistentVector classificationNames = (IPersistentVector) doc.valAt(Keyword.intern(NAMESPACE));
+        if (classificationNames == null) {
+            throw new ClassificationErrorException(XtdbOMRSErrorCode.ENTITY_NOT_CLASSIFIED.getMessageDefinition(
+                    classificationName,
+                    (String) doc.valAt(Constants.XTDB_PK)),
+                    ClassificationMapping.class.getName(),
+                    methodName);
+        } else {
+            List<String> newNames = new ArrayList<>();
+            boolean found = false;
+            for (int i = 0; i < classificationNames.length() && !found; i++) {
+                String existingName = (String) classificationNames.nth(i);
+                if (existingName.equals(classificationName)) {
+                    found = true;
+                } else {
+                    newNames.add(existingName);
+                }
+            }
+            if (!found) {
+                throw new ClassificationErrorException(XtdbOMRSErrorCode.ENTITY_NOT_CLASSIFIED.getMessageDefinition(
+                        classificationName,
+                        (String) doc.valAt(Constants.XTDB_PK)),
+                        ClassificationMapping.class.getName(),
+                        methodName);
+            }
+            classificationNames = PersistentVector.create(newNames);
+        }
+
+        String qualifiedNamespace = getNamespaceForClassification(classificationName);
+        Iterator<MapEntry> entries = (Iterator<MapEntry>) doc.iterator();
+        while (entries.hasNext()) {
+            MapEntry entry = entries.next();
+            Object key = entry.getKey();
+            String keyName = key.toString().substring(1); // remove the ':' from the keyword
+            if (keyName.startsWith(qualifiedNamespace)) {
+                doc = doc.without(key);
+            }
+        }
+
+        // Add the updated list of classifications and the last classification timestamp to note the removal in history
+        return doc
+                .assoc(Keyword.intern(NAMESPACE), classificationNames)
+                .assoc(Keyword.intern(getKeyword(N_LAST_CLASSIFICATION_CHANGE)), new Date());
+
+    }
+
+    /**
+     * Validates that the provided metadata instance possesses the specified classification.
+     *
+     * @param instance to confirm possesses the classification
+     * @param classificationName to confirm the instance possesses
+     * @param className class called
+     * @param methodName method called
+     * @throws ClassificationErrorException if the instance does not possess the classification
+     */
+    public static void validateHasClassification(IPersistentMap instance,
+                                                 String classificationName,
+                                                 String className,
+                                                 String methodName) throws ClassificationErrorException {
+        IPersistentVector classificationNames = (IPersistentVector) instance.valAt(Keyword.intern(NAMESPACE));
+        boolean exists = false;
+        if (classificationNames != null) {
+            for (int i = 0; i < classificationNames.length() && !exists; i++) {
+                String candidate = (String) classificationNames.nth(i);
+                exists = classificationName.equals(candidate);
+            }
+        }
+        if (!exists) {
+            String entityGUID = (String) instance.valAt(Constants.XTDB_PK);
+            throw new ClassificationErrorException(XtdbOMRSErrorCode.ENTITY_NOT_CLASSIFIED.getMessageDefinition(
+                    classificationName, entityGUID), className, methodName);
+        }
+    }
+
+    /**
      * Map from XTDB to Egeria.
      * @return {@code List<Classification>}
-     * @see #ClassificationMapping(XtdbOMRSRepositoryConnector, XtdbDocument, String)
+     * @see #ClassificationMapping(XtdbOMRSRepositoryConnector, XtdbDocument)
      */
     public List<Classification> toEgeria() {
 
@@ -149,7 +289,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
 
         List<Classification> list = new ArrayList<>();
         // Start by retrieving the list of classification names
-        IPersistentVector classificationNames = (IPersistentVector) xtdbDoc.get(getKeyword(namespace));
+        IPersistentVector classificationNames = (IPersistentVector) xtdbDoc.get(NAMESPACE);
 
         if (classificationNames != null) {
             // Then, for each classification associated with the document...
@@ -168,7 +308,7 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                 InstanceType classificationType = getDeserializedValue(xtdbConnector, CLASSIFICATION, N_CLASSIFICATION_TYPE, embeddedType, mapper.getTypeFactory().constructType(InstanceType.class));
 
                 // And use these to retrieve the property mappings for this classification (only)
-                InstanceProperties ip = InstancePropertiesMapping.getFromDoc(xtdbConnector, classificationType, xtdbDoc, namespaceForClassification + "." + CLASSIFICATION_PROPERTIES_NS);
+                InstanceProperties ip = InstancePropertiesMapping.getFromDoc(xtdbConnector, classificationType, xtdbDoc);
 
                 if (ip != null) {
                     classification.setProperties(ip);
@@ -178,6 +318,55 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                 classification.setClassificationOriginGUID(originGuid);
                 String originSymbolicName = (String) xtdbDoc.get(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN));
                 ClassificationOrigin classificationOrigin = getClassificationOriginFromSymbolicName(xtdbConnector, originSymbolicName);
+                classification.setClassificationOrigin(classificationOrigin);
+
+                list.add(classification);
+            }
+        }
+
+        return list.isEmpty() ? null : list;
+
+    }
+
+    /**
+     * Translate the provided XTDB representation into an Egeria representation.
+     * @param doc from which to map
+     * @return {@code List<Classification>}
+     * @throws IOException on any issue deserializing values
+     * @throws InvalidParameterException for any unmapped properties
+     */
+    public static List<Classification> fromMap(IPersistentMap doc) throws IOException, InvalidParameterException {
+
+        List<Classification> list = new ArrayList<>();
+        // Start by retrieving the list of classification names
+        IPersistentVector classificationNames = (IPersistentVector) doc.valAt(Keyword.intern(NAMESPACE));
+
+        if (classificationNames != null) {
+            // Then, for each classification associated with the document...
+            for (int i = 0; i < classificationNames.length(); i++) {
+
+                String classificationName = (String) classificationNames.nth(i);
+                String namespaceForClassification = getNamespaceForClassification(classificationName);
+
+                Classification classification = new Classification();
+                classification.setName(classificationName);
+                InstanceAuditHeaderMapping.fromMap(classification, doc, namespaceForClassification);
+
+                // Retrieve its embedded type details (doing this rather than going to TypeDef from repositoryHelper,
+                // since these could change over history of the document)
+                InstanceType classificationType = getTypeFromInstance(doc, namespaceForClassification);
+
+                // And use these to retrieve the property mappings for this classification (only)
+                InstanceProperties ip = InstancePropertiesMapping.getFromMap(classificationType, doc);
+
+                if (ip != null) {
+                    classification.setProperties(ip);
+                }
+
+                String originGuid = (String) doc.valAt(Keyword.intern(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN_GUID)));
+                classification.setClassificationOriginGUID(originGuid);
+                String originSymbolicName = (String) doc.valAt(Keyword.intern(getKeyword(namespaceForClassification, N_CLASSIFICATION_ORIGIN)));
+                ClassificationOrigin classificationOrigin = getClassificationOriginFromSymbolicName(originSymbolicName);
                 classification.setClassificationOrigin(classificationOrigin);
 
                 list.add(classification);
@@ -220,8 +409,8 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
      * @param classificationName to translate
      * @return String qualified namespace
      */
-    private String getNamespaceForClassification(String classificationName) {
-        return getNamespaceForClassification(namespace, classificationName);
+    public static String getNamespaceForClassification(String classificationName) {
+        return getNamespaceForClassification(NAMESPACE, classificationName);
     }
 
     /**
@@ -244,6 +433,23 @@ public class ClassificationMapping extends InstanceAuditHeaderMapping {
                 "ClassificationOrigin",
                 symbolicName);
         return null;
+    }
+
+    /**
+     * Convert the provided symbolic name into its ClassificationOrigin.
+     * @param symbolicName to convert
+     * @return ClassificationOrigin
+     * @throws InvalidParameterException if there is no such symbolic name
+     */
+    public static ClassificationOrigin getClassificationOriginFromSymbolicName(String symbolicName) throws InvalidParameterException {
+        final String methodName = "getClassificationOriginFromSymbolicName";
+        for (ClassificationOrigin b : ClassificationOrigin.values()) {
+            if (b.getName().equals(symbolicName)) {
+                return b;
+            }
+        }
+        throw new InvalidParameterException(XtdbOMRSErrorCode.UNKNOWN_ENUMERATED_VALUE.getMessageDefinition(
+                symbolicName, "ClassificationOrigin"), ClassificationMapping.class.getName(), methodName, "symbolicName");
     }
 
     /**

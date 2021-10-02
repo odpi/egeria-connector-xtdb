@@ -52,8 +52,7 @@ public class ClassificationMappingTest {
             classifications.add(test);
 
             ClassificationMapping cm = new ClassificationMapping(connector,
-                    classifications,
-                    EntitySummaryMapping.N_CLASSIFICATIONS);
+                    classifications);
             cm.addToXtdbDoc(builder);
 
             XtdbDocument doc = builder.build();

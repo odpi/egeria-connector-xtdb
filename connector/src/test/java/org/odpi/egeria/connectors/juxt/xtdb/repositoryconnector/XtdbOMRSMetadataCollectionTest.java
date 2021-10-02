@@ -31,21 +31,26 @@ public class XtdbOMRSMetadataCollectionTest {
     private static final String qualifiedNameProperty = "qualifiedName";
     private static final String displayNameProperty   = "displayName";
     private static final String descriptionProperty   = "description";
+    private static final String userDefinedProperty   = "userDefined";
+    private static final String partialMatchProperty  = "partialMatch";
 
     private static final String referenceableGuid = "a32316b8-dc8c-48c5-b12b-71c1b2a080bf";
     private static final String glossaryTypeGuid = "36f66863-9726-4b41-97ee-714fd0dc6fe4";
     private static final String categoryTypeGuid = "e507485b-9b5a-44c9-8a28-6967f7ff3672";
     private static final String normTermTypeGuid = "0db3e6ec-f5ef-4d75-ae38-b7ee6fd6ec0a";
     private static final String ctrlTermTypeGuid = "c04e29b2-2d66-48fc-a20d-e59895de6040";
+    private static final String dataClassTypeGuid = "6bc727dc-e855-4979-8736-78ac3cfcd32f";
 
     private static final String categoryAnchorTypeGuid = "c628938e-815e-47db-8d1c-59bb2e84e028";
     private static final String termAnchorTypeGuid     = "1d43d661-bdc7-4a91-a996-3239b8f82e56";
     private static final String termCategorizationTypeGuid = "696a81f5-ac60-46c7-b9fd-6979a1e7ad27";
     private static final String categoryLinkTypeGuid   = "71e4b6fb-3412-4193-aff3-a16eccd87e8e";
+    private static final String dataClassAssignmentTypeGuid = "4df37335-7f0c-4ced-82df-3b2fd07be1bd";
 
     private static final String glossaryQN = "omrs-mc-glossary";
     private static final String categoryQN = "omrs-mc-category";
     private static final String ctrlTermQN = "omrs-mc-term";
+    private static final String dataClassQN = "omrs-mc-data-class";
 
     private static final String glossaryDN = "glossary";
     private static final String categoryDN = "category";
@@ -58,6 +63,7 @@ public class XtdbOMRSMetadataCollectionTest {
     private String glossaryGuid = "";
     private String categoryGuid = "";
     private String ctrlTermGuid = "";
+    private String dataClassGuid = "";
     private String categoryGuidEX = "";
     private String ctrlTermGuidRC = "";
 
@@ -65,6 +71,7 @@ public class XtdbOMRSMetadataCollectionTest {
     private String categoryAnchorGuid     = "";
     private String termAnchorGuid         = "";
     private String termCategorizationGuid = "";
+    private String dataClassAssignmentGuid = "";
     private String categoryLinkGuidEX     = "";
     private String termCategorizationGuidRC = "";
 
@@ -113,6 +120,21 @@ public class XtdbOMRSMetadataCollectionTest {
             assertNotNull(ctrlTermGuid, "Expected created GlossaryTerm to have a GUID assigned.");
             validatePropertyValue(result.getProperties(), qualifiedNameProperty, ctrlTermQN);
             assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the GlossaryTerm.");
+
+            ip = helper.addStringPropertyToInstance(source,
+                    null,
+                    qualifiedNameProperty, dataClassQN,
+                    this.getClass().getName());
+            ip = helper.addBooleanPropertyToInstance(source,
+                    ip,
+                    userDefinedProperty, false,
+                    this.getClass().getName());
+            result = mc.addEntity(username, dataClassTypeGuid, ip, null, null);
+            assertNotNull(result, "Expected a DataClass to be created.");
+            dataClassGuid = result.getGUID();
+            assertNotNull(dataClassGuid, "Expected created DataClass to have a GUID assigned.");
+            validatePropertyValue(result.getProperties(), userDefinedProperty, false);
+            assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the DataClass.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -227,6 +249,22 @@ public class XtdbOMRSMetadataCollectionTest {
             assertNotNull(termCategorizationGuid, "Expected created TermCategorization to have a GUID assigned.");
             validatePropertyValue(result.getProperties(), descriptionProperty, "omrs-mc-term-categorization");
             assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the TermCategorization.");
+
+            ip = helper.addBooleanPropertyToInstance(source,
+                    null,
+                    partialMatchProperty, false,
+                    this.getClass().getName());
+            result = mc.addRelationship(username,
+                    dataClassAssignmentTypeGuid,
+                    ip,
+                    ctrlTermGuid,
+                    dataClassGuid,
+                    null);
+            assertNotNull(result, "Expected a DataClassAssignment to be created.");
+            dataClassAssignmentGuid = result.getGUID();
+            assertNotNull(dataClassAssignmentGuid, "Expected created DataClassAssignment to have a GUID assigned.");
+            validatePropertyValue(result.getProperties(), partialMatchProperty, false);
+            assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the DataClassAssignment.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -524,20 +562,27 @@ public class XtdbOMRSMetadataCollectionTest {
     void undoEntityUpdate() {
         try {
 
+            EntityDetail original = mc.getEntityDetail(username, glossaryGuid);
             EntityDetail result = mc.undoEntityUpdate(username, glossaryGuid);
             assertNotNull(result, "Expected the Glossary to be updated.");
             assertEquals(result.getGUID(), glossaryGuid, "Expected updated Glossary to have matching GUID.");
             assertEquals(result.getVersion(), 3L, "Expected the version to be further incremented by the undo operation.");
+            assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
+            assertNull(result.getProperties().getInstanceProperties().get(displayNameProperty), "Expected undone Glossary update should no longer have a display name.");
 
+            original = mc.getEntityDetail(username, categoryGuid);
             result = mc.undoEntityUpdate(username, categoryGuid);
             assertNotNull(result, "Expected the GlossaryCategory to be updated.");
             assertEquals(result.getGUID(), categoryGuid, "Expected updated GlossaryCategory to have matching GUID.");
             assertEquals(result.getVersion(), 3L, "Expected the version to be further incremented by the undo operation.");
+            assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
 
+            original = mc.getEntityDetail(username, ctrlTermGuid);
             result = mc.undoEntityUpdate(username, ctrlTermGuid);
             assertNotNull(result, "Expected the ControlledGlossaryTerm to be updated.");
             assertEquals(result.getGUID(), ctrlTermGuid, "Expected updated ControlledGlossaryTerm to have matching GUID.");
             assertEquals(result.getVersion(), 5L, "Expected the version to be further incremented by the undo operation.");
+            assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -579,6 +624,12 @@ public class XtdbOMRSMetadataCollectionTest {
             assertEquals(result.getGUID(), ctrlTermGuid, "Expected retrieved ControlledGlossaryTerm to have matching GUID.");
             assertEquals(result.getVersion(), 5L, "Expected the latest version of the ControlledGlossaryTerm.");
             assertEquals(result.getStatus(), InstanceStatus.APPROVED, "Expected the latest status to still be approved.");
+
+            result = mc.getEntityDetail(username, dataClassGuid);
+            assertNotNull(result, "Expected the DataClass to be retrieved.");
+            assertEquals(result.getGUID(), dataClassGuid, "Expected retrieved DataClass to have matching GUID.");
+            assertEquals(result.getVersion(), 1L, "Expected the latest version of the DataClass.");
+            validatePropertyValue(result.getProperties(), userDefinedProperty, false);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -642,16 +693,16 @@ public class XtdbOMRSMetadataCollectionTest {
 
             List<EntityDetail> results = mc.getEntityDetailHistory(username, glossaryGuid, null, null, 0, 100, HistorySequencingOrder.BACKWARDS);
             assertTrue(results != null && !results.isEmpty(), "Expected the Glossary's history to be retrieved.");
-            // Note that we expect 4 here rather than 3, as even though the Glossary itself has
+            // Note that we expect 5 here rather than 3, as even though the Glossary itself has
             // only 3 enumerated versions, the fact that its classification has 2 enumerated versions
-            // (both applicable to the same Glossary version), means there will be a total of 4 visible versions
-            assertEquals(results.size(), 4, "Expected 4 historical versions of the Glossary.");
+            // (both applicable to the same Glossary version), means there will be a total of 5 visible versions
+            assertEquals(results.size(), 5, "Expected 5 historical versions of the Glossary.");
             assertTrue(results.get(0).getVersion() > results.get(1).getVersion(), "Expected results to be sorted in reverse-chronological order.");
 
             results = mc.getEntityDetailHistory(username, categoryGuid, null, null, 0, 100, HistorySequencingOrder.FORWARDS);
             assertTrue(results != null && !results.isEmpty(), "Expected the GlossaryCategory's history to be retrieved.");
-            assertEquals(results.size(), 3, "Expected 3 historical versions of the GlossaryCategory.");
-            assertTrue(results.get(0).getVersion() < results.get(1).getVersion(), "Expected results to be sorted in chronological order.");
+            assertEquals(results.size(), 4, "Expected 4 historical versions of the GlossaryCategory.");
+            assertTrue(results.get(0).getVersion() < results.get(3).getVersion(), "Expected results to be sorted in chronological order.");
 
             results = mc.getEntityDetailHistory(username, ctrlTermGuid, null, null, 0, 100, HistorySequencingOrder.BACKWARDS);
             assertTrue(results != null && !results.isEmpty(), "Expected the ControlledGlossaryTerm's history to be retrieved.");
@@ -682,6 +733,12 @@ public class XtdbOMRSMetadataCollectionTest {
             assertNotNull(result, "Expected the TermCategorization to be retrieved.");
             assertEquals(result.getGUID(), termCategorizationGuid, "Expected retrieved TermCategorization to have matching GUID.");
             assertEquals(result.getVersion(), 3L, "Expected the latest version of the TermCategorization.");
+
+            result = mc.getRelationship(username, dataClassAssignmentGuid);
+            assertNotNull(result, "Expected the DataClassAssignment to be retrieved.");
+            assertEquals(result.getGUID(), dataClassAssignmentGuid, "Expected retrieved DataClassAssignment to have matching GUID.");
+            assertEquals(result.getVersion(), 1L, "Expected the latest version of the DataClassAssignment.");
+            validatePropertyValue(result.getProperties(), partialMatchProperty, false);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -842,7 +899,7 @@ public class XtdbOMRSMetadataCollectionTest {
                     null,
                     100);
             assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
-            assertEquals(results.size(), 3, "Expected precisely three search results.");
+            assertEquals(results.size(), 4, "Expected precisely four search results.");
 
             results = mc.findEntitiesByPropertyValue(username,
                     referenceableGuid,
@@ -855,7 +912,7 @@ public class XtdbOMRSMetadataCollectionTest {
                     null,
                     100);
             assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
-            assertEquals(results.size(), 5, "Expected precisely five search results.");
+            assertEquals(results.size(), 6, "Expected precisely six search results.");
 
             results = mc.findEntitiesByPropertyValue(username,
                     referenceableGuid,
@@ -868,7 +925,7 @@ public class XtdbOMRSMetadataCollectionTest {
                     null,
                     100);
             assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
-            assertEquals(results.size(), 3, "Expected precisely three search results.");
+            assertEquals(results.size(), 4, "Expected precisely four search results.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -965,6 +1022,25 @@ public class XtdbOMRSMetadataCollectionTest {
             assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
             assertEquals(results.size(), 1, "Expected precisely one search result.");
             assertEquals(results.get(0).getGUID(), termCategorizationGuid, "Expected the singular search result to be the TermCategorization.");
+
+            matchProperties = helper.addBooleanPropertyToInstance(source,
+                    null,
+                    partialMatchProperty,
+                    false,
+                    this.getClass().getName());
+            results = mc.findRelationshipsByProperty(username,
+                    null,
+                    matchProperties,
+                    MatchCriteria.ALL,
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100);
+            assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
+            assertEquals(results.size(), 1, "Expected precisely one search result.");
+            assertEquals(results.get(0).getGUID(), dataClassAssignmentGuid, "Expected the singular search result to be the DataClassAssignment.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -1066,10 +1142,10 @@ public class XtdbOMRSMetadataCollectionTest {
             assertNotNull(results, "Expected non-empty results.");
             List<EntityDetail> entities = results.getEntities();
             assertNotNull(entities, "Expected non-empty list of entities.");
-            assertEquals(entities.size(), 5, "Expected the list of neighboring entities to be precisely 5.");
+            assertEquals(entities.size(), 6, "Expected the list of neighboring entities to be precisely 6.");
             List<Relationship> relationships = results.getRelationships();
             assertNotNull(relationships, "Expected non-empty list of relationships.");
-            assertEquals(relationships.size(), 5, "Expected the list of neighboring relationships to be precisely 5.");
+            assertEquals(relationships.size(), 6, "Expected the list of neighboring relationships to be precisely 6.");
 
             List<String> entityTypes = new ArrayList<>();
             entityTypes.add(glossaryTypeGuid);
@@ -1115,7 +1191,7 @@ public class XtdbOMRSMetadataCollectionTest {
                     null,
                     100);
             assertNotNull(results, "Expected non-empty results.");
-            assertEquals(results.size(), 5, "Expected the list of related entities to be precisely 5.");
+            assertEquals(results.size(), 6, "Expected the list of related entities to be precisely 6.");
 
             List<String> classifications = new ArrayList<>();
             classifications.add("SubjectArea");

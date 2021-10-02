@@ -2,9 +2,10 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
+import clojure.lang.Keyword;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
 import xtdb.api.XtdbDocument;
-import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
-import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.PrimitivePropertyValue;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.PrimitiveDefCategory;
 
@@ -31,20 +32,27 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
 
     /**
      * Add the provided primitive value to the XTDB document.
-     * @param xtdbConnector connectivity to the repository
-     * @param instanceType of the instance for which this value applies
      * @param builder to which to add the property value
-     * @param propertyName of the property
-     * @param namespace by which to qualify the property
+     * @param keywords of the property
      * @param value of the property
      */
-    public static void addPrimitivePropertyValueToDoc(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                      InstanceType instanceType,
-                                                      XtdbDocument.Builder builder,
-                                                      String propertyName,
-                                                      String namespace,
+    public static void addPrimitivePropertyValueToDoc(XtdbDocument.Builder builder,
+                                                      PropertyKeywords keywords,
                                                       PrimitivePropertyValue value) {
-        builder.put(getPropertyValueKeyword(xtdbConnector, instanceType, propertyName, namespace), getPrimitiveValueForComparison(value));
+        builder.put(keywords.getSearchablePath(), getPrimitiveValueForComparison(value));
+    }
+
+    /**
+     * Add the provided primitive value to the XTDB map.
+     * @param doc the XTDB map to which to add the property
+     * @param propertyKeyword the property whose value should be set, fully-qualified with namespace and type name
+     * @param value of the property
+     * @return IPersistentMap of the updated XTDB doc
+     */
+    public static IPersistentMap addPrimitivePropertyValueToDoc(IPersistentMap doc,
+                                                                Keyword propertyKeyword,
+                                                                PrimitivePropertyValue value) {
+        return doc.assoc(propertyKeyword, getPrimitiveValueForComparison(value));
     }
 
     /**
@@ -65,10 +73,18 @@ public class PrimitivePropertyValueMapping extends InstancePropertyValueMapping 
                         value = new Date((Long) longForm);
                     }
                     break;
+                case OM_PRIMITIVE_TYPE_BOOLEAN:
+                    // Clojure's representation of boolean is a bit tricky, in that it only recognizes the
+                    // precise Boolean.FALSE value as false, not (for example) new Boolean(false).
+                    // So here we explicitly encode it to those static Boolean constants accordingly
+                    Object bool = ppv.getPrimitiveValue();
+                    if (bool instanceof Boolean) {
+                        value = (Boolean)bool ? Boolean.TRUE : Boolean.FALSE;
+                    }
+                    break;
                 case OM_PRIMITIVE_TYPE_STRING:
                     // Note: further translation of strings into regexes is only necessary for queries, so that will be
                     // done in the XtdbQuery class directly.
-                case OM_PRIMITIVE_TYPE_BOOLEAN:
                 case OM_PRIMITIVE_TYPE_BIGINTEGER:
                 case OM_PRIMITIVE_TYPE_BIGDECIMAL:
                 case OM_PRIMITIVE_TYPE_DOUBLE:

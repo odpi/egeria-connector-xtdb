@@ -2,12 +2,17 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.AbstractTransactionFunction;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceHeader;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -21,7 +26,9 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
     private static final String INSTANCE_HEADER = "InstanceHeader";
 
     private static final String INSTANCE_URL = "instanceURL";
-    private static final String RE_IDENTIFIED_FROM_GUID = "reIdentifiedFromGUID";
+    private static final String N_RE_IDENTIFIED_FROM_GUID = "reIdentifiedFromGUID";
+
+    public static final String RE_IDENTIFIED_FROM_GUID = getKeyword(N_RE_IDENTIFIED_FROM_GUID);
 
     private static final Set<String> KNOWN_PROPERTIES = createKnownProperties();
     private static Set<String> createKnownProperties() {
@@ -74,10 +81,37 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
      */
     protected XtdbDocument.Builder toDoc() {
         XtdbDocument.Builder builder = XtdbDocument.builder(getGuidReference(xtdbConnector, instanceHeader));
-        super.buildDoc(builder, instanceHeader);
+        try {
+            InstanceAuditHeaderMapping.buildDoc(builder, instanceHeader);
+        } catch (IOException e) {
+            xtdbConnector.logProblem(ClassificationMapping.class.getName(),
+                    "addToXtdbDoc",
+                    XtdbOMRSAuditCode.SERIALIZATION_FAILURE,
+                    e,
+                    "<unknown>",
+                    instanceHeader.getType().getTypeDefName(),
+                    e.getClass().getName());
+        }
         builder.put(INSTANCE_URL, instanceHeader.getInstanceURL());
         builder.put(RE_IDENTIFIED_FROM_GUID, instanceHeader.getReIdentifiedFromGUID());
         return builder;
+    }
+
+    /**
+     * Translate the provided Egeria representation into a XTDB document map.
+     * @param header to translate
+     * @return IPersistentMap representing the XTDB document
+     * @throws InvalidParameterException on any errors identified within the metadata instance
+     * @throws IOException on any error serializing the values
+     */
+    public static IPersistentMap toMap(InstanceHeader header) throws InvalidParameterException, IOException {
+        IPersistentMap doc = PersistentHashMap.EMPTY;
+        IPersistentVector tuple = InstanceAuditHeaderMapping.addToMap(doc, header, null);
+        doc = (IPersistentMap) tuple.nth(1);
+        return doc
+                .assoc(Constants.XTDB_PK, getGuidReference(header))
+                .assoc(Keyword.intern(INSTANCE_URL), header.getInstanceURL())
+                .assoc(Keyword.intern(RE_IDENTIFIED_FROM_GUID), header.getReIdentifiedFromGUID());
     }
 
     /**
@@ -107,6 +141,33 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
     }
 
     /**
+     * Translate the provided XTDB representation into an Egeria representation.
+     * @param ih into which to map
+     * @param doc from which to map
+     * @throws IOException on any issue deserializing values
+     * @throws InvalidParameterException for any unmapped properties
+     */
+    protected static void fromMap(InstanceHeader ih,
+                                  IPersistentMap doc) throws IOException, InvalidParameterException {
+        InstanceAuditHeaderMapping.fromMap(ih, doc, null);
+        final String methodName = "fromMap";
+        String guid = AbstractTransactionFunction.getGUID(doc);
+        ih.setGUID(guid == null ? null : trimGuidFromReference(guid));
+        for (String property : KNOWN_PROPERTIES) {
+            Object objValue = doc.valAt(Keyword.intern(property));
+            String value = objValue == null ? null : objValue.toString();
+            if (INSTANCE_URL.equals(property)) {
+                ih.setInstanceURL(value);
+            } else if (RE_IDENTIFIED_FROM_GUID.equals(property)) {
+                ih.setReIdentifiedFromGUID(value);
+            } else {
+                throw new InvalidParameterException(XtdbOMRSErrorCode.UNMAPPABLE_PROPERTY.getMessageDefinition(
+                        property), InstanceHeader.class.getName(), methodName, "property");
+            }
+        }
+    }
+
+    /**
      * Translate the provided InstanceHeader information into a XTDB reference to the GUID of the instance.
      * @param xtdbConnector connectivity to the repository
      * @param ih to translate
@@ -126,6 +187,25 @@ public class InstanceHeaderMapping extends InstanceAuditHeaderMapping {
                     null,
                     type.name());
             return null;
+        }
+    }
+
+    /**
+     * Translate the provided InstanceHeader information into a XTDB reference to the GUID of the instance.
+     * @param ih to translate
+     * @return String for the XTDB reference
+     * @throws InvalidParameterException on any error translating the GUID
+     */
+    public static String getGuidReference(InstanceHeader ih) throws InvalidParameterException {
+        final String methodName = "getGuidReference";
+        TypeDefCategory type = ih.getType().getTypeDefCategory();
+        if (type.equals(TypeDefCategory.ENTITY_DEF)) {
+            return getReference(EntitySummaryMapping.INSTANCE_REF_PREFIX, ih.getGUID());
+        } else if (type.equals(TypeDefCategory.RELATIONSHIP_DEF)) {
+            return getReference(RelationshipMapping.INSTANCE_REF_PREFIX, ih.getGUID());
+        } else {
+            throw new InvalidParameterException(XtdbOMRSErrorCode.BAD_CATEGORY_FOR_TYPEDEF_ATTRIBUTE.getMessageDefinition(
+                    type.getName()), InstancePropertyValueMapping.class.getName(), methodName, "type");
         }
     }
 

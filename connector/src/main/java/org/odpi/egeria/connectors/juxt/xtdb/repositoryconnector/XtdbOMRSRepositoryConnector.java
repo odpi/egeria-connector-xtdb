@@ -3,6 +3,8 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import clojure.lang.*;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.ErrorMessageCache;
+import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
 import xtdb.api.*;
 import xtdb.api.tx.Transaction;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
@@ -30,10 +32,7 @@ import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -42,9 +41,11 @@ import java.util.concurrent.TimeoutException;
 /**
  * Provides all connectivity and API-based interaction with a XTDB back-end.
  */
-public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
+public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector implements Serializable {
 
     private static final Logger log = LoggerFactory.getLogger(XtdbOMRSRepositoryConnector.class);
+
+    private static final long serialVersionUID = 1L;
 
     private static final String SYNC = "Synchronously";
     private static final String ASYNC = "Asynchronously";
@@ -208,6 +209,45 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
                     this.getClass().getName(), methodName, e);
         }
 
+        // Ensure the latest version of the transaction functions is committed to the repository at
+        // every startup (these should all be idempotent operations if the functions already exist)
+        Transaction.Builder tx = Transaction.builder();
+        AddEntityProxy.create(tx);
+        AddEntity.create(tx);
+        UpdateEntityStatus.create(tx);
+        UpdateEntityProperties.create(tx);
+        UndoEntityUpdate.create(tx);
+        RestoreEntity.create(tx);
+        ClassifyEntity.create(tx);
+        DeclassifyEntity.create(tx);
+        UpdateEntityClassification.create(tx);
+        AddRelationship.create(tx);
+        UpdateRelationshipStatus.create(tx);
+        UpdateRelationshipProperties.create(tx);
+        UndoRelationshipUpdate.create(tx);
+        RestoreRelationship.create(tx);
+        DeleteRelationship.create(tx);
+        PurgeRelationship.create(tx);
+        DeleteEntity.create(tx);
+        PurgeEntity.create(tx);
+        ReLinkRelationship.create(tx);
+        ReIdentifyEntity.create(tx);
+        ReIdentifyRelationship.create(tx);
+        ReTypeEntity.create(tx);
+        ReTypeRelationship.create(tx);
+        ReHomeEntity.create(tx);
+        ReHomeRelationship.create(tx);
+        SaveEntityReferenceCopy.create(tx);
+        SaveClassificationReferenceCopy.create(tx);
+        SaveRelationshipReferenceCopy.create(tx);
+        PurgeClassificationReferenceCopy.create(tx);
+        // Null for the timeout here means use the default (which is therefore configurable directly by
+        // the XTDB configurationProperties of the connector)
+        Transaction txn = tx.build();
+        log.info("Adding transaction functions: {}", txn.toVector());
+        TransactionInstant instant = xtdbAPI.submitTx(txn);
+        xtdbAPI.awaitTx(instant, null);
+
     }
 
     /**
@@ -272,86 +312,79 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
-     * Create the provided entity instance in the XTDB repository.
-     * @param entity to create
+     * Validate that the commit was persisted, or throw an exception if it failed.
+     * @param instant giving the commit point
+     * @param methodName that made the commit
+     * @throws Exception on any error
      */
-    public void createEntityProxy(EntityProxy entity) {
-        Transaction.Builder tx = Transaction.builder();
-        addCreateEntityProxyStatements(tx, entity);
-        TransactionInstant results = runTx(tx.build());
-        log.debug(Constants.WRITE_RESULTS, results);
+    public void validateCommit(TransactionInstant instant, String methodName) throws Exception {
+        if (synchronousIndex) {
+            if (!xtdbAPI.hasTxCommitted(instant)) {
+                Exception e = ErrorMessageCache.get(instant.getId());
+                if (e != null) {
+                    throw e;
+                } else {
+                    throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                            this.getClass().getName(),
+                            methodName);
+                }
+            }
+        }
     }
 
     /**
-     * Retrieve the statements that need to be executed against XTDB to create (persist) the entity proxy provided.
-     * @param tx the transaction through which to create the entity proxy
-     * @param entity to create
+     * Validates that the commit was persisted (if synchronous), throwing an exception if it failed, and
+     * also retrieves and returns the detailed entity that resulted from the transaction. Note that if the
+     * operation is configured to be asynchronous, this will ALWAYS return null for the entity details.
+     * @param docId of the entity within XTDB itself (i.e. prefixed)
+     * @param instant giving the commit point of the transaction
+     * @param methodName that made the commit
+     * @return EntityDetail result of the committed transaction (synchronous) or null (asynchronous)
+     * @throws Exception on any error
      */
-    public void addCreateEntityProxyStatements(Transaction.Builder tx, EntityProxy entity) {
-        EntityProxyMapping epm = new EntityProxyMapping(this, entity);
-        put(tx, epm.toXTDB());
+    public EntityDetail getResultingEntity(String docId,
+                                           TransactionInstant instant,
+                                           String methodName) throws Exception {
+        validateCommit(instant, methodName);
+        if (synchronousIndex) {
+            XtdbDocument result = getXtdbObjectByReference(docId);
+            EntityDetailMapping edm = new EntityDetailMapping(this, result);
+            return edm.toEgeria();
+        } else {
+            // For async write we will ALWAYS return null, as there cannot be any consistent idea
+            // of what the object looks like before the write itself has completed
+            return null;
+        }
     }
 
     /**
-     * Create the provided entity instance in the XTDB repository.
-     * @param entity to create
-     * @return EntityDetail that was created
+     * Validates that the commit was persisted (if synchornous), throwing an exception if it failed, and
+     * also retrieves and returns the detailed relationship that resulted from the transaction. Note that if
+     * the operation is configured to be asynchronous, this will ALWAYS return null for the relationship detials.
+     * @param docId of the relationship within XTDB itself (i.e. prefixed)
+     * @param instant giving the commit point of the transaction
+     * @param methodName that made the commit
+     * @return Relationship result of the committed transaction (synchronous) or null (asynchronous)
+     * @throws Exception on any error
      */
-    public EntityDetail createEntity(EntityDetail entity) {
-        Transaction.Builder tx = Transaction.builder();
-        addCreateEntityStatements(tx, entity);
-        TransactionInstant results = runTx(tx.build());
-        log.debug(Constants.WRITE_RESULTS, results);
-        return entity;
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to create (persist) the entity provided.
-     * @param tx the transaction through which to create the entity
-     * @param entity to be created
-     */
-    public void addCreateEntityStatements(Transaction.Builder tx, EntityDetail entity) {
-        EntityDetailMapping edm = new EntityDetailMapping(this, entity);
-        put(tx, edm.toXTDB());
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to update (persist) the entity provided.
-     * @param tx the transaction through which to update the entity
-     * @param entity to be updated
-     */
-    public void addUpdateEntityStatements(Transaction.Builder tx, EntityDetail entity) {
-        addCreateEntityStatements(tx, entity);
-    }
-
-    /**
-     * Permanently delete the entity (and all of its history) from the XTDB repository.
-     * Note that this operation is NOT reversible!
-     * @param guid of the entity to permanently delete
-     */
-    public void purgeEntity(String guid) {
-        Transaction.Builder tx = Transaction.builder();
-        addPurgeEntityStatements(tx, guid);
-        runTx(tx.build());
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to permanently delete the entity (and all of its
-     * history) from the XTDB repository.
-     * @param tx the transaction through which to purge the entity
-     * @param guid of the entity to permanently delete
-     */
-    public void addPurgeEntityStatements(Transaction.Builder tx, String guid) {
-        evict(tx, EntitySummaryMapping.getReference(guid));
-    }
-
-    /**
-     * Update the provided entity instance in the XTDB repository.
-     * @param entity to update
-     * @return EntityDetail that was updated
-     */
-    public EntityDetail updateEntity(EntityDetail entity) {
-        return createEntity(entity);
+    public Relationship getResultingRelationship(String docId,
+                                                 TransactionInstant instant,
+                                                 String methodName) throws Exception {
+        validateCommit(instant, methodName);
+        if (synchronousIndex) {
+            try (IXtdbDatasource db = xtdbAPI.openDB(instant)) {
+                XtdbDocument result = getXtdbObjectByReference(db, docId);
+                RelationshipMapping rm = new RelationshipMapping(this, result, db);
+                return rm.toEgeria();
+            } catch (IOException e) {
+                throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                        this.getClass().getName(), methodName, e);
+            }
+        } else {
+            // For async write we will ALWAYS return null, as there cannot be any consistent idea
+            // of what the object looks like before the write itself has completed
+            return null;
+        }
     }
 
     /**
@@ -1286,69 +1319,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
     }
 
     /**
-     * Create the provided relationship instance in the XTDB repository.
-     * @param relationship to create
-     * @return Relationship that was created
-     */
-    public Relationship createRelationship(Relationship relationship) {
-        Transaction.Builder tx = Transaction.builder();
-        addCreateRelationshipStatements(tx, relationship);
-        TransactionInstant results = runTx(tx.build());
-        log.debug(Constants.WRITE_RESULTS, results);
-        return relationship;
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to create (persist) the relationship provided.
-     * @param tx the transaction through which to create the relationship
-     * @param relationship to be created
-     */
-    public void addCreateRelationshipStatements(Transaction.Builder tx, Relationship relationship) {
-        RelationshipMapping rm = new RelationshipMapping(this, relationship);
-        put(tx, rm.toXTDB());
-    }
-
-    /**
-     * Permanently delete the relationship (and all of its history) from the XTDB repository.
-     * Note that this operation is NOT reversible!
-     * @param guid of the relationship to permanently delete
-     */
-    public void purgeRelationship(String guid) {
-        Transaction.Builder tx = Transaction.builder();
-        addPurgeRelationshipStatements(tx, guid);
-        runTx(tx.build());
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to permanently delete the relationship (and all of
-     * its history) from the XTDB repository.
-     * @param tx the transaction through which to do the purge
-     * @param guid of the relationship to permanently delete
-     */
-    public void addPurgeRelationshipStatements(Transaction.Builder tx, String guid) {
-        evict(tx, RelationshipMapping.getReference(guid));
-    }
-
-    /**
-     * Update the provided relationship instance in the XTDB repository.
-     * @param relationship to update
-     * @return Relationship that was updated
-     */
-    public Relationship updateRelationship(Relationship relationship) {
-        return createRelationship(relationship);
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to update the provided relationship instance in the
-     * XTDB repository.
-     * @param tx the transaction through which to do the relationship update
-     * @param relationship to update
-     */
-    public void addUpdateRelationshipStatements(Transaction.Builder tx, Relationship relationship) {
-        addCreateRelationshipStatements(tx, relationship);
-    }
-
-    /**
      * Retrieve the requested relationship from the XTDB repository.
      * @param guid of the relationship to retrieve
      * @param asOfTime view of the relationship at this particular point in time
@@ -1377,199 +1347,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
 
         return result;
 
-    }
-
-    /**
-     * Restore the previous version of the provided entity, and return the restored version (or null if there was no
-     * previous version and hence no restoration).
-     * @param userId of the user requesting the restoration
-     * @param guid of the entity for which to restore the previous version
-     * @return EntityDetail giving the restored version (or null if there was no previous version to restore)
-     * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
-     */
-    public EntityDetail restorePreviousVersionOfEntity(String userId, String guid) throws RepositoryErrorException {
-        String docRef = EntitySummaryMapping.getReference(guid);
-        List<XtdbDocument> history = getPreviousVersion(docRef);
-        if (history.size() > 1) {
-            // There must be a minimum of two entries in the history for us to have a previous version to go to.
-            EntityDetailMapping edmC = new EntityDetailMapping(this, history.get(0));
-            EntityDetail current = edmC.toEgeria();
-            long currentVersion = current.getVersion();
-            List<Classification> currentClassifications = current.getClassifications();
-            EntityDetailMapping edmP = new EntityDetailMapping(this, history.get(1));
-            EntityDetail restored = edmP.toEgeria();
-            // Update the version of the restored instance to be one more than the latest (current) version, the update
-            // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
-            // and the last user to update it to the user that requested this restoration
-            restored.setVersion(currentVersion + 1);
-            restored.setUpdateTime(new Date());
-            restored.setUpdatedBy(userId);
-            // Ensure that we also retain any of the classifications from the current version, as these are treated
-            // independently from any other updates to the entity
-            restored.setClassifications(currentClassifications);
-            List<String> maintainedBy = restored.getMaintainedBy();
-            if (maintainedBy == null) {
-                maintainedBy = new ArrayList<>();
-            }
-            if (!maintainedBy.contains(userId)) {
-                maintainedBy.add(userId);
-                restored.setMaintainedBy(maintainedBy);
-            }
-            // Then submit this version back into XTDB as an update, and return the result
-            return updateEntity(restored);
-        }
-        return null;
-    }
-
-    /**
-     * Restore the previous version of the provided relationship, and return the restored version (or null if there was
-     * no previous version and hence no restoration).
-     * @param userId of the user requesting the restoration
-     * @param guid of the relationship for which to restore the previous version
-     * @return Relationship giving the restored version (or null if there was no previous version to restore)
-     * @throws RepositoryErrorException if any issue closing an open XTDB resource
-     */
-    public Relationship restorePreviousVersionOfRelationship(String userId, String guid) throws RepositoryErrorException {
-
-        final String methodName = "restorePreviousVersionOfRelationship";
-        String docRef = RelationshipMapping.getReference(guid);
-        Relationship restored = null;
-
-        try (IXtdbDatasource db = xtdbAPI.openDB()) {
-            List<XtdbDocument> history = getPreviousVersion(db, docRef);
-            if (history.size() > 1) {
-                // There must be a minimum of two entries in the history for us to have a previous version to go to.
-                RelationshipMapping rmC = new RelationshipMapping(this, history.get(0), db);
-                Relationship current = rmC.toEgeria();
-                long currentVersion = current.getVersion();
-                RelationshipMapping rmP = new RelationshipMapping(this, history.get(1), db);
-                restored = rmP.toEgeria();
-                // Update the version of the restored instance to be one more than the latest (current) version, the update
-                // time to reflect now (so we have an entirely new record in history that shows as the latest (current)),
-                // and the last user to update it to the user that requested this restoration
-                restored.setVersion(currentVersion + 1);
-                restored.setUpdateTime(new Date());
-                restored.setUpdatedBy(userId);
-                List<String> maintainedBy = restored.getMaintainedBy();
-                if (maintainedBy == null) {
-                    maintainedBy = new ArrayList<>();
-                }
-                if (!maintainedBy.contains(userId)) {
-                    maintainedBy.add(userId);
-                    restored.setMaintainedBy(maintainedBy);
-                }
-                // Then submit this version back into XTDB as an update
-                restored = updateRelationship(restored);
-            }
-        } catch (IOException e) {
-            throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
-                    this.getClass().getName(), methodName, e);
-        }
-
-        return restored;
-
-    }
-
-    /**
-     * Retrieve only the current and previous versions for the provided XTDB object, lazily instantiated so that we do
-     * not need to pull back the entire history for an object that has changed many times.
-     * @param reference indicating the primary key of the object for which to retrieve the previous version
-     * @return {@code List<XtdbDocument>} with the current version as the first element, and the the previous version as the second element (or null if there is no previous version)
-     * @throws RepositoryErrorException if any issue closing the open lazy-evaluating cursor
-     */
-    private List<XtdbDocument> getPreviousVersion(String reference) throws RepositoryErrorException {
-
-        final String methodName = "getPreviousVersion";
-        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
-        List<XtdbDocument> results;
-
-        // try-with to ensure that the ICursor resource is closed, even if any exception is thrown
-        try (ICursor<Map<Keyword, ?>> lazyCursor = xtdbAPI.db().openEntityHistory(reference, options)) {
-            results = getPreviousVersionFromCursor(lazyCursor, reference);
-        } catch (IOException e) {
-            throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
-                    this.getClass().getName(), methodName, e);
-        }
-
-        return results;
-
-    }
-
-    /**
-     * Retrieve only the current and previous versions for the provided XTDB object, from an already-opened
-     * point-in-time view of the repository, lazily instantiated so that we do not need to pull back the entire history
-     * for an object that has changed many times.
-     * @param db from which to retrieve the previous version
-     * @param reference indicating the primary key of the object for which to retrieve the previous version
-     * @return {@code List<XtdbDocument>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
-     * @throws RepositoryErrorException if any issue closing the lazy-evaluating cursor
-     */
-    private List<XtdbDocument> getPreviousVersion(IXtdbDatasource db, String reference) throws RepositoryErrorException {
-
-        final String methodName = "getPreviousVersion";
-        HistoryOptions options = HistoryOptions.create(HistoryOptions.SortOrder.DESC);
-        List<XtdbDocument> results;
-
-        // try-with to ensure that the ICursor resource is closed, even if any exception is thrown
-        try (ICursor<Map<Keyword, ?>> lazyCursor = db.openEntityHistory(reference, options)) {
-            // Note that here we will not pass-through the opened DB as this method will need to retrieve a different
-            // point-in-time view of the details of each entity anyway (based on the transaction dates from the cursor,
-            // rather than the already-opened DB resource)
-            results = getPreviousVersionFromCursor(lazyCursor, reference);
-        } catch (Exception e) {
-            throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
-                    this.getClass().getName(), methodName, e);
-        }
-
-        return results;
-
-    }
-
-    /**
-     * Retrieve only the current and previous versions of the provided XTDB reference, from an already-opened lazily-
-     * evaluated cursor.
-     * @param cursor from which to lazily-evaluate the current and previous versions
-     * @param reference indicating the primary key of the object for which to retrieve the current and previous version
-     * @return {@code List<XtdbDocument>} with the current version as the first element, and the previous version as the second element (or null if there is no previous version)
-     */
-    private List<XtdbDocument> getPreviousVersionFromCursor(ICursor<Map<Keyword, ?>> cursor, String reference) {
-        List<XtdbDocument> results = new ArrayList<>();
-        // History entries themselves will just be transaction details like the following:
-        // { :xtdb.tx/tx-time #inst "2021-02-01T00:28:32.533-00:00",
-        //   :xtdb.tx/tx-id 2,
-        //   :xtdb.db/valid-time #inst "2021-02-01T00:28:32.531-00:00",
-        //   :xtdb.db/content-hash #xtdb/id "..." }
-        if (cursor != null) {
-            if (cursor.hasNext()) {
-                Map<Keyword, ?> currentVersionTxn = cursor.next();
-                // ... so use these transaction details to retrieve the actual objects
-                XtdbDocument current = getXtdbObjectByReference(reference, currentVersionTxn);
-                if (current != null) {
-                    long currentVersion = (Long) current.get(InstanceAuditHeaderMapping.VERSION);
-                    XtdbDocument previous = null;
-                    while (previous == null && cursor.hasNext()) {
-                        Map<Keyword, ?> candidateTxn = cursor.next();
-                        // This candidate MUST be a previous _version_ of the instance itself rather than
-                        // just a previously-dated view (for example, if an entity had a classification added to it the
-                        // entity's version will not have changed but it will have a new historical entry -- this is NOT
-                        // a previous _version_ of the entity, and thus must be skipped over)
-                        XtdbDocument candidate = getXtdbObjectByReference(reference, candidateTxn);
-                        long candidateVersion  = (Long) candidate.get(InstanceAuditHeaderMapping.VERSION);
-                        if (candidateVersion < currentVersion) {
-                            previous = candidate;
-                        }
-                    }
-                    // If we have exited the loop above with a non-null previous version, then put both into
-                    // the results (otherwise do not put anything in the results, as there was no previous
-                    // version to include)
-                    if (previous != null) {
-                        results.add(current);
-                        results.add(previous);
-                    }
-                }
-            }
-        }
-        return results;
     }
 
     /**
@@ -1785,74 +1562,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
         }
 
         return results;
-
-    }
-
-    /**
-     * Save the provided entity as a reference copy. This is only possible if there is no existing entity with the same
-     * GUID, or if there is an existing entity with this GUID and its metadataCollectionId matches. Any other scenario
-     * is an error for a reference copy.
-     * @param entity to save as a reference copy
-     * @throws EntityConflictException the entity conflicts with an existing entity (different metadata collection IDs)
-     */
-    public void saveReferenceCopy(EntityDetail entity) throws EntityConflictException {
-
-        final String methodName = "saveReferenceCopy";
-
-        String rcGuid = entity.getGUID();
-        String rcMetadataCollectionId = entity.getMetadataCollectionId();
-
-        // Retrieve it as a Summary, since we do not care whether it is a Proxy or a full Detail for this operation
-        EntitySummary existingEntity = getEntitySummary(rcGuid);
-        if (existingEntity == null) {
-            createEntity(entity);
-        } else {
-            String exMetadataCollectionId = existingEntity.getMetadataCollectionId();
-            if (!rcMetadataCollectionId.equals(exMetadataCollectionId)) {
-                throw new EntityConflictException(
-                        XtdbOMRSErrorCode.METADATA_COLLECTION_CONFLICT.getMessageDefinition(
-                                entity.getGUID(), repositoryName
-                        ),
-                        this.getClass().getName(),
-                        methodName
-                );
-            } else {
-                updateEntity(entity);
-            }
-        }
-
-    }
-
-    /**
-     * Retrieve the statements that need to be executed against XTDB to save the provided relationship as a reference
-     * copy. This is only possible if there is no existing relationship with the same GUID, or if there is an existing
-     * relationship with this GUID and its metadataCollectionId matches. Any other scenario is an error for a reference
-     * copy.
-     * @param tx the transaction through which to save the reference copy
-     * @param relationship to save as a reference copy
-     * @throws RelationshipConflictException the relationship conflicts with an existing relationship (different metadata collection IDs)
-     * @throws RepositoryErrorException if any issue closing an open XTDB resource
-     */
-    public void addSaveReferenceCopyStatements(Transaction.Builder tx, Relationship relationship) throws RelationshipConflictException, RepositoryErrorException {
-
-        final String methodName = "addSaveReferenceCopyStatements";
-
-        String rcGuid = relationship.getGUID();
-        String rcMetadataCollectionId = relationship.getMetadataCollectionId();
-
-        Relationship existingRelationship = getRelationship(rcGuid, null);
-        if (existingRelationship == null) {
-            addCreateRelationshipStatements(tx, relationship);
-        } else {
-            String exMetadataCollectionId = existingRelationship.getMetadataCollectionId();
-            if (!rcMetadataCollectionId.equals(exMetadataCollectionId)) {
-                throw new RelationshipConflictException(
-                        XtdbOMRSErrorCode.METADATA_COLLECTION_CONFLICT.getMessageDefinition(
-                                relationship.getGUID(), repositoryName), this.getClass().getName(), methodName);
-            } else {
-                addUpdateRelationshipStatements(tx, relationship);
-            }
-        }
 
     }
 
@@ -2510,53 +2219,6 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
      */
     public IXtdb getXtdbAPI() {
         return xtdbAPI;
-    }
-
-    /**
-     * Add a write operation to the transaction (applicable for any write operation, since it is append-only).
-     * Note: this should be used rather than calling '.put' directly against the transaction builder, as this method
-     * will set the historical date based on the information within the document itself (if any), allowing us to have
-     * a historical view for things like reference copies.
-     * @param tx the transaction through which to do the write operation
-     * @param xtdbDoc the document to write to the repository
-     */
-    public static void put(Transaction.Builder tx, XtdbDocument xtdbDoc) {
-        // Explicitly set the transaction time to match what is in the instance itself,
-        // preferring update time if it is available and otherwise falling back to create time
-        // (and if that is not available, falling back to allowing XTDB to manage it itself)
-        Date txnTime = null;
-        // Since classifications do not update the entity updateTime itself, we need to also
-        // scan the entity's last classification change, to potentially apply a validity against
-        // the entire entity document (including all of its classifications) based on these classification changes
-        Object latestClassificationChange = xtdbDoc.get(ClassificationMapping.N_LAST_CLASSIFICATION_CHANGE);
-        if (latestClassificationChange instanceof Date) {
-            txnTime = ((Date) latestClassificationChange);
-        }
-        Object timeFromDoc = xtdbDoc.get(InstanceAuditHeaderMapping.UPDATE_TIME);
-        if (timeFromDoc instanceof Date) {
-            Date updateTime = ((Date) timeFromDoc);
-            // If both the classification update and an entity property update exist, take the latest one for validity
-            if (txnTime == null || txnTime.before(updateTime)) {
-                txnTime = updateTime;
-            }
-        } else {
-            timeFromDoc = xtdbDoc.get(InstanceAuditHeaderMapping.CREATE_TIME);
-            if (timeFromDoc instanceof Date) {
-                txnTime = ((Date) timeFromDoc);
-            } else {
-                txnTime = new Date();
-            }
-        }
-        tx.put(xtdbDoc, txnTime);
-    }
-
-    /**
-     * Add eviction of the specified docRef to the transaction (applicable for permanently removing anything by its "primary key").
-     * @param tx the transaction through which to do the eviction
-     * @param docRef giving the "primary key" of the record to be permanently removed
-     */
-    public static void evict(Transaction.Builder tx, String docRef) {
-        tx.evict(docRef);
     }
 
     /**

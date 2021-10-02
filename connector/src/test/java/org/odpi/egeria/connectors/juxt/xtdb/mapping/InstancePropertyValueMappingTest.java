@@ -50,7 +50,6 @@ public class InstancePropertyValueMappingTest {
                     helper.getNewInstanceType(MockConnection.SOURCE_NAME, type),
                     builder,
                     propertyName,
-                    namespace,
                     ipv);
 
             InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
@@ -96,7 +95,6 @@ public class InstancePropertyValueMappingTest {
                     helper.getNewInstanceType(MockConnection.SOURCE_NAME, type),
                     builder,
                     propertyName,
-                    namespace,
                     ipv);
 
             InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
@@ -147,7 +145,6 @@ public class InstancePropertyValueMappingTest {
                     helper.getNewInstanceType(MockConnection.SOURCE_NAME, type),
                     builder,
                     propertyName,
-                    namespace,
                     apv);
 
             InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
@@ -198,7 +195,6 @@ public class InstancePropertyValueMappingTest {
                     helper.getNewInstanceType(MockConnection.SOURCE_NAME, type),
                     builder,
                     propertyName,
-                    namespace,
                     mpv);
 
             InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,
@@ -264,7 +260,6 @@ public class InstancePropertyValueMappingTest {
                     helper.getNewInstanceType(MockConnection.SOURCE_NAME, type),
                     builder,
                     propertyName,
-                    namespace,
                     null);
 
             InstancePropertyValue retrieved = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(connector,

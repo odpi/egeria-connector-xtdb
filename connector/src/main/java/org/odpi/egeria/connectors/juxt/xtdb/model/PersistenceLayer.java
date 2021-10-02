@@ -13,7 +13,7 @@ import xtdb.api.tx.Transaction;
  */
 public class PersistenceLayer {
 
-    public static final long LATEST_VERSION = 2L;
+    public static final long LATEST_VERSION = 3L;
 
     private static final String PERSISTENCE_DOC = "egeria-connector-xtdb/persistence-layer";
     private static final String VERSION = "egeria-connector-xtdb/persistence-layer.version";

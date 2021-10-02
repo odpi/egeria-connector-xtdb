@@ -22,10 +22,9 @@ import static org.testng.Assert.*;
 /**
  * Test the application of the upgrade.
  */
-public class UpgradeInitialTo2Test {
+public class UpgradeTest {
 
     private static final IXtdb embedded = IXtdb.startNode();
-    private static final UpgradeInitialTo2 upgrade = new UpgradeInitialTo2(embedded, 1);
 
     @BeforeClass
     void setup() {
@@ -33,18 +32,31 @@ public class UpgradeInitialTo2Test {
         createInitialMetadata();
     }
 
-    @Test
-    void testBasics() {
-        assertEquals(upgrade.getFromVersion(), -1L, "Expected to upgrade from version -1.");
-        assertEquals(upgrade.getToVersion(), 2L, "Expected to upgrade to version 2.");
-        assertEquals(upgrade.getBatchSize(), 1, "Expected batch size to match what was set explicitly.");
-    }
-
-    @Test
-    void testMigration() {
+    @Test(groups = { "one" })
+    void testMigration1() {
         try {
 
-            upgrade.migrate();
+            UpgradeInitialTo2 upgrade1 = new UpgradeInitialTo2(embedded, 1);
+            assertEquals(upgrade1.getFromVersion(), -1L, "Expected to upgrade from version -1.");
+            assertEquals(upgrade1.getToVersion(), 2L, "Expected to upgrade to version 2.");
+            assertEquals(upgrade1.getBatchSize(), 1, "Expected batch size to match what was set explicitly.");
+            upgrade1.migrate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            assertNull(e);
+        }
+    }
+
+    @Test(groups = { "two" }, dependsOnGroups = { "one" })
+    void testMigration2() {
+        try {
+
+            Upgrade2To3 upgrade2 = new Upgrade2To3(embedded, 1);
+            assertEquals(upgrade2.getFromVersion(), 2L, "Expected to upgrade from version 2.");
+            assertEquals(upgrade2.getToVersion(), 3L, "Expected to upgrade to version 3.");
+            assertEquals(upgrade2.getBatchSize(), 1, "Expected batch size to match what was set explicitly.");
+            upgrade2.migrate();
             assertTrue(PersistenceLayer.isLatestVersion(embedded), "Expected persistence to be at the latest version after migration.");
 
         } catch (Exception e) {

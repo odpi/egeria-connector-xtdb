@@ -2,6 +2,12 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
+import clojure.lang.IPersistentMap;
+import clojure.lang.Keyword;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.PropertyKeywords;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
@@ -27,19 +33,29 @@ public class MapPropertyValueMapping extends InstancePropertyValueMapping {
     /**
      * Add the provided map value to the XTDB document.
      * @param xtdbConnector connectivity to the repository
-     * @param instanceType of the instance for which this value applies
      * @param builder to which to add the property value
-     * @param propertyName of the property
-     * @param namespace by which to qualify the property
+     * @param keywords of the property
      * @param value of the property
      */
     public static void addMapPropertyValueToDoc(XtdbOMRSRepositoryConnector xtdbConnector,
-                                                InstanceType instanceType,
                                                 XtdbDocument.Builder builder,
-                                                String propertyName,
-                                                String namespace,
+                                                PropertyKeywords keywords,
                                                 MapPropertyValue value) {
-        builder.put(getPropertyValueKeyword(xtdbConnector, instanceType, propertyName, namespace), getMapPropertyValueForComparison(xtdbConnector, value));
+        builder.put(keywords.getSearchablePath(), getMapPropertyValueForComparison(xtdbConnector, value));
+    }
+
+    /**
+     * Add the provided map value to the XTDB map.
+     * @param doc the XTDB map to which to add the property
+     * @param propertyKeyword the property whose value should be set, fully-qualified with namespace and type name
+     * @param value of the property
+     * @return IPersistentMap containing the updated XTDB map
+     * @throws InvalidParameterException if the value cannot be persisted
+     */
+    public static IPersistentMap addMapPropertyValueToDoc(IPersistentMap doc,
+                                                          Keyword propertyKeyword,
+                                                          MapPropertyValue value) throws InvalidParameterException {
+        return doc.assoc(propertyKeyword, getMapPropertyValueForComparison(value));
     }
 
     /**
@@ -57,6 +73,32 @@ public class MapPropertyValueMapping extends InstancePropertyValueMapping {
                 String key = entry.getKey();
                 InstancePropertyValue value = entry.getValue();
                 Object toCompare = getValueForComparison(xtdbConnector, value);
+                if (toCompare != null) {
+                    results.put(key, toCompare);
+                }
+            }
+            if (!results.isEmpty()) {
+                return results;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Convert the provided map property value into a XTDB comparable form.
+     * @param mpv Egeria value to translate to XTDB-comparable value
+     * @return {@code Map<String, Object>} value that XTDB can compare
+     * @throws InvalidParameterException if the value cannot be persisted
+     */
+    public static Map<String, Object> getMapPropertyValueForComparison(MapPropertyValue mpv) throws InvalidParameterException {
+        InstanceProperties values = mpv.getMapValues();
+        if (values != null && values.getInstanceProperties() != null) {
+            // Create a new TreeMap of the values to ensure they are sorted by key (for consistency)
+            Map<String, Object> results = new TreeMap<>();
+            for (Map.Entry<String, InstancePropertyValue> entry : values.getInstanceProperties().entrySet()) {
+                String key = entry.getKey();
+                InstancePropertyValue value = entry.getValue();
+                Object toCompare = getValueForComparison(value);
                 if (toCompare != null) {
                     results.put(key, toCompare);
                 }
