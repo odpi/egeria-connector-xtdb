@@ -6,6 +6,8 @@ import clojure.lang.Keyword;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.AbstractMapping;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefAttribute;
 
+import java.util.Objects;
+
 /**
  * Captures the key characteristics of a property mapping.
  */
@@ -102,6 +104,44 @@ public class PropertyKeywords {
      */
     public static String getEndsWithPropertyNameForMatching(String propertyName) {
         return "." + propertyName + ".value";
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return "PropertyKeywords{" +
+                "attribute=" + attribute +
+                ", simpleName='" + simpleName + '\'' +
+                ", embeddedPath='" + embeddedPath + '\'' +
+                ", searchablePath='" + searchablePath + '\'' +
+                ", embeddedKeyword=" + getEmbeddedKeyword() +
+                ", searchableKeyword=" + getSearchableKeyword() +
+                ", propertyName='" + getPropertyName() + '\'' +
+                '}';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PropertyKeywords that = (PropertyKeywords) o;
+        return Objects.equals(attribute, that.attribute) &&
+                Objects.equals(simpleName, that.simpleName) &&
+                Objects.equals(embeddedPath, that.embeddedPath) &&
+                Objects.equals(searchablePath, that.searchablePath);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(attribute, simpleName, embeddedPath, searchablePath);
     }
 
 }
