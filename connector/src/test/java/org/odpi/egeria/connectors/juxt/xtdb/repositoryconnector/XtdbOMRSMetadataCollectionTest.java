@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import org.odpi.egeria.connectors.juxt.xtdb.mocks.MockConnection;
+import org.odpi.egeria.connectors.juxt.xtdb.readops.GetEntity;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.HistorySequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.MatchCriteria;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.*;
@@ -307,9 +308,9 @@ public class XtdbOMRSMetadataCollectionTest {
             relationship.setGUID(termCategorizationGuidRC);
             relationship.setVersion(10L);
 
-            EntityProxy one = connector.getEntityProxy(categoryGuidEX);
+            EntityProxy one = new GetEntity(connector, categoryGuidEX, null).asProxy();
             assertNotNull(one, "Expected proxy for the externally-sourced GlossaryCategory to exist.");
-            EntityProxy two = connector.getEntityProxy(ctrlTermGuidRC);
+            EntityProxy two = new GetEntity(connector, ctrlTermGuidRC, null).asProxy();
             assertNotNull(two, "Expected proxy for the reference copy ControlledGlossaryTerm to exist.");
 
             relationship.setEntityOneProxy(one);

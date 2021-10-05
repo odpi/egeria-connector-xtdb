@@ -3,9 +3,9 @@
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
 import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
+import org.odpi.egeria.connectors.juxt.xtdb.readops.*;
 import org.odpi.egeria.connectors.juxt.xtdb.txnfn.*;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.*;
-import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.openmetadata.frameworks.auditlog.AuditLog;
@@ -22,7 +22,10 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xtdb.api.IXtdb;
+import xtdb.api.IXtdbDatasource;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -199,7 +202,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         final String methodName = "isEntityKnown";
         this.getInstanceParameterValidation(userId, guid, methodName);
         try {
-            EntityDetail entity = xtdbRepositoryConnector.getEntity(guid, null, false);
+            EntityDetail entity = new GetEntity(xtdbRepositoryConnector, guid, null).asDetail();
             repositoryValidator.validateEntityFromStore(repositoryName, guid, entity, methodName);
             return entity;
         } catch (EntityNotKnownException e) {
@@ -221,17 +224,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
         final String methodName = "getEntitySummary";
         super.getInstanceParameterValidation(userId, guid, methodName);
-        EntitySummary summary = null;
-        try {
-            summary = xtdbRepositoryConnector.getEntity(guid, null, true);
-        } catch (EntityProxyOnlyException e) {
-            xtdbRepositoryConnector.logProblem(this.getClass().getName(),
-                    methodName,
-                    XtdbOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
-                    e,
-                    "exception raised for proxy despite allowing proxies",
-                    e.getClass().getName());
-        }
+        EntitySummary summary = new GetEntity(xtdbRepositoryConnector, guid, null).asSummary();
         repositoryValidator.validateEntityFromStore(repositoryName, guid, summary, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, summary, methodName);
         return summary;
@@ -263,7 +256,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityProxyOnlyException {
         final String methodName = "getEntityDetail";
         super.getInstanceParameterValidation(userId, guid, methodName);
-        EntityDetail entity = xtdbRepositoryConnector.getEntity(guid, asOfTime, false);
+        EntityDetail entity = new GetEntity(xtdbRepositoryConnector, guid, asOfTime).asDetail();
         repositoryValidator.validateEntityFromStore(repositoryName, guid, entity, methodName);
         repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
         return entity;
@@ -285,7 +278,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException {
         final String methodName = "getEntityDetailHistory";
         super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
-        return xtdbRepositoryConnector.getPreviousVersionsOfEntity(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
+        return new GetEntityHistory(xtdbRepositoryConnector, guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder).execute();
     }
 
     /**
@@ -307,27 +300,29 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException,
             PagingErrorException,
             UserNotAuthorizedException {
-
         final String methodName = "getRelationshipsForEntity";
         super.getRelationshipsForEntityParameterValidation(userId, entityGUID, relationshipTypeGUID, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-
-        EntitySummary entity = this.getEntitySummary(userId, entityGUID);
-
-        repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
-        repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
-
-        List<Relationship> entityRelationships = xtdbRepositoryConnector.findRelationshipsForEntity(entityGUID,
-                relationshipTypeGUID,
-                fromRelationshipElement,
-                limitResultsByStatus,
-                asOfTime,
-                sequencingProperty,
-                sequencingOrder,
-                pageSize,
-                userId);
-
+        List<Relationship> entityRelationships;
+        IXtdb xtdbAPI = xtdbRepositoryConnector.getXtdbAPI();
+        try (IXtdbDatasource db = asOfTime == null ? xtdbAPI.openDB() : xtdbAPI.openDB(asOfTime)) {
+            EntitySummary entity = GetEntity.summaryByGuid(xtdbRepositoryConnector, db, entityGUID);
+            repositoryValidator.validateEntityFromStore(repositoryName, entityGUID, entity, methodName);
+            repositoryValidator.validateEntityIsNotDeleted(repositoryName, entity, methodName);
+            entityRelationships = new GetRelationshipsForEntity(xtdbRepositoryConnector,
+                    entityGUID,
+                    relationshipTypeGUID,
+                    fromRelationshipElement,
+                    limitResultsByStatus,
+                    db,
+                    sequencingProperty,
+                    sequencingOrder,
+                    pageSize,
+                    userId).getResults();
+        } catch (IOException e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                    this.getClass().getName(), this.getClass().getName(), e);
+        }
         return entityRelationships == null || entityRelationships.isEmpty() ? null : entityRelationships;
-
     }
 
     /**
@@ -389,9 +384,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             TypeErrorException,
             PagingErrorException {
-
         this.findEntitiesParameterValidation(userId, entityTypeGUID, entitySubtypeGUIDs, matchProperties, fromEntityElement, limitResultsByStatus, matchClassifications, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-        return xtdbRepositoryConnector.findEntities(entityTypeGUID,
+        return new FindEntities(xtdbRepositoryConnector,
+                entityTypeGUID,
                 entitySubtypeGUIDs,
                 matchProperties,
                 fromEntityElement,
@@ -401,8 +396,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 sequencingProperty,
                 sequencingOrder,
                 pageSize,
-                userId);
-
+                userId).getResults();
     }
 
     /**
@@ -476,10 +470,10 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException,
             PagingErrorException,
             UserNotAuthorizedException {
-
         super.findEntitiesByPropertyValueParameterValidation(userId, entityTypeGUID, searchCriteria, fromEntityElement, limitResultsByStatus, limitResultsByClassification, asOfTime, sequencingProperty, sequencingOrder, pageSize);
         SearchClassifications searchClassifications = repositoryHelper.getSearchClassificationsFromList(limitResultsByClassification);
-        return xtdbRepositoryConnector.findEntitiesByText(entityTypeGUID,
+        return new FindEntitiesByPropertyValue(xtdbRepositoryConnector,
+                entityTypeGUID,
                 searchCriteria,
                 fromEntityElement,
                 limitResultsByStatus,
@@ -488,8 +482,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 sequencingProperty,
                 sequencingOrder,
                 pageSize,
-                userId);
-
+                userId).getResults();
     }
 
     /**
@@ -500,9 +493,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                             String guid) throws
             InvalidParameterException,
             RepositoryErrorException {
-        final String  methodName = "isRelationshipKnown";
+        final String methodName = "isRelationshipKnown";
         super.getInstanceParameterValidation(userId, guid, methodName);
-        return xtdbRepositoryConnector.getRelationship(guid, null);
+        return new GetRelationship(xtdbRepositoryConnector, guid, null).execute();
     }
 
     /**
@@ -540,7 +533,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RepositoryErrorException,
             RelationshipNotKnownException {
         final String methodName = "getAndValidateRelationship";
-        Relationship relationship = xtdbRepositoryConnector.getRelationship(guid, asOfTime);
+        Relationship relationship = new GetRelationship(xtdbRepositoryConnector, guid, asOfTime).execute();
         repositoryValidator.validateRelationshipFromStore(repositoryName, guid, relationship, methodName);
         repositoryValidator.validateRelationshipIsNotDeleted(repositoryName, relationship, methodName);
         return relationship;
@@ -562,7 +555,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             RelationshipNotKnownException {
         final String methodName = "getRelationshipHistory";
         super.getInstanceHistoryParameterValidation(userId, guid, fromTime, toTime, methodName);
-        return xtdbRepositoryConnector.getPreviousVersionsOfRelationship(guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder);
+        return new GetRelationshipHistory(xtdbRepositoryConnector, guid, fromTime, toTime, startFromElement, pageSize, sequencingOrder).execute();
     }
 
     /**
@@ -583,9 +576,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException,
             RepositoryErrorException,
             PagingErrorException {
-
         super.findRelationshipsParameterValidation(userId, relationshipTypeGUID, relationshipSubtypeGUIDs, matchProperties, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-        return xtdbRepositoryConnector.findRelationships(relationshipTypeGUID,
+        return new FindRelationships(xtdbRepositoryConnector,
+                relationshipTypeGUID,
                 relationshipSubtypeGUIDs,
                 matchProperties,
                 fromRelationshipElement,
@@ -594,8 +587,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 sequencingProperty,
                 sequencingOrder,
                 pageSize,
-                userId);
-
+                userId).getResults();
     }
 
     /**
@@ -618,7 +610,6 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException,
             PagingErrorException,
             UserNotAuthorizedException {
-
         super.findRelationshipsByPropertyParameterValidation(userId, relationshipTypeGUID, matchProperties, matchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
         SearchProperties searchProperties = repositoryHelper.getSearchPropertiesFromInstanceProperties(repositoryName, matchProperties, matchCriteria);
         return findRelationships(userId,
@@ -653,9 +644,9 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             PropertyErrorException,
             PagingErrorException,
             UserNotAuthorizedException {
-
         super.findRelationshipsByPropertyValueParameterValidation(userId, relationshipTypeGUID, searchCriteria, fromRelationshipElement, limitResultsByStatus, asOfTime, sequencingProperty, sequencingOrder, pageSize);
-        return xtdbRepositoryConnector.findRelationshipsByText(relationshipTypeGUID,
+        return new FindRelationshipsByPropertyValue(xtdbRepositoryConnector,
+                relationshipTypeGUID,
                 searchCriteria,
                 fromRelationshipElement,
                 limitResultsByStatus,
@@ -663,8 +654,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                 sequencingProperty,
                 sequencingOrder,
                 pageSize,
-                userId);
-
+                userId).getResults();
     }
 
     /**
@@ -695,7 +685,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             try {
                 InstanceGraph one = new InstanceGraph();
                 List<EntityDetail> list = new ArrayList<>();
-                EntityDetail entity = xtdbRepositoryConnector.getEntity(startEntityGUID, asOfTime, false);
+                EntityDetail entity = new GetEntity(xtdbRepositoryConnector, startEntityGUID, asOfTime).asDetail();
                 list.add(entity);
                 one.setEntities(list);
                 return one;
@@ -705,10 +695,12 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             }
         }
 
-        return xtdbRepositoryConnector.getTraversalsBetweenEntities(startEntityGUID,
+        // Otherwise, actually do the traversals...
+        return new GetLinkingEntities(xtdbRepositoryConnector,
+                startEntityGUID,
                 endEntityGUID,
                 limitResultsByStatus,
-                asOfTime);
+                asOfTime).execute();
 
     }
 
@@ -725,6 +717,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                                Date asOfTime,
                                                int level) throws
             InvalidParameterException,
+            EntityNotKnownException,
             RepositoryErrorException,
             TypeErrorException {
 
@@ -762,14 +755,14 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             }
         }
 
-        return xtdbRepositoryConnector.findNeighborhood(entityGUID,
+        return new GetEntityNeighborhood(xtdbRepositoryConnector,
+                entityGUID,
                 entityTypeGUIDs,
                 relationshipTypeGUIDs,
                 limitResultsByStatus,
                 limitResultsByClassification,
                 asOfTime,
-                level,
-                true);
+                level).execute();
 
     }
 
@@ -823,14 +816,12 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         }
 
         // Retrieve ALL (full depth) neighborhood from the starting entity (not retrieving any relationships)
-        InstanceGraph adjacent = xtdbRepositoryConnector.findNeighborhood(startEntityGUID,
+        InstanceGraph adjacent = new GetRelatedEntities(xtdbRepositoryConnector,
+                startEntityGUID,
                 entityTypeGUIDs,
-                null,
                 limitResultsByStatus,
                 limitResultsByClassification,
-                asOfTime,
-                -1,
-                false);
+                asOfTime).execute();
 
         if (adjacent != null) {
             // ... and then simply limit the entity results according to the sequencing and paging parameters
@@ -1436,18 +1427,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
 
-        EntitySummary retrievedEntity = null;
-        try {
-            retrievedEntity = xtdbRepositoryConnector.getEntity(entityGUID, null, true);
-        } catch (EntityProxyOnlyException e) {
-            xtdbRepositoryConnector.logProblem(this.getClass().getName(),
-                    methodName,
-                    XtdbOMRSAuditCode.UNEXPECTED_RUNTIME_ERROR,
-                    e,
-                    "exception raised for proxy despite allowing proxies",
-                    e.getClass().getName());
-        }
-
+        EntitySummary retrievedEntity = new GetEntity(xtdbRepositoryConnector, entityGUID, null).asSummary();
         List<Classification> homeClassifications = new ArrayList<>();
 
         if (retrievedEntity != null) {
@@ -1553,12 +1533,14 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     @Override
     protected EntityProxy getEntityProxy(String userId,
                                          String entityGUID,
-                                         String methodName) throws EntityNotKnownException {
-        EntityProxy entityProxy = xtdbRepositoryConnector.getEntityProxy(entityGUID);
-        if (entityProxy == null) {
+                                         String methodName) throws
+            EntityNotKnownException,
+            RepositoryErrorException {
+        EntityProxy proxy = new GetEntity(xtdbRepositoryConnector, entityGUID, null).asProxy();
+        if (proxy == null) {
             reportEntityNotKnown(entityGUID, methodName);
         }
-        return entityProxy;
+        return proxy;
     }
 
 }
