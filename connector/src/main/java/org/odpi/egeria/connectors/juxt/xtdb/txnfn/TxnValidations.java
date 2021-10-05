@@ -770,21 +770,21 @@ public class TxnValidations {
                         validPropertyType = true;
                     }
                     break;
-
                 case ENUM:
                     if (propertyDefinitionType == AttributeTypeDefCategory.ENUM_DEF) {
                         validPropertyType = true;
                     }
                     break;
-
                 case MAP:
-
                 case STRUCT:
-
                 case ARRAY:
                     if (propertyDefinitionType == AttributeTypeDefCategory.COLLECTION) {
                         validPropertyType = true;
                     }
+                    break;
+                case UNKNOWN:
+                default:
+                    // Nothing to do, leave the property validity as false
                     break;
             }
 
