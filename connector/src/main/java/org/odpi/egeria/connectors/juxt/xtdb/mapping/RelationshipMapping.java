@@ -6,6 +6,7 @@ import clojure.lang.IPersistentMap;
 import clojure.lang.IPersistentVector;
 import clojure.lang.Keyword;
 import clojure.lang.PersistentVector;
+import org.odpi.egeria.connectors.juxt.xtdb.readops.GetEntity;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import xtdb.api.IXtdbDatasource;
@@ -138,8 +139,7 @@ public class RelationshipMapping extends InstanceHeaderMapping {
      * @return EntityProxy
      */
     private EntityProxy getEntityProxyFromRef(String ref) {
-        XtdbDocument epDoc = xtdbConnector.getXtdbObjectByReference(db, ref);
-        return EntityProxyMapping.getFromDoc(xtdbConnector, epDoc);
+        return GetEntity.proxyByRef(xtdbConnector, db, ref);
     }
 
     /**
