@@ -32,17 +32,18 @@ public class PurgeEntity extends AbstractTransactionFunction {
 
     // Query to retrieve ALL relationships that point to this entity, irrespective of status or
     // home repository
+    // (mixed quoting is necessary to ensure the eid is evaluated, so it becomes first in the join
+    // ordering of the query for performance reasons)
     private static final String RELN_QUERY = "" +
-            "(quote {:find [r]" +
-            " :where [[r :" + RelationshipMapping.ENTITY_PROXIES + " e]" +
-            "         [r :" + InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY + " " + TypeDefCategory.RELATIONSHIP_DEF.getOrdinal() + "]]" +
-            " :in [e]})";
+            "{:find [(quote r)]" +
+            " :where [[(quote r) :" + RelationshipMapping.ENTITY_PROXIES + " eid]" +
+            "         [(quote r) :" + InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY + " " + TypeDefCategory.RELATIONSHIP_DEF.getOrdinal() + "]]}";
 
     private static final String FN = "" +
             "(fn [ctx eid force] " +
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
-            "          relationships (xtdb.api/q db " + RELN_QUERY + " eid)" +
+            "          relationships (xtdb.api/q db " + RELN_QUERY + ")" +
             "          existing (xtdb.api/entity db eid)" +
             "          deleted (.doc (" + PurgeEntity.class.getCanonicalName() + ". tx-id existing eid force))]" +
             // For each of the relationships that was found, delegate to the purge transaction function
