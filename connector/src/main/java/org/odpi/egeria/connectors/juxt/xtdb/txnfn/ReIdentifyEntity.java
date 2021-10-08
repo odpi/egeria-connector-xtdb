@@ -31,18 +31,19 @@ public class ReIdentifyEntity extends ReIdentifyInstance {
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
 
     // Query to retrieve all homed relationships that have this entity as one of their endpoints
+    // (mixed quoting is necessary to ensure the eid is evaluated, so it becomes first in the join
+    // ordering of the query for performance reasons)
     private static final String RELN_QUERY = "" +
-            "(quote {:find [r]" +
-            " :where [[r :" + RelationshipMapping.ENTITY_PROXIES + " e]" +
-            "         [r :" + InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY + " " + TypeDefCategory.RELATIONSHIP_DEF.getOrdinal() + "]" +
-            "         [r :" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + " mid]]" +
-            " :in [e mid]})";
+            "{:find [(quote r)]" +
+            " :where [[(quote r) :" + RelationshipMapping.ENTITY_PROXIES + " eid]" +
+            "         [(quote r) :" + InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY + " " + TypeDefCategory.RELATIONSHIP_DEF.getOrdinal() + "]" +
+            "         [(quote r) :" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + " mid]]}";
 
     private static final String FN = "" +
             "(fn [ctx eid user nid mid] " +
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
-            "          relationships (xtdb.api/q db " + RELN_QUERY + " eid mid)" +
+            "          relationships (xtdb.api/q db " + RELN_QUERY + ")" +
             "          existing (xtdb.api/entity db eid)" +
             "          updates (.tuple (" + ReIdentifyEntity.class.getCanonicalName() + ". tx-id existing user eid nid mid))]" +
             "         (vec (concat (vec (for [[rid] relationships]" +

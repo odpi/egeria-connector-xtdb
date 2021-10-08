@@ -150,8 +150,7 @@ public class GetEntity extends AbstractReadOperation {
         if (log.isDebugEnabled())
             log.debug(Constants.FOUND_RESULTS, xtdbDoc == null ? null : xtdbDoc.toMap());
         if (xtdbDoc != null) {
-            EntityProxyMapping epm = new EntityProxyMapping(xtdb, xtdbDoc);
-            return epm.toEgeria();
+            return EntityProxyMapping.getFromDoc(xtdb, xtdbDoc);
         }
         return null;
     }

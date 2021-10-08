@@ -45,22 +45,6 @@ public abstract class AbstractGraphOperation extends AbstractReadOperation {
     }
 
     /**
-     * Create a new search operation.
-     * @param xtdb connectivity to XTDB
-     * @param startEntityGUID unique identifier of the starting entity for the traversal
-     * @param limitResultsByStatus list of statuses by which to limit results
-     * @param existingDB the already-opened point-in-time from which to retrieve results
-     */
-    protected AbstractGraphOperation(XtdbOMRSRepositoryConnector xtdb,
-                                     String startEntityGUID,
-                                     List<InstanceStatus> limitResultsByStatus,
-                                     IXtdbDatasource existingDB) {
-        super(xtdb, existingDB);
-        this.startEntityGUID = startEntityGUID;
-        this.limitResultsByStatus = limitResultsByStatus;
-    }
-
-    /**
      * Find the entities and relationships that radiate out from the supplied entity GUID.
      * The results are scoped by the provided type GUIDs, other limiters, and the level.
      * @param db already-opened point-in-time view of the datasource from which to retrieve

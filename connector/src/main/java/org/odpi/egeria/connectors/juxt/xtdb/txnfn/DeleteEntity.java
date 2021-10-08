@@ -32,30 +32,31 @@ public class DeleteEntity extends DeleteInstance {
     private static final String METHOD_NAME = FUNCTION_NAME.toString();
 
     // Query to retrieve all non-deleted relationships that point to this entity,
-    // including their metadataCollectionId (mid)
+    // (mixed quoting is necessary to ensure the eid is evaluated, so it becomes first in the join
+    // ordering of the query for performance reasons)
     private static final String RELN_QUERY = "" +
-            "(quote {:find [r mid]" +
-            " :where [[r :" + RelationshipMapping.ENTITY_PROXIES + " e]" +
-            "         [r :" + InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY + " " + TypeDefCategory.RELATIONSHIP_DEF.getOrdinal() + "]" +
-            "         [r :" + InstanceAuditHeaderMapping.CURRENT_STATUS + " s]" +
-            "         [(not= s " + InstanceStatus.DELETED.getOrdinal() + ")]" +
-            "         [r :" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + " mid]]" +
-            " :in [e]})";
+            "{:find [(quote r)]" +
+            "  :where [[(quote r) :" + RelationshipMapping.ENTITY_PROXIES + " eid]" +
+            "          [(quote r) :" + InstanceAuditHeaderMapping.TYPE_DEF_CATEGORY + " " + TypeDefCategory.RELATIONSHIP_DEF.getOrdinal() + "]" +
+            "          [(quote r) :" + InstanceAuditHeaderMapping.CURRENT_STATUS + " (quote s)]" +
+            "          [(quote (not= s " + InstanceStatus.DELETED.getOrdinal() + "))]]}";
 
     private static final String FN = "" +
             "(fn [ctx eid user] " +
             "    (let [db (xtdb.api/db ctx)" +
             "          tx-id (:tx-id db)" +
-            "          relationships (xtdb.api/q db " + RELN_QUERY + " eid)" +
+            "          relationships (xtdb.api/q db " + RELN_QUERY + ")" +
             "          existing (xtdb.api/entity db eid)" +
             "          deleted (.doc (" + DeleteEntity.class.getCanonicalName() + ". tx-id existing user eid))" +
             getTxnTimeCalculation("deleted") + "]" +
             // For each of the relationships that was found, check the metadataCollectionId of it to determine
             // whether to delete the relationship (homed in this repo, same as entity) or to purge it (reference copy)
             // by delegating to the appropriate transaction function for those operations
-            "         (conj (vec (for [[rid mid] relationships]" +
-            "                     (let [home (get existing :" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + ")]" +
-            "                          (if (= home mid)" +
+            //"         (conj (vec (for [[rid mid] relationships]" +
+            "         (conj (vec (for [[rid] relationships]" +
+            "                     (let [home (get existing :" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + ")" +
+            "                           mid (xtdb.api/pull db [:" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + "] rid)]" +
+            "                          (if (= home (:" + InstanceAuditHeaderMapping.METADATA_COLLECTION_ID + " mid))" +
             "                              [:xtdb.api/fn " + DeleteRelationship.FUNCTION_NAME + " rid user]" +
             "                              [:xtdb.api/fn " + PurgeRelationship.FUNCTION_NAME + " rid true]))))" +
             // And of course also persist the soft-deleted entity itself as part of this transaction

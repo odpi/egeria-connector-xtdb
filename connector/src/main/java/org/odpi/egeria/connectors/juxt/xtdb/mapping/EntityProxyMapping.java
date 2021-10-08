@@ -49,8 +49,14 @@ public class EntityProxyMapping extends EntitySummaryMapping {
     }
 
     /**
-     * Map from XTDB to Egeria.
+     * Map from XTDB to Egeria. NOTE: This method should ONLY be used when you are certain that you have
+     * only a proxy that you are translating. In general, it is better to use the getFromDoc method which
+     * will automatically determine whether you have a full entity or only a proxy, and translate either to
+     * only the proxy representation as-needed. (This method here should really be treated as an internal
+     * method of this class, and is only public given that it overrides another public method in the parent
+     * class.)
      * @return EntityProxy
+     * @see #getFromDoc(XtdbOMRSRepositoryConnector, XtdbDocument)
      * @see #EntityProxyMapping(XtdbOMRSRepositoryConnector, XtdbDocument)
      */
     @Override
@@ -83,6 +89,8 @@ public class EntityProxyMapping extends EntitySummaryMapping {
     @Override
     protected void fromDoc() {
         super.fromDoc();
+        // Note: the following will ONLY work for true proxy objects, not full entities (for full
+        // entities this will return a full set of properties, not only the unique properties
         InstanceProperties uniqueProperties = InstancePropertiesMapping.getFromDoc(xtdbConnector, instanceHeader.getType(), xtdbDoc);
         ((EntityProxy) instanceHeader).setUniqueProperties(uniqueProperties);
     }
@@ -102,7 +110,6 @@ public class EntityProxyMapping extends EntitySummaryMapping {
             EntityProxy ep = new EntityProxy();
             EntitySummaryMapping.fromMap(ep, doc);
             InstanceType entityType = getTypeFromInstance(doc, null);
-            // TODO: very small risk that this actually retrieves more than just unique properties
             InstanceProperties uniqueProperties = InstancePropertiesMapping.getFromMap(entityType, doc);
             ep.setUniqueProperties(uniqueProperties);
             return ep;
