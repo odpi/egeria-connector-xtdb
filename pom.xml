@@ -69,7 +69,7 @@
 
     <properties>
         <open-metadata.version>3.2-SNAPSHOT</open-metadata.version>
-        <xtdb.version>1.19.0-beta1</xtdb.version>
+        <xtdb.version>1.19.0</xtdb.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.13.0</jackson.version>
         <lucene.version>8.9.0</lucene.version>
