@@ -68,8 +68,8 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.2-SNAPSHOT</open-metadata.version>
-        <xtdb.version>1.19.0-beta1</xtdb.version>
+        <open-metadata.version>3.2</open-metadata.version>
+        <xtdb.version>1.19.0</xtdb.version>
         <clojure.version>1.10.3</clojure.version>
         <jackson.version>2.13.0</jackson.version>
         <lucene.version>8.9.0</lucene.version>
@@ -310,7 +310,7 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>6.3.2</version>
+                    <version>6.4.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
