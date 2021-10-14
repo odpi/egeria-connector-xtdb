@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/odpi/egeria-connector-xtdb)](LICENSE)
 [![Build](https://github.com/odpi/egeria-connector-xtdb/workflows/Build/badge.svg)](https://github.com/odpi/egeria-connector-xtdb/actions/workflows/merge.yml?query=workflow%3ABuild)
 [![CodeQL](https://github.com/odpi/egeria-connector-xtdb/workflows/CodeQL/badge.svg)](https://github.com/odpi/egeria-connector-xtdb/actions/workflows/codeql-analysis.yml)
-[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-crux?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-crux&v=RELEASE&c=jar-with-dependencies)
+[![Release](https://img.shields.io/maven-central/v/org.odpi.egeria/egeria-connector-xtdb?label=release)](http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-xtdb&v=RELEASE&c=jar-with-dependencies)
 [![Development](https://img.shields.io/nexus/s/org.odpi.egeria/egeria-connector-xtdb?label=development&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/org/odpi/egeria/egeria-connector-xtdb/)
 
 # XTDB Plugin Repository Connector
