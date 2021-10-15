@@ -1,0 +1,29 @@
+apiVersion: v1
+data:
+  CONNECTOR_JAR: egeria-connector-xtdb-3.2-jar-with-dependencies.jar
+  CONNECTOR_URL: http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-xtdb&v=RELEASE&c=jar-with-dependencies
+  EGERIA_COHORT: coco
+  EGERIA_SERVER: myserver
+  EGERIA_USER: myuser
+  KAFKA_ENDPOINT: x40-10-kafka:9092
+  LOGGING_LEVEL_ROOT: WARN
+  PTS_REPORT_NAME: x40-10
+  STRICT_SSL: "false"
+  XTDB_SERVER: xtdb
+  XTDBPROXY_ENDPOINT: https://x40-10-xtdb-service:9443
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: x40-10
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2021-10-14T22:07:52Z"
+  labels:
+    app.kubernetes.io/instance: x40-10
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ec-pts-xtdb
+    helm.sh/chart: ec-pts-xtdb-0.1
+  name: x40-10-configmap
+  namespace: default
+  resourceVersion: "57442455"
+  selfLink: /api/v1/namespaces/default/configmaps/x40-10-configmap
+  uid: 0444d790-b8f9-4e2a-8ea6-e00edcdd8ba1
