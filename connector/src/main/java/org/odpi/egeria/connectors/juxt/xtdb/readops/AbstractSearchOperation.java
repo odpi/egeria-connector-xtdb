@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.xtdb.readops;
 
 import clojure.lang.IPersistentMap;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.RelationshipMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.model.search.TextConditionBuilder;
@@ -19,8 +20,10 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xtdb.api.ICursor;
 import xtdb.api.IXtdbDatasource;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 
@@ -118,8 +121,9 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
      * @return {@code Collection<List<?>>} of internal XT references (IDs) that match the query
      * @throws TypeErrorException if a requested type for searching is not known to the repository
      * @throws TimeoutException if the query times out
+     * @throws RepositoryErrorException if there is any issue iterating through the results
      */
-    protected abstract Collection<List<?>> runQuery(IXtdbDatasource db) throws TypeErrorException, TimeoutException;
+    protected abstract Collection<List<?>> runQuery(IXtdbDatasource db) throws TypeErrorException, TimeoutException, RepositoryErrorException;
 
     /**
      * Search XTDB based on the provided parameters, using an already-opened point-in-time view of the database (should
@@ -139,6 +143,7 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
      * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the XTDB document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryErrorException if there is any issue iterating through the results
      */
     protected Collection<List<?>> searchXtdb(IXtdbDatasource db,
                                              TypeDefCategory category,
@@ -152,7 +157,7 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
                                              SequencingOrder sequencingOrder,
                                              int pageSize,
                                              String namespace,
-                                             String userId) throws TypeErrorException {
+                                             String userId) throws TypeErrorException, RepositoryErrorException {
         XtdbQuery query = new XtdbQuery();
         updateQuery(query,
                 category,
@@ -167,9 +172,14 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
                 userId);
         IPersistentMap q = query.getQuery();
         log.debug(Constants.QUERY_WITH, q);
-        Collection<List<?>> results = db.query(q);
-        // Note: we de-duplicate and apply paging here, against the full set of results from XTDB
-        return deduplicateAndPage(results, fromElement, pageSize);
+        Collection<List<?>> results;
+        try (ICursor<List<?>> searchCursor = db.openQuery(q)) {
+            results = deduplicateAndPage(searchCursor, fromElement, pageSize);
+        } catch (IOException e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                    this.getClass().getName(), this.getClass().getName(), e);
+        }
+        return results;
     }
 
     /**
@@ -228,6 +238,7 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
      * @param userId of the user running the query
      * @return {@code Collection<List<?>>} list of the XTDB document references that match
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryErrorException if there is any issue iterating through the results
      */
     protected Collection<List<?>> searchXtdbText(IXtdbDatasource db,
                                                  TypeDefCategory category,
@@ -240,7 +251,7 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
                                                  SequencingOrder sequencingOrder,
                                                  int pageSize,
                                                  String namespace,
-                                                 String userId) throws TypeErrorException {
+                                                 String userId) throws TypeErrorException, RepositoryErrorException {
         XtdbQuery query = new XtdbQuery();
         updateTextQuery(query,
                 category,
@@ -254,9 +265,14 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
                 userId);
         IPersistentMap q = query.getQuery();
         log.debug(Constants.QUERY_WITH, q);
-        Collection<List<?>> results = db.query(q);
-        // Note: we de-duplicate and apply paging here, against the full set of results from XTDB
-        return deduplicateAndPage(results, fromElement, pageSize);
+        Collection<List<?>> results;
+        try (ICursor<List<?>> searchCursor = db.openQuery(q)) {
+            results = deduplicateAndPage(searchCursor, fromElement, pageSize);
+        } catch (IOException e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                    this.getClass().getName(), this.getClass().getName(), e);
+        }
+        return results;
     }
 
     /**
@@ -377,44 +393,55 @@ public abstract class AbstractSearchOperation extends AbstractReadOperation {
      * @param pageSize number of elements to include in the page
      * @return {@code Collection<List<?>>} of only the single page of results specified
      */
-    protected Collection<List<?>> deduplicateAndPage(Collection<List<?>> results,
+    protected Collection<List<?>> deduplicateAndPage(ICursor<List<?>> results,
                                                      int fromElement,
                                                      int pageSize) {
-        if (results == null || results.isEmpty()) {
-            return results;
-        } else {
-            List<List<?>> pageOfResults  = new ArrayList<>();
+
+        List<List<?>> pageOfResults  = new ArrayList<>();
+        if (results != null && results.hasNext()) {
+
             Set<List<?>> skippedResults = new HashSet<>();
             int currentIndex = 0;
             // 0 as a pageSize means ALL pages -- so we should return every result that we found (up to the maximum
             // number of results allowed by the connector)
             pageSize = pageSize > 0 ? pageSize : xtdb.getMaxPageSize();
             int lastResultIndex = (fromElement + pageSize);
-            for (List<?> singleResult : results) {
+
+            while (results.hasNext()) {
+
+                List<?> next = results.next();
                 if (currentIndex >= lastResultIndex) {
                     // If we are at / beyond the last index, break out of the loop
                     break;
                 } else if (currentIndex >= fromElement) {
-                    if (!pageOfResults.contains(singleResult)) {
+                    // TODO: for large page sizes we may be able to optimise the following, if the assumption
+                    //  that the bag of results returned will always have duplicate values next to each other
+                    //  (then we only need to compare to the last result to see if we should skip it or not,
+                    //  rather than a 'contains' against a List)
+                    if (!pageOfResults.contains(next)) {
                         // Otherwise, only add this result if it is at or beyond the starting point (fromElement) and
                         // our list of results does not already contain this result (in which case, also increment our
                         // current index for the number of results we have captured)
-                        pageOfResults.add(singleResult);
+                        pageOfResults.add(next);
                         currentIndex++;
                     }
-                } else if (!skippedResults.contains(singleResult)) {
+                } else if (!skippedResults.contains(next)) {
                     // Otherwise, remember that we have are skipping this result and increment the current index
                     // accordingly just this once (necessary to skip only the correct number of results, when the
                     // fromElement is not 0)
-                    skippedResults.add(singleResult);
+                    skippedResults.add(next);
                     currentIndex++;
                 }
                 // In any other scenario, it is a result that has already been included or already been skipped,
                 // so we do not need to increment our index or do anything with the result -- just move on to the
                 // next one
+
             }
-            return pageOfResults;
+
         }
+
+        return pageOfResults;
+
     }
 
 }

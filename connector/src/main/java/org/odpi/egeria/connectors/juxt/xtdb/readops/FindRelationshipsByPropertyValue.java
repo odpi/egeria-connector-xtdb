@@ -8,6 +8,7 @@ import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSReposito
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.TypeErrorException;
 import xtdb.api.IXtdbDatasource;
 
@@ -64,10 +65,10 @@ public class FindRelationshipsByPropertyValue extends AbstractRelationshipSearch
      * @param db the datasource against which to run the query
      * @return {@code Collection<List<?>>} of internal XT references (IDs) that match the query
      * @throws TypeErrorException if a requested type for searching is not known to the repository
-     * @throws TimeoutException if the query times out
+     * @throws RepositoryErrorException if there is any issue iterating through the results
      */
     @Override
-    protected Collection<List<?>> runQuery(IXtdbDatasource db) throws TypeErrorException, TimeoutException {
+    protected Collection<List<?>> runQuery(IXtdbDatasource db) throws TypeErrorException, RepositoryErrorException {
         return searchXtdbText(db,
                 TypeDefCategory.RELATIONSHIP_DEF,
                 typeGUID,
