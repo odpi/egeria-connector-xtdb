@@ -452,20 +452,7 @@ public class XtdbQueryTest {
             assertNotNull(sequencing);
             assertTrue(sequencing.containsKey(find));
             assertTrue(sequencing.containsKey(where));
-            assertTrue(sequencing.containsKey(order));
-
-            Object candidate = sequencing.valAt(order);
-            assertTrue(candidate instanceof IPersistentVector, "Sequencing criteria are expected to be enclosed in an outer vector.");
-            IPersistentVector criteria = (IPersistentVector) candidate;
-            assertEquals(criteria.length(), 1, "One criterion is expected when sequencing by default order (by GUID).");
-            // Expected --> [[e :asc]]
-
-            candidate = criteria.nth(0);
-            assertTrue(candidate instanceof IPersistentVector, "Sequencing criteria are are expected to be enclosed in an inner vector.");
-            IPersistentVector criterion = (IPersistentVector) candidate;
-            assertEquals(criterion.length(), 2, "Sequencing criterion is expected to be a tuple.");
-            assertEquals(criterion.nth(0), XtdbQuery.DOC_ID, "First element of tuple is expected to be the document ID symbol.");
-            assertEquals(criterion.nth(1), XtdbQuery.SORT_ASCENDING, "Second element of tuple is expected to be the keyword for ascending sort.");
+            assertFalse(sequencing.containsKey(order));
 
         } catch (Exception e) {
             e.printStackTrace();

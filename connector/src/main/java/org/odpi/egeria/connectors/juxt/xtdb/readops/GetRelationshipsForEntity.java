@@ -3,6 +3,7 @@
 package org.odpi.egeria.connectors.juxt.xtdb.readops;
 
 import clojure.lang.IPersistentMap;
+import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.EntitySummaryMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.model.search.XtdbQuery;
@@ -10,11 +11,14 @@ import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSReposito
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.SequencingOrder;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceStatus;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.typedefs.TypeDefCategory;
+import org.odpi.openmetadata.repositoryservices.ffdc.exception.RepositoryErrorException;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.TypeErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xtdb.api.ICursor;
 import xtdb.api.IXtdbDatasource;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -67,9 +71,10 @@ public class GetRelationshipsForEntity extends AbstractRelationshipSearchOperati
      * @param db the datasource against which to run the query
      * @return {@code Collection<List<?>>} of internal XT references (IDs) that match the query
      * @throws TypeErrorException if a requested type for searching is not known to the repository
+     * @throws RepositoryErrorException if there is any issue iterating through the results
      */
     @Override
-    protected Collection<List<?>> runQuery(IXtdbDatasource db) throws TypeErrorException {
+    protected Collection<List<?>> runQuery(IXtdbDatasource db) throws TypeErrorException, RepositoryErrorException {
         XtdbQuery query = new XtdbQuery();
         query.addRelationshipEndpointConditions(EntitySummaryMapping.getReference(entityGUID));
         updateQuery(query,
@@ -85,9 +90,14 @@ public class GetRelationshipsForEntity extends AbstractRelationshipSearchOperati
                 userId);
         IPersistentMap q = query.getQuery();
         log.debug(Constants.QUERY_WITH, q);
-        Collection<List<?>> results = db.query(q);
-        // Note: we de-duplicate and apply paging here, against the full set of results from XTDB
-        return deduplicateAndPage(results, fromElement, pageSize);
+        Collection<List<?>> results;
+        try (ICursor<List<?>> searchCursor = db.openQuery(q)) {
+            results = deduplicateAndPage(searchCursor, fromElement, pageSize);
+        } catch (IOException e) {
+            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
+                    this.getClass().getName(), this.getClass().getName(), e);
+        }
+        return results;
     }
 
 }

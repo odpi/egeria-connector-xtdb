@@ -308,7 +308,7 @@ public class XtdbQuery {
     }
 
     /**
-     * Add the sequencing information onto the query. (If both are null, will default to sorting by GUID.)
+     * Add the sequencing information onto the query.
      * @param sequencingOrder by which to sequence the results
      * @param sequencingProperty by which to sequence the results (required if sorting by property, otherwise ignored)
      * @param namespace by which to qualify the sorting property (required if sorting by property, otherwise ignored)
@@ -322,68 +322,68 @@ public class XtdbQuery {
                               XtdbOMRSRepositoryConnector xtdbConnector) {
         final String methodName = "addSequencing";
         Set<Keyword> qualifiedSortProperties = null;
-        if (sequencingProperty != null) {
-            // Translate the provided sequencingProperty name into all of its possible appropriate property name
-            // references (depends on the type limiting used for the search)
-            qualifiedSortProperties = InstancePropertyValueMapping.getKeywordsForProperty(xtdbConnector, sequencingProperty, namespace, typeNames, null);
-        }
-        if (sequencingOrder == null) {
-            // Default to sorting by GUID, if no sorting is defined (for consistent result ordering, paging, etc)
-            sequencingOrder = SequencingOrder.GUID;
-        }
-        // Note: for sorting by anything other than document ID we need to ensure we also add the
-        // element to the conditions and sequence (unless there already as part of another search criteria), hence the
-        // 'addFindElement' logic.
-        switch (sequencingOrder) {
-            case LAST_UPDATE_OLDEST:
-                addFindElement(UPDATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
-                sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_ASCENDING));
-                break;
-            case LAST_UPDATE_RECENT:
-                addFindElement(UPDATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
-                sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_DESCENDING));
-                break;
-            case CREATION_DATE_OLDEST:
-                addFindElement(CREATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
-                sequencing.add(PersistentVector.create(CREATE_TIME, SORT_ASCENDING));
-                break;
-            case CREATION_DATE_RECENT:
-                addFindElement(CREATE_TIME);
-                conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
-                sequencing.add(PersistentVector.create(CREATE_TIME, SORT_DESCENDING));
-                break;
-            case PROPERTY_ASCENDING:
-                if (qualifiedSortProperties == null || qualifiedSortProperties.isEmpty()) {
-                    xtdbConnector.logProblem(this.getClass().getName(),
-                            methodName,
-                            XtdbOMRSAuditCode.NO_SORT_PROPERTY,
-                            null,
-                            sequencingProperty,
-                            typeNames == null ? "<null>" : typeNames.toString());
-                } else {
-                    addPropertyBasedSorting(qualifiedSortProperties, SORT_ASCENDING);
-                }
-                break;
-            case PROPERTY_DESCENDING:
-                if (qualifiedSortProperties == null || qualifiedSortProperties.isEmpty()) {
-                    xtdbConnector.logProblem(this.getClass().getName(),
-                            methodName,
-                            XtdbOMRSAuditCode.NO_SORT_PROPERTY,
-                            null,
-                            sequencingProperty,
-                            typeNames == null ? "<null>" : typeNames.toString());
-                } else {
-                    addPropertyBasedSorting(qualifiedSortProperties, SORT_DESCENDING);
-                }
-                break;
-            case ANY:
-            case GUID:
-            default:
-                sequencing.add(PersistentVector.create(DOC_ID, SORT_ASCENDING));
-                break;
+        if (sequencingOrder != null) {
+            // Only proceed with sorting if some order has been defined, otherwise do not attempt to sort
+            // the results (just use XTDB's consistent, undefined sort order for the results)
+            if (sequencingProperty != null) {
+                // Translate the provided sequencingProperty name into all of its possible appropriate property name
+                // references (depends on the type limiting used for the search)
+                qualifiedSortProperties = InstancePropertyValueMapping.getKeywordsForProperty(xtdbConnector, sequencingProperty, namespace, typeNames, null);
+            }
+            // Note: for sorting by anything other than document ID we need to ensure we also add the
+            // element to the conditions and sequence (unless there already as part of another search criteria), hence the
+            // 'addFindElement' logic.
+            switch (sequencingOrder) {
+                case LAST_UPDATE_OLDEST:
+                    addFindElement(UPDATE_TIME);
+                    conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
+                    sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_ASCENDING));
+                    break;
+                case LAST_UPDATE_RECENT:
+                    addFindElement(UPDATE_TIME);
+                    conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.UPDATE_TIME), UPDATE_TIME));
+                    sequencing.add(PersistentVector.create(UPDATE_TIME, SORT_DESCENDING));
+                    break;
+                case CREATION_DATE_OLDEST:
+                    addFindElement(CREATE_TIME);
+                    conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
+                    sequencing.add(PersistentVector.create(CREATE_TIME, SORT_ASCENDING));
+                    break;
+                case CREATION_DATE_RECENT:
+                    addFindElement(CREATE_TIME);
+                    conditions.add(PersistentVector.create(DOC_ID, Keyword.intern(InstanceAuditHeaderMapping.CREATE_TIME), CREATE_TIME));
+                    sequencing.add(PersistentVector.create(CREATE_TIME, SORT_DESCENDING));
+                    break;
+                case PROPERTY_ASCENDING:
+                    if (qualifiedSortProperties == null || qualifiedSortProperties.isEmpty()) {
+                        xtdbConnector.logProblem(this.getClass().getName(),
+                                methodName,
+                                XtdbOMRSAuditCode.NO_SORT_PROPERTY,
+                                null,
+                                sequencingProperty,
+                                typeNames == null ? "<null>" : typeNames.toString());
+                    } else {
+                        addPropertyBasedSorting(qualifiedSortProperties, SORT_ASCENDING);
+                    }
+                    break;
+                case PROPERTY_DESCENDING:
+                    if (qualifiedSortProperties == null || qualifiedSortProperties.isEmpty()) {
+                        xtdbConnector.logProblem(this.getClass().getName(),
+                                methodName,
+                                XtdbOMRSAuditCode.NO_SORT_PROPERTY,
+                                null,
+                                sequencingProperty,
+                                typeNames == null ? "<null>" : typeNames.toString());
+                    } else {
+                        addPropertyBasedSorting(qualifiedSortProperties, SORT_DESCENDING);
+                    }
+                    break;
+                case ANY:
+                case GUID:
+                default:
+                    sequencing.add(PersistentVector.create(DOC_ID, SORT_ASCENDING));
+                    break;
+            }
         }
     }
 
