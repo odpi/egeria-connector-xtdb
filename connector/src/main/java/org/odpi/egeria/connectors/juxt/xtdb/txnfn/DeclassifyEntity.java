@@ -55,7 +55,6 @@ public class DeclassifyEntity extends AbstractTransactionFunction {
                         entityGUID), CLASS_NAME, METHOD_NAME);
             } else {
 
-                TxnValidations.nonProxyEntity(existing, entityGUID, CLASS_NAME, METHOD_NAME);
                 TxnValidations.requiredProperty(entityGUID, "classificationName", classificationName, CLASS_NAME, METHOD_NAME);
                 TxnValidations.entityFromStore(entityGUID, existing, CLASS_NAME, METHOD_NAME);
                 TxnValidations.instanceIsNotDeleted(existing, entityGUID, CLASS_NAME, METHOD_NAME);
