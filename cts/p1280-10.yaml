@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the Egeria project.
+volumeParameters:
+  instancesPerType: 1280
+  maxSearchResults: 10
+  waitBetweenScenarios: 0
+  profilesToSkip: []
+  methodsToSkip:
+    - "getRelatedEntities"
+    - "getLinkingEntities"
+    - "getEntityNeighborhood"
+
+tut:
+  serverType: "plugin"
+  connectorProvider: "org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnectorProvider"
+  connectorConfig:
+    xtdbConfig:
+      xtdb/index-store:
+        kv-store:
+          xtdb/module: xtdb.lmdb/->kv-store
+          db-dir: data/servers/xtdb/lmdb-index
+      xtdb/document-store:
+        kv-store:
+          xtdb/module: xtdb.rocksdb/->kv-store
+          db-dir: data/servers/xtdb/rdb-docs
+      xtdb/tx-log:
+        kv-store:
+          xtdb/module: xtdb.rocksdb/->kv-store
+          db-dir: data/servers/xtdb/rdb-tx
+      xtdb.lucene/lucene-store:
+        db-dir: data/servers/xtdb/lucene
+
+downloads:
+  - filename: egeria-connector-xtdb-jar-with-dependencies.jar
+    url: "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-xtdb&v=RELEASE&c=jar-with-dependencies"
