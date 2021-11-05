@@ -1,0 +1,61 @@
+Name:         g0020-10-platform-864b8cf8cf-cmw67
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-1.fyre.ibm.com/9.20.193.94
+Start Time:   Wed, 03 Nov 2021 11:08:47 -0700
+Labels:       app.kubernetes.io/component=platform
+              app.kubernetes.io/instance=g0020-10
+              app.kubernetes.io/name=egeria-pts
+              pod-template-hash=864b8cf8cf
+Annotations:  cni.projectcalico.org/podIP: 10.233.72.103/32
+              cni.projectcalico.org/podIPs: 10.233.72.103/32
+Status:       Running
+IP:           10.233.72.103
+IPs:
+  IP:           10.233.72.103
+Controlled By:  ReplicaSet/g0020-10-platform-864b8cf8cf
+Containers:
+  platform:
+    Container ID:   docker://79be1192f7ae0c36a1adcf2619a09538c8e942c76ea44fe599acebf0d7fa4d93
+    Image:          quay.io/odpi/egeria:3.3
+    Image ID:       docker-pullable://quay.io/odpi/egeria@sha256:7e8e2e05b229a169de5218986a712514614cb18cca875acd68780f83980ad5ba
+    Port:           9443/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Wed, 03 Nov 2021 11:09:19 -0700
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     4
+      memory:  16Gi
+    Requests:
+      cpu:      2
+      memory:   8Gi
+    Readiness:  tcp-socket :9443 delay=10s timeout=1s period=10s #success=1 #failure=6
+    Environment Variables from:
+      g0020-10-env  ConfigMap  Optional: false
+    Environment:
+      LOADER_PATH:  /opt/egeria/connectors
+    Mounts:
+      /opt/egeria/connectors from egeria-connector-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-m8p54 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  egeria-connector-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  default-token-m8p54:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-m8p54
+    Optional:    false
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:          <none>

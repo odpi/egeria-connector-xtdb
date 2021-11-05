@@ -1,0 +1,34 @@
+apiVersion: v1
+data:
+  CONNECTOR_CONFIG: '{}'
+  CONNECTOR_PROVIDER: org.odpi.openmetadata.adapters.repositoryservices.graphrepository.repositoryconnector.GraphOMRSRepositoryConnectorProvider
+  EGERIA_COHORT: pts
+  EGERIA_ENDPOINT: https://g0020-10-platform:9443
+  EGERIA_SERVER: pts
+  EGERIA_USER: admin
+  INSTANCES_PER_TYPE: "20"
+  KAFKA_ENDPOINT: g0020-10-kafka:9092
+  MAX_SEARCH_RESULTS: "10"
+  METHODS_TO_SKIP: '["getRelatedEntities","getLinkingEntities","getEntityNeighborhood"]'
+  PROFILES_TO_SKIP: '[]'
+  PTS_REPORT_NAME: g0020-10
+  STRICT_SSL: "false"
+  TUT_SERVER: tut
+  TUT_TYPE: native
+  WAIT_BETWEEN_SCENARIOS: "0"
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: g0020-10
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2021-11-03T18:08:47Z"
+  labels:
+    app.kubernetes.io/instance: g0020-10
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: egeria-pts
+    helm.sh/chart: egeria-pts-3.3.0
+  name: g0020-10-env
+  namespace: default
+  resourceVersion: "63592610"
+  selfLink: /api/v1/namespaces/default/configmaps/g0020-10-env
+  uid: f98827d5-98f0-4c05-89b5-0ce4628c5aaa
