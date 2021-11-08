@@ -26,7 +26,7 @@ done
 echo "Detailing runtime and reports into ./$scale..."
 mkdir -p ./"$scale"
 kubectl cp "$pod_report":/tmp/"$scale".tar.gz ./"$scale"/"$scale".tar.gz
-kubectl describe pod "$pod_actual" > ./"$scale"/deployment
+kubectl describe pod "$scale" > ./"$scale"/deployment
 kubectl get configmap "$scale"-env -o yaml > ./"$scale"/configmap.yaml
 
 echo "Deleting completed helm chart..."
