@@ -7,8 +7,6 @@ volumeParameters:
   profilesToSkip: []
   methodsToSkip:
     - "getRelatedEntities"
-    - "getLinkingEntities"
-    - "getEntityNeighborhood"
 
 tut:
   serverType: "plugin"
