@@ -1,0 +1,474 @@
+Name:         p0160-10-kafka-0
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-2.fyre.ibm.com/9.20.194.190
+Start Time:   Wed, 10 Nov 2021 06:26:17 -0800
+Labels:       app.kubernetes.io/component=kafka
+              app.kubernetes.io/instance=p0160-10
+              app.kubernetes.io/managed-by=Helm
+              app.kubernetes.io/name=kafka
+              controller-revision-hash=p0160-10-kafka-964d49b77
+              helm.sh/chart=kafka-14.2.4
+              statefulset.kubernetes.io/pod-name=p0160-10-kafka-0
+Annotations:  cni.projectcalico.org/containerID: 94f6bd2aa7cb73ba2a4531a30ce377659b04e42cc65f93c2f93dfe1a08b0a926
+              cni.projectcalico.org/podIP: 10.233.104.47/32
+              cni.projectcalico.org/podIPs: 10.233.104.47/32
+Status:       Running
+IP:           10.233.104.47
+IPs:
+  IP:           10.233.104.47
+Controlled By:  StatefulSet/p0160-10-kafka
+Containers:
+  kafka:
+    Container ID:  docker://e1b8b6dc35b362b7a0edea73ae8d0d9ec448d1bc6eac23557a5cd3e263fae9d9
+    Image:         docker.io/bitnami/kafka:2.8.1-debian-10-r25
+    Image ID:      docker-pullable://bitnami/kafka@sha256:a56dc6e34974730e9debdfd8ee2afddda5130ed3c57f1e6c1430273ac4c4e6a6
+    Ports:         9092/TCP, 9093/TCP
+    Host Ports:    0/TCP, 0/TCP
+    Command:
+      /scripts/setup.sh
+    State:          Running
+      Started:      Wed, 10 Nov 2021 06:26:20 -0800
+    Ready:          True
+    Restart Count:  0
+    Liveness:       tcp-socket :kafka-client delay=10s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      tcp-socket :kafka-client delay=5s timeout=5s period=10s #success=1 #failure=6
+    Environment:
+      BITNAMI_DEBUG:                                       false
+      MY_POD_IP:                                            (v1:status.podIP)
+      MY_POD_NAME:                                         p0160-10-kafka-0 (v1:metadata.name)
+      KAFKA_CFG_ZOOKEEPER_CONNECT:                         p0160-10-zookeeper
+      KAFKA_INTER_BROKER_LISTENER_NAME:                    INTERNAL
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:            INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
+      KAFKA_CFG_LISTENERS:                                 INTERNAL://:9093,CLIENT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS:                      INTERNAL://$(MY_POD_NAME).p0160-10-kafka-headless.default.svc.cluster.local:9093,CLIENT://$(MY_POD_NAME).p0160-10-kafka-headless.default.svc.cluster.local:9092
+      ALLOW_PLAINTEXT_LISTENER:                            yes
+      KAFKA_VOLUME_DIR:                                    /bitnami/kafka
+      KAFKA_LOG_DIR:                                       /opt/bitnami/kafka/logs
+      KAFKA_CFG_DELETE_TOPIC_ENABLE:                       false
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE:                 true
+      KAFKA_HEAP_OPTS:                                     -Xmx1024m -Xms1024m
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MESSAGES:               10000
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MS:                     1000
+      KAFKA_CFG_LOG_RETENTION_BYTES:                       1073741824
+      KAFKA_CFG_LOG_RETENTION_CHECK_INTERVALS_MS:          300000
+      KAFKA_CFG_LOG_RETENTION_HOURS:                       168
+      KAFKA_CFG_MESSAGE_MAX_BYTES:                         1000012
+      KAFKA_CFG_LOG_SEGMENT_BYTES:                         1073741824
+      KAFKA_CFG_LOG_DIRS:                                  /bitnami/kafka/data
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR:                1
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR:          1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:  1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR:             1
+      KAFKA_CFG_NUM_IO_THREADS:                            8
+      KAFKA_CFG_NUM_NETWORK_THREADS:                       3
+      KAFKA_CFG_NUM_PARTITIONS:                            1
+      KAFKA_CFG_NUM_RECOVERY_THREADS_PER_DATA_DIR:         1
+      KAFKA_CFG_SOCKET_RECEIVE_BUFFER_BYTES:               102400
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES:                  104857600
+      KAFKA_CFG_SOCKET_SEND_BUFFER_BYTES:                  102400
+      KAFKA_CFG_ZOOKEEPER_CONNECTION_TIMEOUT_MS:           6000
+      KAFKA_CFG_AUTHORIZER_CLASS_NAME:                     
+      KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND:            true
+      KAFKA_CFG_SUPER_USERS:                               User:admin
+    Mounts:
+      /bitnami/kafka from data (rw)
+      /opt/bitnami/kafka/logs from logs (rw)
+      /scripts/setup.sh from scripts (rw,path="setup.sh")
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-q6qcb (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  scripts:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      p0160-10-kafka-scripts
+    Optional:  false
+  data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  logs:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  kube-api-access-q6qcb:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         p0160-10-platform-6ddd5698b9-dkd4h
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-3.fyre.ibm.com/9.20.194.199
+Start Time:   Wed, 10 Nov 2021 06:26:17 -0800
+Labels:       app.kubernetes.io/component=platform
+              app.kubernetes.io/instance=p0160-10
+              app.kubernetes.io/name=egeria-pts
+              pod-template-hash=6ddd5698b9
+Annotations:  cni.projectcalico.org/containerID: bb365704f14c8612f726f0e956281eb860525a1b3632dd4fc020df9c7396657e
+              cni.projectcalico.org/podIP: 10.233.64.23/32
+              cni.projectcalico.org/podIPs: 10.233.64.23/32
+Status:       Running
+IP:           10.233.64.23
+IPs:
+  IP:           10.233.64.23
+Controlled By:  ReplicaSet/p0160-10-platform-6ddd5698b9
+Init Containers:
+  init-connector:
+    Container ID:  docker://7b80e8e5e3f056d74616c16f0915d6a95e812f43528a0cc874d66f82a1fab17a
+    Image:         quay.io/odpi/egeria-configure:3.3
+    Image ID:      docker-pullable://quay.io/odpi/egeria-configure@sha256:84ade821a196e11ff65dbbef98198aa7051617b28d0e4b101e63818a8696749c
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      cd /opt/egeria/connectors &&
+      curl --location "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-xtdb&v=RELEASE&c=jar-with-dependencies" --output "egeria-connector-xtdb-jar-with-dependencies.jar" &&
+      echo "Downloads complete."
+      
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Wed, 10 Nov 2021 06:26:20 -0800
+      Finished:     Wed, 10 Nov 2021 06:26:23 -0800
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      p0160-10-env  ConfigMap  Optional: false
+    Environment:    <none>
+    Mounts:
+      /opt/egeria/connectors from egeria-connector-volume (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-j5ddz (ro)
+Containers:
+  platform:
+    Container ID:   docker://d9d7bd2d98f4bb860d7ee7493f87ed5fd2f6afd9aaf6f4d69d1b03e8012cde1f
+    Image:          quay.io/odpi/egeria:3.3
+    Image ID:       docker-pullable://quay.io/odpi/egeria@sha256:7e8e2e05b229a169de5218986a712514614cb18cca875acd68780f83980ad5ba
+    Port:           9443/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Wed, 10 Nov 2021 06:26:24 -0800
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     4
+      memory:  16Gi
+    Requests:
+      cpu:      2
+      memory:   8Gi
+    Readiness:  tcp-socket :9443 delay=10s timeout=1s period=10s #success=1 #failure=6
+    Environment Variables from:
+      p0160-10-env  ConfigMap  Optional: false
+    Environment:
+      LOADER_PATH:  /opt/egeria/connectors
+    Mounts:
+      /opt/egeria/connectors from egeria-connector-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-j5ddz (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  egeria-connector-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  kube-api-access-j5ddz:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         p0160-10-report-m54hk
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-2.fyre.ibm.com/9.20.194.190
+Start Time:   Wed, 10 Nov 2021 06:26:17 -0800
+Labels:       app.kubernetes.io/component=report
+              app.kubernetes.io/instance=p0160-10
+              app.kubernetes.io/name=egeria-pts
+              controller-uid=d73ddb9e-9bd4-48ff-8688-16c3b06d1590
+              job-name=p0160-10-report
+Annotations:  cni.projectcalico.org/containerID: 27cd2d60c787cd108d06af6be6fceb422f8720008a85cf32d0102cf5822f5080
+              cni.projectcalico.org/podIP: 10.233.104.48/32
+              cni.projectcalico.org/podIPs: 10.233.104.48/32
+Status:       Running
+IP:           10.233.104.48
+IPs:
+  IP:           10.233.104.48
+Controlled By:  Job/p0160-10-report
+Init Containers:
+  wait-for-platform:
+    Container ID:   docker://3ae2db3953d450deb82d012516b8452f0ffe1b936003146db324fb6bc841f193
+    Image:          quay.io/odpi/egeria-configure:3.3
+    Image ID:       docker-pullable://quay.io/odpi/egeria-configure@sha256:84ade821a196e11ff65dbbef98198aa7051617b28d0e4b101e63818a8696749c
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Wed, 10 Nov 2021 06:26:21 -0800
+      Finished:     Wed, 10 Nov 2021 06:26:48 -0800
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  p0160-10-platform
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-6x9kj (ro)
+  wait-for-kafka:
+    Container ID:   docker://2da44391afe70968144a941be7108f66aa2b1148c34a5b86614c70d013409547
+    Image:          quay.io/odpi/egeria-configure:3.3
+    Image ID:       docker-pullable://quay.io/odpi/egeria-configure@sha256:84ade821a196e11ff65dbbef98198aa7051617b28d0e4b101e63818a8696749c
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Wed, 10 Nov 2021 06:26:49 -0800
+      Finished:     Wed, 10 Nov 2021 06:26:49 -0800
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  p0160-10-kafka
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-6x9kj (ro)
+  wait-for-init:
+    Container ID:  docker://eebd0a73c20e382a2be43700d9e92222fb1fb47d4c06428f8e362793c61a2f17
+    Image:         quay.io/odpi/egeria-configure:3.3
+    Image ID:      docker-pullable://quay.io/odpi/egeria-configure@sha256:84ade821a196e11ff65dbbef98198aa7051617b28d0e4b101e63818a8696749c
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      /scripts/wait-for-init.sh
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Wed, 10 Nov 2021 06:26:50 -0800
+      Finished:     Wed, 10 Nov 2021 06:27:06 -0800
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      p0160-10-env  ConfigMap  Optional: false
+    Environment:    <none>
+    Mounts:
+      /scripts from scripts-vol (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-6x9kj (ro)
+  report:
+    Container ID:  docker://2e6da12950db13d656f13c80b4e48e333d11ce4179f96dade00e07849200b39f
+    Image:         quay.io/odpi/egeria-configure:3.3
+    Image ID:      docker-pullable://quay.io/odpi/egeria-configure@sha256:84ade821a196e11ff65dbbef98198aa7051617b28d0e4b101e63818a8696749c
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      /scripts/collect-results.sh
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Wed, 10 Nov 2021 06:27:08 -0800
+      Finished:     Sun, 14 Nov 2021 09:42:53 -0800
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     1
+      memory:  512Mi
+    Requests:
+      cpu:     200m
+      memory:  64Mi
+    Environment Variables from:
+      p0160-10-env  ConfigMap  Optional: false
+    Environment:    <none>
+    Mounts:
+      /export from output-files (rw)
+      /scripts from scripts-vol (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-6x9kj (ro)
+Containers:
+  wait-for-retrieval:
+    Container ID:  docker://04f9488802eb246b3b395712713ed43b51a0e34f8b2d7a1890a07fdfeb4b46ef
+    Image:         quay.io/odpi/egeria-configure:3.3
+    Image ID:      docker-pullable://quay.io/odpi/egeria-configure@sha256:84ade821a196e11ff65dbbef98198aa7051617b28d0e4b101e63818a8696749c
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/sh
+      -c
+    Args:
+      set -e
+      echo "Creating a fifo pipe to send the output data"
+      mkfifo /export/pipe
+      echo "You'll need to stream the files out for this pod to shutdown, using a command like:"
+      echo "oc exec POD_NAME -- sh -c 'cat /export/pipe' | tar -xvf -"
+      cd /export
+      tar -cvf - /export/${PTS_REPORT_NAME}.tar.gz > /export/pipe
+      echo "The files have been read, the previous command stopped blocking, will wait for final cleanup..."
+      sleep 10
+      echo "Will now exit."
+      
+    State:          Running
+      Started:      Sun, 14 Nov 2021 09:42:55 -0800
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      p0160-10-env  ConfigMap  Optional: false
+    Environment:    <none>
+    Mounts:
+      /export from output-files (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-6x9kj (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  output-files:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  scripts-vol:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      p0160-10-scripts-configmap
+    Optional:  false
+  kube-api-access-6x9kj:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason   Age   From     Message
+  ----    ------   ----  ----     -------
+  Normal  Pulled   48s   kubelet  Container image "quay.io/odpi/egeria-configure:3.3" already present on machine
+  Normal  Created  47s   kubelet  Created container wait-for-retrieval
+  Normal  Started  47s   kubelet  Started container wait-for-retrieval
+
+Name:         p0160-10-zookeeper-0
+Namespace:    default
+Priority:     0
+Node:         cgk8s-node-2.fyre.ibm.com/9.20.194.190
+Start Time:   Wed, 10 Nov 2021 06:26:17 -0800
+Labels:       app.kubernetes.io/component=zookeeper
+              app.kubernetes.io/instance=p0160-10
+              app.kubernetes.io/managed-by=Helm
+              app.kubernetes.io/name=zookeeper
+              controller-revision-hash=p0160-10-zookeeper-5dc56f9d89
+              helm.sh/chart=zookeeper-7.4.7
+              statefulset.kubernetes.io/pod-name=p0160-10-zookeeper-0
+Annotations:  cni.projectcalico.org/containerID: d6c071b1cd230bf3c3440d7bee02ae84ab492e534e421c896e5f31a9b43ccd00
+              cni.projectcalico.org/podIP: 10.233.104.49/32
+              cni.projectcalico.org/podIPs: 10.233.104.49/32
+Status:       Running
+IP:           10.233.104.49
+IPs:
+  IP:           10.233.104.49
+Controlled By:  StatefulSet/p0160-10-zookeeper
+Containers:
+  zookeeper:
+    Container ID:  docker://b48c2c3c32d174c9a9321dc5beeb9840822475f99c4a27ef9ec66d87a6112415
+    Image:         docker.io/bitnami/zookeeper:3.7.0-debian-10-r157
+    Image ID:      docker-pullable://bitnami/zookeeper@sha256:a4b5419841bfdd02f3c75746fcaa714afdc691427016705854c3aab5e91ec627
+    Ports:         2181/TCP, 2888/TCP, 3888/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      bash
+      -ec
+      # Execute entrypoint as usual after obtaining ZOO_SERVER_ID
+      # check ZOO_SERVER_ID in persistent volume via myid
+      # if not present, set based on POD hostname
+      if [[ -f "/bitnami/zookeeper/data/myid" ]]; then
+        export ZOO_SERVER_ID="$(cat /bitnami/zookeeper/data/myid)"
+      else
+        HOSTNAME=`hostname -s`
+        if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+          ORD=${BASH_REMATCH[2]}
+          export ZOO_SERVER_ID=$((ORD + 1 ))
+        else
+          echo "Failed to get index from hostname $HOST"
+          exit 1
+        fi
+      fi
+      exec /entrypoint.sh /run.sh
+      
+    State:          Running
+      Started:      Wed, 10 Nov 2021 06:26:21 -0800
+    Ready:          True
+    Restart Count:  0
+    Requests:
+      cpu:      250m
+      memory:   256Mi
+    Liveness:   exec [/bin/bash -c echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok] delay=30s timeout=5s period=10s #success=1 #failure=6
+    Readiness:  exec [/bin/bash -c echo "ruok" | timeout 2 nc -w 2 localhost 2181 | grep imok] delay=5s timeout=5s period=10s #success=1 #failure=6
+    Environment:
+      BITNAMI_DEBUG:               false
+      ZOO_DATA_LOG_DIR:            
+      ZOO_PORT_NUMBER:             2181
+      ZOO_TICK_TIME:               2000
+      ZOO_INIT_LIMIT:              10
+      ZOO_SYNC_LIMIT:              5
+      ZOO_PRE_ALLOC_SIZE:          65536
+      ZOO_SNAPCOUNT:               100000
+      ZOO_MAX_CLIENT_CNXNS:        60
+      ZOO_4LW_COMMANDS_WHITELIST:  srvr, mntr, ruok
+      ZOO_LISTEN_ALLIPS_ENABLED:   no
+      ZOO_AUTOPURGE_INTERVAL:      0
+      ZOO_AUTOPURGE_RETAIN_COUNT:  3
+      ZOO_MAX_SESSION_TIMEOUT:     40000
+      ZOO_SERVERS:                 p0160-10-zookeeper-0.p0160-10-zookeeper-headless.default.svc.cluster.local:2888:3888::1
+      ZOO_ENABLE_AUTH:             no
+      ZOO_HEAP_SIZE:               1024
+      ZOO_LOG_LEVEL:               ERROR
+      ALLOW_ANONYMOUS_LOGIN:       yes
+      POD_NAME:                    p0160-10-zookeeper-0 (v1:metadata.name)
+    Mounts:
+      /bitnami/zookeeper from data (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-w2p4r (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  kube-api-access-w2p4r:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
