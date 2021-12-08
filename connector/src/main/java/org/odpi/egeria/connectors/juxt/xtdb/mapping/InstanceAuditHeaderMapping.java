@@ -251,7 +251,6 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
      * @param doc from which to map
      * @param namespace by which the properties are qualified
      */
-    @SuppressWarnings("unchecked")
     protected void fromDoc(InstanceAuditHeader iah, XtdbDocument doc, String namespace) {
 
         final String methodName = "fromDoc";
@@ -288,7 +287,21 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                     iah.setUpdatedBy(value);
                     break;
                 case N_MAINTAINED_BY:
-                    iah.setMaintainedBy(objValue == null ? null : (List<String>) objValue);
+                    if (objValue != null) {
+                        IPersistentVector maintainers = (IPersistentVector) objValue;
+                        List<String> maintainerList = new ArrayList<>();
+                        ISeq maintainerSeq = maintainers.seq();
+                        while (maintainerSeq != null) {
+                            Object maintainer = maintainerSeq.first();
+                            if (maintainer != null) {
+                                maintainerList.add(maintainer.toString());
+                            }
+                            maintainerSeq = maintainerSeq.next();
+                        }
+                        iah.setMaintainedBy(maintainerList);
+                    } else {
+                        iah.setMaintainedBy(null);
+                    }
                     break;
                 case N_CREATE_TIME:
                     iah.setCreateTime(objValue == null ? null : (Date) objValue);
@@ -330,7 +343,6 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
      * @throws IOException on any issue deserializing values
      * @throws InvalidParameterException for any unmapped properties
      */
-    @SuppressWarnings("unchecked")
     protected static void fromMap(InstanceAuditHeader iah,
                                   IPersistentMap doc,
                                   String namespace) throws IOException, InvalidParameterException {
@@ -369,7 +381,21 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                     iah.setUpdatedBy(value);
                     break;
                 case N_MAINTAINED_BY:
-                    iah.setMaintainedBy(objValue == null ? null : (List<String>) objValue);
+                    if (objValue != null) {
+                        IPersistentVector maintainers = (IPersistentVector) objValue;
+                        List<String> maintainerList = new ArrayList<>();
+                        ISeq maintainerSeq = maintainers.seq();
+                        while (maintainerSeq != null) {
+                            Object maintainer = maintainerSeq.first();
+                            if (maintainer != null) {
+                                maintainerList.add(maintainer.toString());
+                            }
+                            maintainerSeq = maintainerSeq.next();
+                        }
+                        iah.setMaintainedBy(maintainerList);
+                    } else {
+                        iah.setMaintainedBy(null);
+                    }
                     break;
                 case N_CREATE_TIME:
                     iah.setCreateTime(objValue == null ? null : (Date) objValue);

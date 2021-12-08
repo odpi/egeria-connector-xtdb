@@ -2,10 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.txnfn;
 
-import clojure.lang.IPersistentMap;
-import clojure.lang.IPersistentVector;
-import clojure.lang.Keyword;
-import clojure.lang.PersistentVector;
+import clojure.lang.*;
 import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.ClassificationMapping;
 import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
@@ -15,9 +12,7 @@ import org.slf4j.LoggerFactory;
 import xtdb.api.XtdbDocument;
 import xtdb.api.tx.Transaction;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 /**
  * Base class that all transaction functions should implement.
@@ -77,7 +72,6 @@ public abstract class AbstractTransactionFunction {
      * @param classificationName of the classification being incremented (or null if incrementing the base instance)
      * @return IPersistentMap with the updates applied
      */
-    @SuppressWarnings("unchecked")
     protected static IPersistentMap incrementVersion(String userId,
                                                      IPersistentMap instance,
                                                      String classificationName) {
@@ -100,7 +94,7 @@ public abstract class AbstractTransactionFunction {
         }
 
         Long currentVersion = (Long) instance.valAt(VERSION);
-        List<String> maintainers = (List<String>) instance.valAt(MAINTAINED_BY);
+        IPersistentVector maintainers = (IPersistentVector) instance.valAt(MAINTAINED_BY);
 
         IPersistentMap modified = instance
                 .assoc(UPDATED_BY, userId)
@@ -108,11 +102,18 @@ public abstract class AbstractTransactionFunction {
                 .assoc(VERSION, currentVersion + 1);
 
         if (maintainers == null) {
-            maintainers = new ArrayList<>();
+            maintainers = PersistentVector.EMPTY;
         }
-        if (!maintainers.contains(userId)) {
-            maintainers.add(userId);
-            modified = modified.assoc(MAINTAINED_BY, PersistentVector.create(maintainers));
+        boolean found = false;
+        ISeq maintainerSeq = maintainers.seq();
+        while (maintainerSeq != null && !found) {
+            Object first = maintainerSeq.first();
+            found = first != null && first.toString().equals(userId);
+            maintainerSeq = maintainerSeq.next();
+        }
+        if (!found) {
+            IPersistentCollection updated = RT.conj(maintainers, userId);
+            modified = modified.assoc(MAINTAINED_BY, updated);
         }
 
         return modified;
