@@ -436,11 +436,15 @@ public class XtdbOMRSMetadataCollectionTest {
     void updateEntityStatus() {
         try {
 
-            EntityDetail result = mc.updateEntityStatus(username, ctrlTermGuid, InstanceStatus.APPROVED);
+            EntityDetail result = mc.updateEntityStatus(username + "_b", ctrlTermGuid, InstanceStatus.APPROVED);
             assertNotNull(result, "Expected status update of ControlledGlossaryTerm to return the term.");
             assertEquals(result.getGUID(), ctrlTermGuid, "Expected returned ControlledGlossaryTerm's GUID to match.");
             assertEquals(result.getStatus(), InstanceStatus.APPROVED, "Expected status to be set to the updated value.");
             assertEquals(result.getVersion(), 3L, "Expected the version to be incremented by the status update.");
+            assertNotNull(result.getMaintainedBy());
+            assertEquals(result.getMaintainedBy().size(), 2);
+            assertEquals(result.getMaintainedBy().get(0), username);
+            assertEquals(result.getMaintainedBy().get(1), username + "_b");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -466,6 +470,9 @@ public class XtdbOMRSMetadataCollectionTest {
             validatePropertyValue(result.getProperties(), qualifiedNameProperty, glossaryQN);
             validatePropertyValue(result.getProperties(), displayNameProperty, glossaryDN);
             assertEquals(result.getVersion(), 2L, "Expected the version to be incremented by the properties update.");
+            assertNotNull(result.getMaintainedBy());
+            assertEquals(result.getMaintainedBy().size(), 1);
+            assertEquals(result.getMaintainedBy().get(0), username);
 
             ip = helper.addStringPropertyToInstance(source,
                     null,
@@ -481,6 +488,9 @@ public class XtdbOMRSMetadataCollectionTest {
             validatePropertyValue(result.getProperties(), qualifiedNameProperty, categoryQN);
             validatePropertyValue(result.getProperties(), displayNameProperty, categoryDN);
             assertEquals(result.getVersion(), 2L, "Expected the version to be incremented by the properties update.");
+            assertNotNull(result.getMaintainedBy());
+            assertEquals(result.getMaintainedBy().size(), 1);
+            assertEquals(result.getMaintainedBy().get(0), username);
 
             ip = helper.addStringPropertyToInstance(source,
                     null,
@@ -490,12 +500,17 @@ public class XtdbOMRSMetadataCollectionTest {
                     ip,
                     displayNameProperty, ctrlTermDN,
                     this.getClass().getName());
-            result = mc.updateEntityProperties(username, ctrlTermGuid, ip);
+            result = mc.updateEntityProperties(username + "_c", ctrlTermGuid, ip);
             assertNotNull(result, "Expected the ControlledGlossaryTerm to be updated.");
             assertEquals(result.getGUID(), ctrlTermGuid, "Expected updated ControlledGlossaryTerm to have matching GUID.");
             validatePropertyValue(result.getProperties(), qualifiedNameProperty, ctrlTermQN);
             validatePropertyValue(result.getProperties(), displayNameProperty, ctrlTermDN);
             assertEquals(result.getVersion(), 4L, "Expected the version to be incremented by the properties update.");
+            assertNotNull(result.getMaintainedBy());
+            assertEquals(result.getMaintainedBy().size(), 3);
+            assertEquals(result.getMaintainedBy().get(0), username);
+            assertEquals(result.getMaintainedBy().get(1), username + "_b");
+            assertEquals(result.getMaintainedBy().get(2), username + "_c");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -579,11 +594,17 @@ public class XtdbOMRSMetadataCollectionTest {
             assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
 
             original = mc.getEntityDetail(username, ctrlTermGuid);
-            result = mc.undoEntityUpdate(username, ctrlTermGuid);
+            result = mc.undoEntityUpdate(username + "_d", ctrlTermGuid);
             assertNotNull(result, "Expected the ControlledGlossaryTerm to be updated.");
             assertEquals(result.getGUID(), ctrlTermGuid, "Expected updated ControlledGlossaryTerm to have matching GUID.");
             assertEquals(result.getVersion(), 5L, "Expected the version to be further incremented by the undo operation.");
             assertEquals(original.getClassifications(), result.getClassifications(), "Classifications should match after undo, as they are managed independently.");
+            assertNotNull(result.getMaintainedBy());
+            assertEquals(result.getMaintainedBy().size(), 3);
+            assertEquals(result.getMaintainedBy().get(0), username);
+            assertEquals(result.getMaintainedBy().get(1), username + "_b");
+            // Note that there is no username_c because that users' changes have now been undone
+            assertEquals(result.getMaintainedBy().get(2), username + "_d");
 
         } catch (Exception e) {
             e.printStackTrace();
