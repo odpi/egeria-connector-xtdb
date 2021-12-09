@@ -119,6 +119,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         Date updateTime = iah.getUpdateTime();
         Date createTime = iah.getCreateTime();
 
+        List<String> maintainers = iah.getMaintainedBy();
         builder.put(getKeyword(namespace, N_HEADER_VERSION), iah.getHeaderVersion());
         builder.put(getKeyword(namespace, N_METADATA_COLLECTION_ID), iah.getMetadataCollectionId());
         builder.put(getKeyword(namespace, N_METADATA_COLLECTION_NAME), iah.getMetadataCollectionName());
@@ -126,7 +127,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         builder.put(getKeyword(namespace, N_INSTANCE_LICENSE), iah.getInstanceLicense());
         builder.put(getKeyword(namespace, N_CREATED_BY), iah.getCreatedBy());
         builder.put(getKeyword(namespace, N_UPDATED_BY), iah.getUpdatedBy());
-        builder.put(getKeyword(namespace, N_MAINTAINED_BY), iah.getMaintainedBy());
+        builder.put(getKeyword(namespace, N_MAINTAINED_BY), maintainers == null ? null : PersistentVector.create(maintainers));
         builder.put(getKeyword(namespace, N_CREATE_TIME), createTime);
         builder.put(getKeyword(namespace, N_UPDATE_TIME), updateTime);
         builder.put(getKeyword(namespace, N_VERSION), iah.getVersion());
@@ -170,6 +171,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         Date updateTime = iah.getUpdateTime();
         Date createTime = iah.getCreateTime();
 
+        List<String> maintainers = iah.getMaintainedBy();
         doc = addTypeDetailsToMap(doc, iah.getType(), namespace);
         doc = doc
                 .assoc(Keyword.intern(getKeyword(namespace, N_HEADER_VERSION)), iah.getHeaderVersion())
@@ -179,7 +181,7 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
                 .assoc(Keyword.intern(getKeyword(namespace, N_INSTANCE_LICENSE)), iah.getInstanceLicense())
                 .assoc(Keyword.intern(getKeyword(namespace, N_CREATED_BY)), iah.getCreatedBy())
                 .assoc(Keyword.intern(getKeyword(namespace, N_UPDATED_BY)), iah.getUpdatedBy())
-                .assoc(Keyword.intern(getKeyword(namespace, N_MAINTAINED_BY)), iah.getMaintainedBy())
+                .assoc(Keyword.intern(getKeyword(namespace, N_MAINTAINED_BY)), maintainers == null ? null : PersistentVector.create(maintainers))
                 .assoc(Keyword.intern(getKeyword(namespace, N_CREATE_TIME)), createTime)
                 .assoc(Keyword.intern(getKeyword(namespace, N_UPDATE_TIME)), updateTime)
                 .assoc(Keyword.intern(getKeyword(namespace, N_VERSION)), iah.getVersion())
