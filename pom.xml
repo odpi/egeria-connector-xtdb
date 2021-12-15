@@ -74,7 +74,7 @@
         <jackson.version>2.13.0</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.32</slf4j.version>
-        <logback.version>1.2.7</logback.version>
+        <logback.version>1.2.8</logback.version>
         <testng.version>7.4.0</testng.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
