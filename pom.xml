@@ -76,6 +76,7 @@
         <slf4j.version>1.7.32</slf4j.version>
         <logback.version>1.2.8</logback.version>
         <testng.version>7.4.0</testng.version>
+        <httpclient.version>4.5.13</httpclient.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -168,6 +169,13 @@
                 <groupId>com.xtdb</groupId>
                 <artifactId>xtdb-s3</artifactId>
                 <version>${xtdb.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-13956 -->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
