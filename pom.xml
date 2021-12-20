@@ -71,7 +71,7 @@
         <open-metadata.version>3.5-SNAPSHOT</open-metadata.version>
         <xtdb.version>1.20.0</xtdb.version>
         <clojure.version>1.10.3</clojure.version>
-        <jackson.version>2.13.0</jackson.version>
+        <jackson.version>2.13.1</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.32</slf4j.version>
         <logback.version>1.2.8</logback.version>
