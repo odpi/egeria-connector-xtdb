@@ -2,6 +2,7 @@
 /* Copyright Contributors to the ODPi Egeria project. */
 package org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector;
 
+import org.odpi.openmetadata.frameworks.auditlog.AuditLogReportingComponent;
 import org.odpi.openmetadata.frameworks.connectors.properties.beans.ConnectorType;
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.repositoryconnector.OMRSRepositoryConnectorProviderBase;
 
@@ -74,9 +75,28 @@ import java.util.List;
  */
 public class XtdbOMRSRepositoryConnectorProvider extends OMRSRepositoryConnectorProviderBase {
 
-    static final String CONNECTOR_TYPE_GUID = "ba99618d-fd21-475b-8eba-87051aea026e";
-    static final String CONNECTOR_TYPE_NAME = "OMRS XTDB Repository Connector";
-    static final String CONNECTOR_TYPE_DESC = "OMRS XTDB Repository Connector that uses XTDB as a back-end historical repository for metadata.";
+    /*
+     * Unique identifier of the connector for the audit log.
+     */
+    private static final int connectorComponentId = 100;
+
+    /*
+     * Unique identifier for the connector type.
+     */
+    private static final String connectorTypeGUID = "ba99618d-fd21-475b-8eba-87051aea026e";
+
+    /*
+     * Descriptive information about the connector for the connector type and audit log.
+     */
+    private static final String connectorQualifiedName = "Egeria:OMRSRepositoryConnector:XTDB";
+    private static final String connectorDisplayName = "XTDB-based OMRS Repository Connector";
+    private static final String connectorDescription = "Plugin open metadata repository connector that maps open metadata calls to an XTDB-based metadata repository.";
+    private static final String connectorWikiPage = "https://odpi.github.io/egeria-docs/connectors/repository/xtdb/";
+
+    /*
+     * Class of the connector.
+     */
+    private static final Class<?> connectorClass = XtdbOMRSRepositoryConnector.class;
 
     public static final String XTDB_CONFIG = "xtdbConfig";
     public static final String XTDB_CONFIG_EDN = "xtdbConfigEDN";
@@ -89,15 +109,22 @@ public class XtdbOMRSRepositoryConnectorProvider extends OMRSRepositoryConnector
      */
     public XtdbOMRSRepositoryConnectorProvider() {
 
-        Class<?> connectorClass = XtdbOMRSRepositoryConnector.class;
+        super();
+
+        /*
+         * Set up the class name of the connector that this provider creates.
+         */
         super.setConnectorClassName(connectorClass.getName());
 
+        /*
+         * Set up the connector type that should be included in a connection used to configure this connector.
+         */
         ConnectorType connectorType = new ConnectorType();
         connectorType.setType(ConnectorType.getConnectorTypeType());
-        connectorType.setGUID(CONNECTOR_TYPE_GUID);
-        connectorType.setQualifiedName(CONNECTOR_TYPE_NAME);
-        connectorType.setDisplayName(CONNECTOR_TYPE_NAME);
-        connectorType.setDescription(CONNECTOR_TYPE_DESC);
+        connectorType.setGUID(connectorTypeGUID);
+        connectorType.setQualifiedName(connectorQualifiedName);
+        connectorType.setDisplayName(connectorDisplayName);
+        connectorType.setDescription(connectorDescription);
         connectorType.setConnectorProviderClassName(this.getClass().getName());
 
         List<String> configProperties = new ArrayList<>();
@@ -108,6 +135,18 @@ public class XtdbOMRSRepositoryConnectorProvider extends OMRSRepositoryConnector
         connectorType.setRecognizedConfigurationProperties(configProperties);
 
         super.connectorTypeBean = connectorType;
+
+        /*
+         * Set up the component description used in the connector's audit log messages.
+         */
+        AuditLogReportingComponent componentDescription = new AuditLogReportingComponent();
+
+        componentDescription.setComponentId(connectorComponentId);
+        componentDescription.setComponentName(connectorQualifiedName);
+        componentDescription.setComponentDescription(connectorDescription);
+        componentDescription.setComponentWikiURL(connectorWikiPage);
+
+        super.setConnectorComponentDescription(componentDescription);
 
     }
 
