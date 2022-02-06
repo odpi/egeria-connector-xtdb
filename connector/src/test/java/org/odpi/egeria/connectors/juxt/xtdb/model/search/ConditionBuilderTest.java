@@ -99,15 +99,17 @@ public class ConditionBuilderTest {
                     connector,
                     false,
                     true);
-            // Expected --> [(not [e :entityProperties/Referenceable.qualifiedName.value "a-qualified-name"])]
+            // Expected --> [(not-join [e] [e :entityProperties/Referenceable.qualifiedName.value "a-qualified-name"])]
             assertNotNull(conditions);
             assertEquals(conditions.size(), 1, "One condition is expected when searching for a single negated property.");
             IPersistentCollection candidate = conditions.get(0);
             assertTrue(candidate instanceof IPersistentList);
             IPersistentList condition = (IPersistentList) candidate;
-            assertEquals(condition.count(), 2, "Two elements expected in the clause: 'not' followed by a condition.");
-            assertEquals(condition.seq().first(), ConditionBuilder.NOT_OPERATOR);
+            assertEquals(condition.count(), 3, "Three elements expected in the clause: 'not-join' followed by a selector and a condition.");
+            assertEquals(condition.seq().first(), ConditionBuilder.NOT_JOIN_OPERATOR);
             Object embedded = condition.seq().next().first();
+            assertTrue(embedded instanceof IPersistentCollection);
+            embedded = condition.seq().next().next().first();
             assertTrue(embedded instanceof IPersistentCollection);
             validatePropertyCondition((IPersistentCollection) embedded, propertyKeyword, propertyValue);
 

@@ -253,8 +253,10 @@ public class TextConditionBuilder {
             intermediateConditions.add(PersistentVector.create(PersistentList.create(predicateComparison)));
             if (comparator.equals(PropertyComparisonOperator.NEQ)) {
                 // If the comparison was a not-equals, we need to invert the condition we searched
+                // (not-join [e] ... )
                 List<Object> not = new ArrayList<>();
-                not.add(ConditionBuilder.NOT_OPERATOR);
+                not.add(ConditionBuilder.NOT_JOIN_OPERATOR);
+                not.add(PersistentVector.create(XtdbQuery.DOC_ID));
                 not.addAll(intermediateConditions);
                 intermediateConditions = new ArrayList<>();
                 intermediateConditions.add(PersistentList.create(not));

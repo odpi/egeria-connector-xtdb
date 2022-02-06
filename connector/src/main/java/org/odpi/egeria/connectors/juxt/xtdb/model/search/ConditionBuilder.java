@@ -27,6 +27,7 @@ public class ConditionBuilder {
     public static final Symbol OR_OPERATOR = Symbol.intern("or");
     public static final Symbol AND_OPERATOR = Symbol.intern("and");
     public static final Symbol NOT_OPERATOR = Symbol.intern("not");
+    public static final Symbol NOT_JOIN_OPERATOR = Symbol.intern("not-join");
     public static final Symbol OR_JOIN = Symbol.intern("or-join");
     protected static final Symbol EQ_OPERATOR = Symbol.intern("=");
     protected static final Symbol NEQ_OPERATOR = Symbol.intern("not=");
@@ -133,11 +134,14 @@ public class ConditionBuilder {
                         }
                         break;
                     case NONE:
-                        // (not (or-join [e] ... ) )
-                        predicatedConditions.add(NOT_OPERATOR);
                         if (allConditions.size() == 1) {
+                            // (not-join [e] ... )
+                            predicatedConditions.add(NOT_JOIN_OPERATOR);
+                            predicatedConditions.add(PersistentVector.create(XtdbQuery.DOC_ID));
                             predicatedConditions.addAll(allConditions.get(0));
                         } else {
+                            // (not (or-join [e] ... ) )
+                            predicatedConditions.add(NOT_OPERATOR);
                             List<Object> or = new ArrayList<>();
                             or.add(OR_JOIN);
                             or.add(PersistentVector.create(XtdbQuery.DOC_ID));

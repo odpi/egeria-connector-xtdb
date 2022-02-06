@@ -296,12 +296,15 @@ public class TextConditionBuilderTest {
             assertNotNull(conditions);
             assertEquals(conditions.size(), 1, "Only a single outer-wrapped NOT clause expected for a not equals Lucene-optimized property text query.");
             IPersistentCollection outer = conditions.get(0);
-            assertTrue(outer instanceof IPersistentList, "Single NOT clause expected to be wrapped within a list.");
+            assertTrue(outer instanceof IPersistentList, "Single NOT-JOIN clause expected to be wrapped within a list.");
             IPersistentList clause = (IPersistentList) outer;
-            assertEquals(clause.seq().first(), ConditionBuilder.NOT_OPERATOR, "First element of clause expected to be the NOT operator.");
+            assertEquals(clause.seq().first(), ConditionBuilder.NOT_JOIN_OPERATOR, "First element of clause expected to be the NOT-JOIN operator.");
+
+            ISeq next = clause.seq().next();
+            assertTrue(next.first() instanceof IPersistentVector, "Second element to be a vector.");
 
             List<IPersistentCollection> toValidate = new ArrayList<>();
-            ISeq next = clause.seq().next();
+            next = clause.seq().next().next();
             while (next != null) {
                 Object candidate = next.first();
                 assertTrue(candidate instanceof IPersistentCollection, "Nested conditions are expected to be collections themselves.");
