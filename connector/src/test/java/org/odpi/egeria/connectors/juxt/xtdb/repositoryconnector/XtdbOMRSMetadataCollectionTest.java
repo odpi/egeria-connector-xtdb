@@ -47,6 +47,7 @@ public class XtdbOMRSMetadataCollectionTest {
     private static final String termCategorizationTypeGuid = "696a81f5-ac60-46c7-b9fd-6979a1e7ad27";
     private static final String categoryLinkTypeGuid   = "71e4b6fb-3412-4193-aff3-a16eccd87e8e";
     private static final String dataClassAssignmentTypeGuid = "4df37335-7f0c-4ced-82df-3b2fd07be1bd";
+    private static final String softwareServerPlatformDeploymentTypeGuid = "b909eb3b-5205-4180-9f63-122a65b30738";
 
     private static final String glossaryQN = "omrs-mc-glossary";
     private static final String categoryQN = "omrs-mc-category";
@@ -67,6 +68,8 @@ public class XtdbOMRSMetadataCollectionTest {
     private String dataClassGuid = "";
     private String categoryGuidEX = "";
     private String ctrlTermGuidRC = "";
+    private String hostGuid = "";
+    private String softwareServerPlatformGuid = "";
 
     // Relationships
     private String categoryAnchorGuid     = "";
@@ -75,6 +78,9 @@ public class XtdbOMRSMetadataCollectionTest {
     private String dataClassAssignmentGuid = "";
     private String categoryLinkGuidEX     = "";
     private String termCategorizationGuidRC = "";
+    private String softwareServerPlatformDeploymentGuid = "";
+
+    private Date now = null;
 
     XtdbOMRSMetadataCollectionTest() {
         try {
@@ -136,6 +142,24 @@ public class XtdbOMRSMetadataCollectionTest {
             assertNotNull(dataClassGuid, "Expected created DataClass to have a GUID assigned.");
             validatePropertyValue(result.getProperties(), userDefinedProperty, false);
             assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the DataClass.");
+
+            ip = helper.addStringPropertyToInstance(source,
+                    null,
+                    qualifiedNameProperty, "HostQN",
+                    this.getClass().getName());
+            result = mc.addEntity(username, "1abd16db-5b8a-4fd9-aee5-205db3febe99", ip, null, null);
+            assertNotNull(result, "Expected a Host to be created.");
+            hostGuid = result.getGUID();
+            assertNotNull(hostGuid, "Expected created Host to have a GUID assigned.");
+
+            ip = helper.addStringPropertyToInstance(source,
+                    null,
+                    qualifiedNameProperty, "SoftwareServerPlatformQN",
+                    this.getClass().getName());
+            result = mc.addEntity(username, "ba7c7884-32ce-4991-9c41-9778f1fec6aa", ip, null, null);
+            assertNotNull(result, "Expected a SoftwareServerPlatform to be created.");
+            softwareServerPlatformGuid = result.getGUID();
+            assertNotNull(softwareServerPlatformGuid, "Expected created SoftwareServerPlatform to have a GUID assigned.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -266,6 +290,23 @@ public class XtdbOMRSMetadataCollectionTest {
             assertNotNull(dataClassAssignmentGuid, "Expected created DataClassAssignment to have a GUID assigned.");
             validatePropertyValue(result.getProperties(), partialMatchProperty, false);
             assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the DataClassAssignment.");
+
+            now = new Date();
+            ip = helper.addDatePropertyToInstance(source,
+                    null,
+                    "deploymentTime", now,
+                    this.getClass().getName());
+            result = mc.addRelationship(username,
+                    softwareServerPlatformDeploymentTypeGuid,
+                    ip,
+                    hostGuid,
+                    softwareServerPlatformGuid,
+                    null);
+            assertNotNull(result, "Expected a SoftwareServerPlatformDeployment to be created.");
+            softwareServerPlatformDeploymentGuid = result.getGUID();
+            assertNotNull(softwareServerPlatformDeploymentGuid, "Expected created SoftwareServerPlatformDeployment to have a GUID assigned.");
+            validatePropertyValue(result.getProperties(), "deploymentTime", ip.getPropertyValue("deploymentTime").valueAsObject());
+            assertEquals(result.getVersion(), 1L, "Expected this to be the initial version of the SoftwareServerPlatformDeployment.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -907,6 +948,38 @@ public class XtdbOMRSMetadataCollectionTest {
     }
 
     @Test(groups = { "search" }, dependsOnGroups = { "read" })
+    void findEntitiesByPropertyNone() {
+        try {
+
+            InstanceProperties matchProperties = helper.addStringPropertyToInstance(source,
+                    null,
+                    displayNameProperty,
+                    helper.getExactMatchRegex("glossary"),
+                    this.getClass().getName());
+
+            // Search for Referenceables using an overlapping attribute (like 'displayName') that can appear on many
+            // subtypes but not on the super-type itself, and use the NONE match criteria
+            List<EntityDetail> results = mc.findEntitiesByProperty(username,
+                    "a32316b8-dc8c-48c5-b12b-71c1b2a080bf",
+                    matchProperties,
+                    MatchCriteria.NONE,
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100);
+            assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
+            assertEquals(results.size(), 14, "Expected precisely fourteen search results.");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            assertNull(e);
+        }
+    }
+
+    @Test(groups = { "search" }, dependsOnGroups = { "read" })
     void findEntitiesByPropertyValue() {
         try {
 
@@ -1063,6 +1136,43 @@ public class XtdbOMRSMetadataCollectionTest {
             assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
             assertEquals(results.size(), 1, "Expected precisely one search result.");
             assertEquals(results.get(0).getGUID(), dataClassAssignmentGuid, "Expected the singular search result to be the DataClassAssignment.");
+
+            matchProperties = helper.addDatePropertyToInstance(source,
+                    null,
+                    "deploymentTime",
+                    now,
+                    this.getClass().getName());
+            results = mc.findRelationshipsByProperty(username,
+                    null,
+                    matchProperties,
+                    MatchCriteria.ALL,
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100);
+            assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
+            assertEquals(results.size(), 1, "Expected precisely one search result.");
+            assertEquals(results.get(0).getType().getTypeDefName(), "SoftwareServerPlatformDeployment");
+            assertEquals(results.get(0).getType().getTypeDefGUID(), softwareServerPlatformDeploymentTypeGuid);
+            assertEquals(results.get(0).getGUID(), softwareServerPlatformDeploymentGuid, "Expected the singular search result to be the SoftwareServerPlatformDeployment.");
+
+            results = mc.findRelationshipsByProperty(username,
+                    softwareServerPlatformDeploymentTypeGuid,
+                    matchProperties,
+                    MatchCriteria.ALL,
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100);
+            assertTrue(results != null && !results.isEmpty(), "Expected non-empty search results.");
+            assertEquals(results.size(), 1, "Expected precisely one search result.");
+            assertEquals(results.get(0).getType().getTypeDefName(), "SoftwareServerPlatformDeployment");
+            assertEquals(results.get(0).getType().getTypeDefGUID(), softwareServerPlatformDeploymentTypeGuid);
+            assertEquals(results.get(0).getGUID(), softwareServerPlatformDeploymentGuid, "Expected the singular search result to be the SoftwareServerPlatformDeployment.");
 
         } catch (Exception e) {
             e.printStackTrace();
