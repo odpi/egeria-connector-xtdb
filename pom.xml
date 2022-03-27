@@ -71,7 +71,7 @@
         <open-metadata.version>3.7-SNAPSHOT</open-metadata.version>
         <xtdb.version>1.20.0</xtdb.version>
         <clojure.version>1.10.3</clojure.version>
-        <jackson.version>2.13.2</jackson.version>
+        <jackson.version>2.13.2.1</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.2.11</logback.version>
@@ -83,7 +83,7 @@
         <!-- Build processing -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <spotbugs.version>4.5.3.0</spotbugs.version>
+        <spotbugs.version>4.6.0.0</spotbugs.version>
     </properties>
 
     <repositories>
@@ -278,12 +278,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.3.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.10.0</version>
+                    <version>3.10.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -318,7 +318,7 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>7.0.0</version>
+                    <version>7.0.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
