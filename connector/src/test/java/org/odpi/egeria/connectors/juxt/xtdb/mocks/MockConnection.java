@@ -6,6 +6,7 @@ import org.odpi.egeria.connectors.juxt.xtdb.mapping.Constants;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnector;
 import org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnectorProvider;
 import org.odpi.openmetadata.adapters.repositoryservices.ConnectorConfigurationFactory;
+import org.odpi.openmetadata.frameworks.auditlog.ComponentDevelopmentStatus;
 import org.odpi.openmetadata.frameworks.connectors.Connector;
 import org.odpi.openmetadata.frameworks.connectors.ConnectorBroker;
 import org.odpi.openmetadata.frameworks.connectors.ffdc.ConnectionCheckedException;
@@ -94,7 +95,7 @@ public class MockConnection extends Connection {
         List<OMRSAuditLogStore> auditLogDestinations = new ArrayList<>();
         auditLogDestinations.add((OMRSAuditLogStore)auditLogConnector);
         OMRSAuditLogDestination destination = new OMRSAuditLogDestination("MockXtdb", "XTDB", "ODPi", auditLogDestinations);
-        OMRSAuditLog auditLog = new OMRSAuditLog(destination, -1, "ConnectorTest", "Testing of the connector", null);
+        OMRSAuditLog auditLog = new OMRSAuditLog(destination, -1, ComponentDevelopmentStatus.SAMPLE, "ConnectorTest", "Testing of the connector", null);
         contentManager = new OMRSRepositoryContentManager(USERNAME, auditLog);
 
         try {
