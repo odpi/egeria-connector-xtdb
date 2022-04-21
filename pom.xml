@@ -11,7 +11,7 @@
     <groupId>org.odpi.egeria</groupId>
     <artifactId>egeria-connector-xtdb-module</artifactId>
     <packaging>pom</packaging>
-    <version>3.7-SNAPSHOT</version>
+    <version>3.8-SNAPSHOT</version>
     <modules>
         <module>connector</module>
         <module>migrator</module>
@@ -68,9 +68,9 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.7-SNAPSHOT</open-metadata.version>
+        <open-metadata.version>3.8-SNAPSHOT</open-metadata.version>
         <xtdb.version>1.20.0</xtdb.version>
-        <clojure.version>1.11.0</clojure.version>
+        <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.2.2</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -273,7 +273,7 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.8.7</version>
+                    <version>0.8.8</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -293,7 +293,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.3.2</version>
+                    <version>3.4.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -323,7 +323,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M5</version>
+                    <version>3.0.0-M6</version>
                     <configuration>
                         <forkCount>1</forkCount>
                         <reuseForks>true</reuseForks>
@@ -614,7 +614,7 @@
                                 <plugin>
                                     <groupId>com.h3xstream.findsecbugs</groupId>
                                     <artifactId>findsecbugs-plugin</artifactId>
-                                    <version>1.11.0</version> <!-- Auto-update to the latest stable -->
+                                    <version>1.12.0</version> <!-- Auto-update to the latest stable -->
                                 </plugin>
                             </plugins>
                         </configuration>
