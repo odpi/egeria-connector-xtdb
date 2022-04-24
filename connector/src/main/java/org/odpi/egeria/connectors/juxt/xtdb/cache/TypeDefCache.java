@@ -261,6 +261,7 @@ public class TypeDefCache {
             instanceType.setTypeDefDescription(typeDef.getDescription());
             instanceType.setTypeDefDescriptionGUID(typeDef.getDescriptionGUID());
             instanceType.setTypeDefSuperTypes(getAllSuperTypes(typeDefGUID));
+            instanceType.setValidStatusList(typeDef.getValidInstanceStatusList());
 
             Map<String, PropertyKeywords> properties = getAllPropertyKeywordsForTypeDef(typeDef.getGUID());
 
