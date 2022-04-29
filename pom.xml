@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.8-SNAPSHOT</open-metadata.version>
+        <open-metadata.version>3.8</open-metadata.version>
         <xtdb.version>1.20.0</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.2.2</jackson.version>
@@ -318,7 +318,7 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>7.0.4</version>
+                    <version>7.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
