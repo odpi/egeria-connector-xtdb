@@ -11,7 +11,7 @@
     <groupId>org.odpi.egeria</groupId>
     <artifactId>egeria-connector-xtdb-module</artifactId>
     <packaging>pom</packaging>
-    <version>3.8-SNAPSHOT</version>
+    <version>3.8</version>
     <modules>
         <module>connector</module>
         <module>migrator</module>
@@ -76,7 +76,12 @@
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.2.11</logback.version>
         <testng.version>7.5</testng.version>
+        <!-- Dependent libraries -->
         <httpclient.version>4.5.13</httpclient.version>
+        <netty.version>4.1.76.Final</netty.version>
+        <kafka.version>2.6.3</kafka.version>
+        <jacksondataformat.version>2.11.4</jacksondataformat.version>
+        <commonscodec.version>1.15</commonscodec.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -159,6 +164,20 @@
                 <version>${xtdb.version}</version>
                 <scope>runtime</scope>
             </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-38153 -->
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${kafka.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-28491 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-cbor</artifactId>
+                <version>${jacksondataformat.version}</version>
+                <scope>runtime</scope>
+            </dependency>
             <dependency>
                 <groupId>com.xtdb</groupId>
                 <artifactId>xtdb-jdbc</artifactId>
@@ -176,6 +195,41 @@
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
                 <version>${httpclient.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-21295 -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http2</artifactId>
+                <version>${netty.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-43797 -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http</artifactId>
+                <version>${netty.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-37136, CVE-2021-37137 -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec</artifactId>
+                <version>${netty.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-0026 -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-handler</artifactId>
+                <version>${netty.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <!-- Following dependency is to ensure we use updated version of dependent library to avoid sonatype-2012-0050 -->
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>${commonscodec.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
