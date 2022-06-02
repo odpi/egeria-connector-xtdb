@@ -230,7 +230,7 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
         // Null for the timeout here means use the default (which is therefore configurable directly by
         // the XTDB configurationProperties of the connector)
         Transaction txn = tx.build();
-        log.info("Adding transaction functions: {}", txn.toVector());
+        log.info("Adding transaction functions: {}", txn);
         TransactionInstant instant = xtdbAPI.submitTx(txn);
         xtdbAPI.awaitTx(instant, null);
 
@@ -405,7 +405,7 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
      */
     public TransactionInstant runTx(Transaction statements) {
         if (log.isDebugEnabled())
-            log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements.toVector());
+            log.debug("{} transacting with: {}", synchronousIndex ? SYNC : ASYNC, statements);
         TransactionInstant tx = xtdbAPI.submitTx(statements);
         // Null for the timeout here means use the default (which is therefore configurable directly by the XTDB
         // configurationProperties of the connector)
