@@ -68,19 +68,19 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.9-SNAPSHOT</open-metadata.version>
-        <xtdb.version>1.20.0</xtdb.version>
+        <open-metadata.version>3.9</open-metadata.version>
+        <xtdb.version>1.21.0</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
-        <jackson.version>2.13.2.2</jackson.version>
+        <jackson.version>2.13.3</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.2.11</logback.version>
-        <testng.version>7.5</testng.version>
+        <testng.version>7.6.0</testng.version>
         <!-- Dependent libraries -->
         <httpclient.version>4.5.13</httpclient.version>
-        <netty.version>4.1.76.Final</netty.version>
+        <netty.version>4.1.77.Final</netty.version>
         <kafka.version>2.6.3</kafka.version>
-        <jacksondataformat.version>2.11.4</jacksondataformat.version>
+        <jacksondataformat.version>2.13.3</jacksondataformat.version>
         <commonscodec.version>1.15</commonscodec.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -88,7 +88,7 @@
         <!-- Build processing -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <spotbugs.version>4.6.0.0</spotbugs.version>
+        <spotbugs.version>4.7.0</spotbugs.version>
     </properties>
 
     <repositories>
