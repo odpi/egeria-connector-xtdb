@@ -11,7 +11,7 @@
     <groupId>org.odpi.egeria</groupId>
     <artifactId>egeria-connector-xtdb-module</artifactId>
     <packaging>pom</packaging>
-    <version>3.9-SNAPSHOT</version>
+    <version>3.10-SNAPSHOT</version>
     <modules>
         <module>connector</module>
         <module>migrator</module>
@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.9</open-metadata.version>
+        <open-metadata.version>3.10-SNAPSHOT</open-metadata.version>
         <xtdb.version>1.21.0</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.3</jackson.version>
@@ -367,7 +367,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
-                    <version>3.16.0</version>
+                    <version>3.17.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.owasp</groupId>
@@ -377,7 +377,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M6</version>
+                    <version>3.0.0-M7</version>
                     <configuration>
                         <forkCount>1</forkCount>
                         <reuseForks>true</reuseForks>
