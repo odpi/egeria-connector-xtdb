@@ -1,0 +1,30 @@
+apiVersion: v1
+data:
+  CONNECTOR_CONFIG: '{"xtdbConfig":{"xtdb.lucene/lucene-store":{"db-dir":"data/servers/xtdb/lucene"},"xtdb/document-store":{"kv-store":{"db-dir":"data/servers/xtdb/rdb-docs","xtdb/module":"xtdb.rocksdb/->kv-store"}},"xtdb/index-store":{"kv-store":{"db-dir":"data/servers/xtdb/lmdb-index","xtdb/module":"xtdb.lmdb/->kv-store"}},"xtdb/tx-log":{"kv-store":{"db-dir":"data/servers/xtdb/rdb-tx","xtdb/module":"xtdb.rocksdb/->kv-store"}}}}'
+  CONNECTOR_PROVIDER: org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector.XtdbOMRSRepositoryConnectorProvider
+  CTS_FACTOR: "5"
+  CTS_REPORT_NAME: cts5x
+  EGERIA_COHORT: cts
+  EGERIA_ENDPOINT: https://cts5x-platform:9443
+  EGERIA_SERVER: cts
+  EGERIA_USER: admin
+  KAFKA_ENDPOINT: cts5x-strimzi-kafka-bootstrap:9092
+  START_DELAY: "10"
+  STRICT_SSL: "false"
+  TUT_SERVER: tut
+  TUT_TYPE: plugin
+kind: ConfigMap
+metadata:
+  annotations:
+    meta.helm.sh/release-name: cts5x
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2022-06-10T17:26:26Z"
+  labels:
+    app.kubernetes.io/instance: cts5x
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: egeria-cts
+    helm.sh/chart: egeria-cts-3.9.0
+  name: cts5x-env
+  namespace: default
+  resourceVersion: "754"
+  uid: a932837b-54f9-4bf7-98da-ea3505281c13
