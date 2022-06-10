@@ -1,0 +1,821 @@
+Name:         cts5x-strimzi-zookeeper-0
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:26:45 +0100
+Labels:       app.kubernetes.io/instance=cts5x-strimzi
+              app.kubernetes.io/managed-by=strimzi-cluster-operator
+              app.kubernetes.io/name=zookeeper
+              app.kubernetes.io/part-of=strimzi-cts5x-strimzi
+              controller-revision-hash=cts5x-strimzi-zookeeper-8557fd4999
+              statefulset.kubernetes.io/pod-name=cts5x-strimzi-zookeeper-0
+              strimzi.io/cluster=cts5x-strimzi
+              strimzi.io/kind=Kafka
+              strimzi.io/name=cts5x-strimzi-zookeeper
+Annotations:  strimzi.io/cluster-ca-cert-generation: 0
+              strimzi.io/generation: 0
+              strimzi.io/logging-hash: 0f057cb0003c78f02978b83e4fabad5bd508680c
+Status:       Running
+IP:           10.42.0.226
+IPs:
+  IP:           10.42.0.226
+Controlled By:  StatefulSet/cts5x-strimzi-zookeeper
+Containers:
+  zookeeper:
+    Container ID:  containerd://bfba06882fa51129c48e0ad7819cb9484e30a76c6f03d027af1d5ee940bac0e1
+    Image:         quay.io/strimzi/kafka:0.28.0-kafka-3.0.0
+    Image ID:      quay.io/strimzi/kafka@sha256:7c04f65e216bb941458aeadffb85e9eeee43d5ca67da566017c2c93a0664c98e
+    Ports:         2888/TCP, 3888/TCP, 2181/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      /opt/kafka/zookeeper_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:26:46 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       exec [/opt/kafka/zookeeper_healthcheck.sh] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      exec [/opt/kafka/zookeeper_healthcheck.sh] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:
+      ZOOKEEPER_METRICS_ENABLED:         false
+      ZOOKEEPER_SNAPSHOT_CHECK_ENABLED:  true
+      STRIMZI_KAFKA_GC_LOG_ENABLED:      false
+      KAFKA_HEAP_OPTS:                   -Xms128M
+      ZOOKEEPER_CONFIGURATION:           tickTime=2000
+                                         initLimit=5
+                                         syncLimit=2
+                                         autopurge.purgeInterval=1
+                                         
+    Mounts:
+      /opt/kafka/cluster-ca-certs/ from cluster-ca-certs (rw)
+      /opt/kafka/custom-config/ from zookeeper-metrics-and-logging (rw)
+      /opt/kafka/zookeeper-node-certs/ from zookeeper-nodes (rw)
+      /tmp from strimzi-tmp (rw)
+      /var/lib/zookeeper from data (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-cjbm6 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  data-cts5x-strimzi-zookeeper-0
+    ReadOnly:   false
+  strimzi-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  zookeeper-metrics-and-logging:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-strimzi-zookeeper-config
+    Optional:  false
+  zookeeper-nodes:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-zookeeper-nodes
+    Optional:    false
+  cluster-ca-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-cluster-ca-cert
+    Optional:    false
+  kube-api-access-cjbm6:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         cts5x-platform-5d9c56dcf6-w7c88
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:26:26 +0100
+Labels:       app.kubernetes.io/component=platform
+              app.kubernetes.io/instance=cts5x
+              app.kubernetes.io/name=egeria-cts
+              pod-template-hash=5d9c56dcf6
+Annotations:  <none>
+Status:       Running
+IP:           10.42.0.222
+IPs:
+  IP:           10.42.0.222
+Controlled By:  ReplicaSet/cts5x-platform-5d9c56dcf6
+Init Containers:
+  init-connector:
+    Container ID:  containerd://57f9103047053b29ffb0bde54eb92a4fe1745c1a852625d1bfeace8e32ed75ab
+    Image:         quay.io/odpi/egeria-configure:3.9
+    Image ID:      quay.io/odpi/egeria-configure@sha256:c0412ae486fc109544371ef7b80bdfbe8f08a703d400635f6e499c7e371b8c12
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      cd /opt/egeria/connectors &&
+      curl --location "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.odpi.egeria&a=egeria-connector-xtdb&v=RELEASE&c=jar-with-dependencies" --output "egeria-connector-xtdb-3.9-SNAPSHOT-jar-with-dependencies.jar" &&
+      echo "Downloads complete."
+      
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Fri, 10 Jun 2022 18:26:29 +0100
+      Finished:     Fri, 10 Jun 2022 18:26:33 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      cts5x-env   ConfigMap  Optional: false
+    Environment:  <none>
+    Mounts:
+      /opt/egeria/connectors from egeria-connector-volume (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-ftrns (ro)
+Containers:
+  platform:
+    Container ID:   containerd://22e0c2227cb29a43cf8b3fb2a94b481cc339d62cc6b83bc1b1434119c6ea220b
+    Image:          quay.io/odpi/egeria:3.9
+    Image ID:       quay.io/odpi/egeria@sha256:7724739f47484d04769664f18e8efe8144ea69ac907f775eda3e26b0f7ce6ed3
+    Port:           9443/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:26:35 +0100
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     1
+      memory:  8Gi
+    Requests:
+      cpu:      500m
+      memory:   4Gi
+    Readiness:  tcp-socket :9443 delay=10s timeout=1s period=10s #success=1 #failure=6
+    Environment Variables from:
+      cts5x-env  ConfigMap  Optional: false
+    Environment:
+      LOADER_PATH:  /opt/egeria/connectors,/deployments/server/lib
+    Mounts:
+      /opt/egeria/connectors from egeria-connector-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-ftrns (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  egeria-connector-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  kube-api-access-ftrns:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         cts5x-strimzi-kafka-2
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:27:13 +0100
+Labels:       app.kubernetes.io/instance=cts5x-strimzi
+              app.kubernetes.io/managed-by=strimzi-cluster-operator
+              app.kubernetes.io/name=kafka
+              app.kubernetes.io/part-of=strimzi-cts5x-strimzi
+              controller-revision-hash=cts5x-strimzi-kafka-6b7f847bfc
+              statefulset.kubernetes.io/pod-name=cts5x-strimzi-kafka-2
+              strimzi.io/cluster=cts5x-strimzi
+              strimzi.io/kind=Kafka
+              strimzi.io/name=cts5x-strimzi-kafka
+Annotations:  strimzi.io/broker-configuration-hash: 614fda82ede95bce12b59097865585003ee923cbe10dda7f262722113c43a515d133c3868e48132d
+              strimzi.io/clients-ca-cert-generation: 0
+              strimzi.io/cluster-ca-cert-generation: 0
+              strimzi.io/generation: 0
+              strimzi.io/inter-broker-protocol-version: 3.0
+              strimzi.io/kafka-version: 3.0.0
+              strimzi.io/log-message-format-version: 3.0
+              strimzi.io/logging-appenders-hash: e893ac9f32f7958042d1c82477e3484b0f8ebad5
+              strimzi.io/storage: {"volumes":[{"type":"persistent-claim","size":"5Gi","deleteClaim":true,"id":0}],"type":"jbod"}
+Status:       Running
+IP:           10.42.0.230
+IPs:
+  IP:           10.42.0.230
+Controlled By:  StatefulSet/cts5x-strimzi-kafka
+Containers:
+  kafka:
+    Container ID:  containerd://175f6b59bca1e1fb89cd79f86e87bc3efd86dc51769dcb8b6aa7aa425b5244fb
+    Image:         quay.io/strimzi/kafka:0.28.0-kafka-3.0.0
+    Image ID:      quay.io/strimzi/kafka@sha256:7c04f65e216bb941458aeadffb85e9eeee43d5ca67da566017c2c93a0664c98e
+    Ports:         9090/TCP, 9091/TCP, 9092/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      /opt/kafka/kafka_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:27:14 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       exec [/opt/kafka/kafka_liveness.sh] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      exec [test -f /var/opt/kafka/kafka-ready] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:
+      KAFKA_METRICS_ENABLED:         false
+      STRIMZI_KAFKA_GC_LOG_ENABLED:  false
+      KAFKA_HEAP_OPTS:               -Xms128M
+    Mounts:
+      /opt/kafka/broker-certs from broker-certs (rw)
+      /opt/kafka/client-ca-certs from client-ca-cert (rw)
+      /opt/kafka/cluster-ca-certs from cluster-ca (rw)
+      /opt/kafka/custom-config/ from kafka-metrics-and-logging (rw)
+      /tmp from strimzi-tmp (rw)
+      /var/lib/kafka/data-0 from data-0 (rw)
+      /var/opt/kafka from ready-files (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-pds6z (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data-0:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  data-0-cts5x-strimzi-kafka-2
+    ReadOnly:   false
+  strimzi-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  cluster-ca:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-cluster-ca-cert
+    Optional:    false
+  broker-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-kafka-brokers
+    Optional:    false
+  client-ca-cert:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-clients-ca-cert
+    Optional:    false
+  kafka-metrics-and-logging:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-strimzi-kafka-config
+    Optional:  false
+  ready-files:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Ki
+  kube-api-access-pds6z:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         cts5x-strimzi-kafka-0
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:27:14 +0100
+Labels:       app.kubernetes.io/instance=cts5x-strimzi
+              app.kubernetes.io/managed-by=strimzi-cluster-operator
+              app.kubernetes.io/name=kafka
+              app.kubernetes.io/part-of=strimzi-cts5x-strimzi
+              controller-revision-hash=cts5x-strimzi-kafka-6b7f847bfc
+              statefulset.kubernetes.io/pod-name=cts5x-strimzi-kafka-0
+              strimzi.io/cluster=cts5x-strimzi
+              strimzi.io/kind=Kafka
+              strimzi.io/name=cts5x-strimzi-kafka
+Annotations:  strimzi.io/broker-configuration-hash: 614fda82ede95bce12b59097865585003ee923cbe10dda7f262722113c43a515d133c3868e48132d
+              strimzi.io/clients-ca-cert-generation: 0
+              strimzi.io/cluster-ca-cert-generation: 0
+              strimzi.io/generation: 0
+              strimzi.io/inter-broker-protocol-version: 3.0
+              strimzi.io/kafka-version: 3.0.0
+              strimzi.io/log-message-format-version: 3.0
+              strimzi.io/logging-appenders-hash: e893ac9f32f7958042d1c82477e3484b0f8ebad5
+              strimzi.io/storage: {"volumes":[{"type":"persistent-claim","size":"5Gi","deleteClaim":true,"id":0}],"type":"jbod"}
+Status:       Running
+IP:           10.42.0.231
+IPs:
+  IP:           10.42.0.231
+Controlled By:  StatefulSet/cts5x-strimzi-kafka
+Containers:
+  kafka:
+    Container ID:  containerd://b4679984ae7d464778ae0d75e57cce51e3dceedadb4f53121f3905aee78cacfc
+    Image:         quay.io/strimzi/kafka:0.28.0-kafka-3.0.0
+    Image ID:      quay.io/strimzi/kafka@sha256:7c04f65e216bb941458aeadffb85e9eeee43d5ca67da566017c2c93a0664c98e
+    Ports:         9090/TCP, 9091/TCP, 9092/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      /opt/kafka/kafka_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:27:16 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       exec [/opt/kafka/kafka_liveness.sh] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      exec [test -f /var/opt/kafka/kafka-ready] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:
+      KAFKA_METRICS_ENABLED:         false
+      STRIMZI_KAFKA_GC_LOG_ENABLED:  false
+      KAFKA_HEAP_OPTS:               -Xms128M
+    Mounts:
+      /opt/kafka/broker-certs from broker-certs (rw)
+      /opt/kafka/client-ca-certs from client-ca-cert (rw)
+      /opt/kafka/cluster-ca-certs from cluster-ca (rw)
+      /opt/kafka/custom-config/ from kafka-metrics-and-logging (rw)
+      /tmp from strimzi-tmp (rw)
+      /var/lib/kafka/data-0 from data-0 (rw)
+      /var/opt/kafka from ready-files (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-95q6m (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data-0:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  data-0-cts5x-strimzi-kafka-0
+    ReadOnly:   false
+  strimzi-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  cluster-ca:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-cluster-ca-cert
+    Optional:    false
+  broker-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-kafka-brokers
+    Optional:    false
+  client-ca-cert:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-clients-ca-cert
+    Optional:    false
+  kafka-metrics-and-logging:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-strimzi-kafka-config
+    Optional:  false
+  ready-files:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Ki
+  kube-api-access-95q6m:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         cts5x-strimzi-kafka-1
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:27:14 +0100
+Labels:       app.kubernetes.io/instance=cts5x-strimzi
+              app.kubernetes.io/managed-by=strimzi-cluster-operator
+              app.kubernetes.io/name=kafka
+              app.kubernetes.io/part-of=strimzi-cts5x-strimzi
+              controller-revision-hash=cts5x-strimzi-kafka-6b7f847bfc
+              statefulset.kubernetes.io/pod-name=cts5x-strimzi-kafka-1
+              strimzi.io/cluster=cts5x-strimzi
+              strimzi.io/kind=Kafka
+              strimzi.io/name=cts5x-strimzi-kafka
+Annotations:  strimzi.io/broker-configuration-hash: 614fda82ede95bce12b59097865585003ee923cbe10dda7f262722113c43a515d133c3868e48132d
+              strimzi.io/clients-ca-cert-generation: 0
+              strimzi.io/cluster-ca-cert-generation: 0
+              strimzi.io/generation: 0
+              strimzi.io/inter-broker-protocol-version: 3.0
+              strimzi.io/kafka-version: 3.0.0
+              strimzi.io/log-message-format-version: 3.0
+              strimzi.io/logging-appenders-hash: e893ac9f32f7958042d1c82477e3484b0f8ebad5
+              strimzi.io/storage: {"volumes":[{"type":"persistent-claim","size":"5Gi","deleteClaim":true,"id":0}],"type":"jbod"}
+Status:       Running
+IP:           10.42.0.232
+IPs:
+  IP:           10.42.0.232
+Controlled By:  StatefulSet/cts5x-strimzi-kafka
+Containers:
+  kafka:
+    Container ID:  containerd://b37e7654ed8e9d054f022415c0db1cddb1ac1b1744368adadefeab9b3ef4524b
+    Image:         quay.io/strimzi/kafka:0.28.0-kafka-3.0.0
+    Image ID:      quay.io/strimzi/kafka@sha256:7c04f65e216bb941458aeadffb85e9eeee43d5ca67da566017c2c93a0664c98e
+    Ports:         9090/TCP, 9091/TCP, 9092/TCP
+    Host Ports:    0/TCP, 0/TCP, 0/TCP
+    Command:
+      /opt/kafka/kafka_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:27:17 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       exec [/opt/kafka/kafka_liveness.sh] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      exec [test -f /var/opt/kafka/kafka-ready] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:
+      KAFKA_METRICS_ENABLED:         false
+      STRIMZI_KAFKA_GC_LOG_ENABLED:  false
+      KAFKA_HEAP_OPTS:               -Xms128M
+    Mounts:
+      /opt/kafka/broker-certs from broker-certs (rw)
+      /opt/kafka/client-ca-certs from client-ca-cert (rw)
+      /opt/kafka/cluster-ca-certs from cluster-ca (rw)
+      /opt/kafka/custom-config/ from kafka-metrics-and-logging (rw)
+      /tmp from strimzi-tmp (rw)
+      /var/lib/kafka/data-0 from data-0 (rw)
+      /var/opt/kafka from ready-files (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-69phg (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  data-0:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  data-0-cts5x-strimzi-kafka-1
+    ReadOnly:   false
+  strimzi-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  cluster-ca:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-cluster-ca-cert
+    Optional:    false
+  broker-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-kafka-brokers
+    Optional:    false
+  client-ca-cert:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-clients-ca-cert
+    Optional:    false
+  kafka-metrics-and-logging:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-strimzi-kafka-config
+    Optional:  false
+  ready-files:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Ki
+  kube-api-access-69phg:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         cts5x-strimzi-entity-operator-76756784b6-f9zs2
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:27:38 +0100
+Labels:       app.kubernetes.io/instance=cts5x-strimzi
+              app.kubernetes.io/managed-by=strimzi-cluster-operator
+              app.kubernetes.io/name=entity-operator
+              app.kubernetes.io/part-of=strimzi-cts5x-strimzi
+              pod-template-hash=76756784b6
+              strimzi.io/cluster=cts5x-strimzi
+              strimzi.io/kind=Kafka
+              strimzi.io/name=cts5x-strimzi-entity-operator
+Annotations:  strimzi.io/cluster-ca-cert-generation: 0
+Status:       Running
+IP:           10.42.0.233
+IPs:
+  IP:           10.42.0.233
+Controlled By:  ReplicaSet/cts5x-strimzi-entity-operator-76756784b6
+Containers:
+  topic-operator:
+    Container ID:  containerd://1599da5fd37baefaa7ad2855d2bbf07cfcb4df57066223531fe38fe0aaeff6ad
+    Image:         quay.io/strimzi/operator:0.28.0
+    Image ID:      quay.io/strimzi/operator@sha256:8b010c5fb8244b742a37f264feefc116d75bb2abd2d6895375cbeea250727b39
+    Port:          8080/TCP
+    Host Port:     0/TCP
+    Args:
+      /opt/strimzi/bin/topic_operator_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:27:39 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       http-get http://:healthcheck/healthy delay=10s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      http-get http://:healthcheck/ready delay=10s timeout=5s period=10s #success=1 #failure=3
+    Startup:        http-get http://:healthcheck/healthy delay=15s timeout=5s period=10s #success=1 #failure=12
+    Environment:
+      STRIMZI_RESOURCE_LABELS:                  strimzi.io/cluster=cts5x-strimzi
+      STRIMZI_KAFKA_BOOTSTRAP_SERVERS:          cts5x-strimzi-kafka-bootstrap:9091
+      STRIMZI_ZOOKEEPER_CONNECT:                localhost:2181
+      STRIMZI_NAMESPACE:                        default
+      STRIMZI_FULL_RECONCILIATION_INTERVAL_MS:  20000
+      STRIMZI_ZOOKEEPER_SESSION_TIMEOUT_MS:     18000
+      STRIMZI_TOPIC_METADATA_MAX_ATTEMPTS:      6
+      STRIMZI_SECURITY_PROTOCOL:                SSL
+      STRIMZI_TLS_ENABLED:                      true
+      STRIMZI_GC_LOG_ENABLED:                   false
+    Mounts:
+      /etc/eto-certs/ from eto-certs (rw)
+      /etc/tls-sidecar/cluster-ca-certs/ from cluster-ca-certs (rw)
+      /opt/topic-operator/custom-config/ from entity-topic-operator-metrics-and-logging (rw)
+      /tmp from strimzi-to-tmp (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-kcp2x (ro)
+  user-operator:
+    Container ID:  containerd://07354a75dec3379f319f2018f4675d51df4234a54d2731712575f55d7ac9b4d7
+    Image:         quay.io/strimzi/operator:0.28.0
+    Image ID:      quay.io/strimzi/operator@sha256:8b010c5fb8244b742a37f264feefc116d75bb2abd2d6895375cbeea250727b39
+    Port:          8081/TCP
+    Host Port:     0/TCP
+    Args:
+      /opt/strimzi/bin/user_operator_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:27:39 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       http-get http://:healthcheck/healthy delay=10s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      http-get http://:healthcheck/ready delay=10s timeout=5s period=10s #success=1 #failure=3
+    Environment:
+      STRIMZI_KAFKA_BOOTSTRAP_SERVERS:          cts5x-strimzi-kafka-bootstrap:9091
+      STRIMZI_NAMESPACE:                        default
+      STRIMZI_LABELS:                           strimzi.io/cluster=cts5x-strimzi
+      STRIMZI_FULL_RECONCILIATION_INTERVAL_MS:  20000
+      STRIMZI_CA_KEY_NAME:                      cts5x-strimzi-clients-ca
+      STRIMZI_CA_CERT_NAME:                     cts5x-strimzi-clients-ca-cert
+      STRIMZI_CA_NAMESPACE:                     default
+      STRIMZI_CA_VALIDITY:                      365
+      STRIMZI_CA_RENEWAL:                       30
+      STRIMZI_CLUSTER_CA_CERT_SECRET_NAME:      cts5x-strimzi-cluster-ca-cert
+      STRIMZI_EO_KEY_SECRET_NAME:               cts5x-strimzi-entity-user-operator-certs
+      STRIMZI_GC_LOG_ENABLED:                   false
+      STRIMZI_SECRET_PREFIX:                    
+      STRIMZI_ACLS_ADMIN_API_SUPPORTED:         false
+    Mounts:
+      /etc/euo-certs/ from euo-certs (rw)
+      /etc/tls-sidecar/cluster-ca-certs/ from cluster-ca-certs (rw)
+      /opt/user-operator/custom-config/ from entity-user-operator-metrics-and-logging (rw)
+      /tmp from strimzi-uo-tmp (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-kcp2x (ro)
+  tls-sidecar:
+    Container ID:  containerd://d70cf55068c7cf6524409aff740dc17839433ab9d1065f83cf386b72992f0530
+    Image:         quay.io/strimzi/kafka:0.28.0-kafka-3.1.0
+    Image ID:      quay.io/strimzi/kafka@sha256:06e9bda15495feb2b92d9950e834cdeed6ef20064f021a879610f1b59dd46950
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /opt/stunnel/entity_operator_stunnel_run.sh
+    State:          Running
+      Started:      Fri, 10 Jun 2022 18:27:40 +0100
+    Ready:          True
+    Restart Count:  0
+    Liveness:       exec [/opt/stunnel/stunnel_healthcheck.sh 2181] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Readiness:      exec [/opt/stunnel/stunnel_healthcheck.sh 2181] delay=15s timeout=5s period=10s #success=1 #failure=3
+    Environment:
+      TLS_SIDECAR_LOG_LEVEL:      notice
+      STRIMZI_ZOOKEEPER_CONNECT:  cts5x-strimzi-zookeeper-client:2181
+    Mounts:
+      /etc/eto-certs/ from eto-certs (rw)
+      /etc/tls-sidecar/cluster-ca-certs/ from cluster-ca-certs (rw)
+      /tmp from strimzi-tls-sidecar-tmp (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-kcp2x (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  entity-topic-operator-metrics-and-logging:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-strimzi-entity-topic-operator-config
+    Optional:  false
+  strimzi-to-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  eto-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-entity-topic-operator-certs
+    Optional:    false
+  entity-user-operator-metrics-and-logging:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-strimzi-entity-user-operator-config
+    Optional:  false
+  strimzi-uo-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  euo-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-entity-user-operator-certs
+    Optional:    false
+  strimzi-tls-sidecar-tmp:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     Memory
+    SizeLimit:  1Mi
+  cluster-ca-certs:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  cts5x-strimzi-cluster-ca-cert
+    Optional:    false
+  kube-api-access-kcp2x:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:                      <none>
+
+Name:         cts5x-report-tqjrx
+Namespace:    default
+Priority:     0
+Node:         lima-rancher-desktop/192.168.50.196
+Start Time:   Fri, 10 Jun 2022 18:26:26 +0100
+Labels:       app.kubernetes.io/component=report
+              app.kubernetes.io/instance=cts5x
+              app.kubernetes.io/name=egeria-cts
+              controller-uid=0fadf65e-b54b-4041-ba0d-006ca26ffb1d
+              job-name=cts5x-report
+Annotations:  <none>
+Status:       Running
+IP:           10.42.0.221
+IPs:
+  IP:           10.42.0.221
+Controlled By:  Job/cts5x-report
+Init Containers:
+  wait-for-platform:
+    Container ID:   containerd://fa40bfd05c4ee687b126af07c72e15a55cf1f1fac8cb1ecf5f3942aa90241e0b
+    Image:          quay.io/odpi/egeria-configure:3.9
+    Image ID:       quay.io/odpi/egeria-configure@sha256:c0412ae486fc109544371ef7b80bdfbe8f08a703d400635f6e499c7e371b8c12
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Fri, 10 Jun 2022 18:26:29 +0100
+      Finished:     Fri, 10 Jun 2022 18:27:08 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  cts5x-platform
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9br64 (ro)
+  wait-for-kafka:
+    Container ID:   containerd://716b055a635d50d42d5a60580ef81a1a36c25b8fef597c08987b8875b0436e91
+    Image:          quay.io/odpi/egeria-configure:3.9
+    Image ID:       quay.io/odpi/egeria-configure@sha256:c0412ae486fc109544371ef7b80bdfbe8f08a703d400635f6e499c7e371b8c12
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Fri, 10 Jun 2022 18:27:09 +0100
+      Finished:     Fri, 10 Jun 2022 18:27:33 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      SERVICE:  cts5x-strimzi-kafka-bootstrap
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9br64 (ro)
+  wait-for-init:
+    Container ID:  containerd://d2060f36bbf4aadad62db13584a838dd536616e0e8ac789b8b79fffcab6855e9
+    Image:         quay.io/odpi/egeria-configure:3.9
+    Image ID:      quay.io/odpi/egeria-configure@sha256:c0412ae486fc109544371ef7b80bdfbe8f08a703d400635f6e499c7e371b8c12
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      /scripts/wait-for-init.sh
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Fri, 10 Jun 2022 18:27:35 +0100
+      Finished:     Fri, 10 Jun 2022 18:27:51 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      cts5x-env   ConfigMap  Optional: false
+    Environment:  <none>
+    Mounts:
+      /scripts from scripts-vol (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9br64 (ro)
+  report:
+    Container ID:  containerd://2dca17771fcbbe9adcbce1d06fa1714f59f5a4147cd40d5f03a1c3fa4b902ce5
+    Image:         quay.io/odpi/egeria-configure:3.9
+    Image ID:      quay.io/odpi/egeria-configure@sha256:c0412ae486fc109544371ef7b80bdfbe8f08a703d400635f6e499c7e371b8c12
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/bash
+      -c
+      /scripts/collect-results.sh
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Fri, 10 Jun 2022 18:27:52 +0100
+      Finished:     Fri, 10 Jun 2022 20:06:14 +0100
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     1
+      memory:  512Mi
+    Requests:
+      cpu:     200m
+      memory:  64Mi
+    Environment Variables from:
+      cts5x-env   ConfigMap  Optional: false
+    Environment:  <none>
+    Mounts:
+      /export from output-files (rw)
+      /scripts from scripts-vol (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9br64 (ro)
+Containers:
+  wait-for-retrieval:
+    Container ID:  containerd://e45bfd07b5d0689f6da59c12c78fe54d6057ae337f77887236e8666d3996dbec
+    Image:         quay.io/odpi/egeria-configure:3.9
+    Image ID:      quay.io/odpi/egeria-configure@sha256:c0412ae486fc109544371ef7b80bdfbe8f08a703d400635f6e499c7e371b8c12
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/sh
+      -c
+    Args:
+      set -e
+      echo "Creating a fifo pipe to send the output data"
+      mkfifo /export/pipe
+      echo "You'll need to stream the files out for this pod to shutdown, using a command like:"
+      echo "kubectl exec POD_NAME -- sh -c 'cat /export/pipe' | tar -xvf -"
+      cd /export
+      tar -cvf - /export/${CTS_REPORT_NAME}.tar.gz > /export/pipe
+      echo "The files have been read, the previous command stopped blocking, will wait for final cleanup..."
+      sleep 10
+      echo "Will now exit."
+      
+    State:          Running
+      Started:      Fri, 10 Jun 2022 20:06:16 +0100
+    Ready:          True
+    Restart Count:  0
+    Environment Variables from:
+      cts5x-env   ConfigMap  Optional: false
+    Environment:  <none>
+    Mounts:
+      /export from output-files (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9br64 (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  output-files:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:     
+    SizeLimit:  <unset>
+  scripts-vol:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      cts5x-scripts-configmap
+    Optional:  false
+  kube-api-access-9br64:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason   Age   From     Message
+  ----    ------   ----  ----     -------
+  Normal  Pulling  15m   kubelet  Pulling image "quay.io/odpi/egeria-configure:3.9"
+  Normal  Pulled   15m   kubelet  Successfully pulled image "quay.io/odpi/egeria-configure:3.9" in 517.673ms
+  Normal  Created  15m   kubelet  Created container wait-for-retrieval
+  Normal  Started  15m   kubelet  Started container wait-for-retrieval
+
