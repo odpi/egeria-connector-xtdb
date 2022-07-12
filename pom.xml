@@ -78,7 +78,7 @@
         <testng.version>7.6.0</testng.version>
         <!-- Dependent libraries -->
         <httpclient.version>4.5.13</httpclient.version>
-        <netty.version>4.1.77.Final</netty.version>
+        <netty.version>4.1.79.Final</netty.version>
         <kafka.version>2.6.3</kafka.version>
         <jacksondataformat.version>2.13.3</jacksondataformat.version>
         <commonscodec.version>1.15</commonscodec.version>
