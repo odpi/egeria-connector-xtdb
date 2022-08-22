@@ -73,7 +73,7 @@
         <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.3</jackson.version>
         <lucene.version>8.9.0</lucene.version>
-        <slf4j.version>1.7.36</slf4j.version>
+        <slf4j.version>2.0.0</slf4j.version>
         <logback.version>1.2.11</logback.version>
         <testng.version>7.6.0</testng.version>
         <!-- Dependent libraries -->
