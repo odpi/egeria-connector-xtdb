@@ -69,16 +69,16 @@
 
     <properties>
         <open-metadata.version>3.10-SNAPSHOT</open-metadata.version>
-        <xtdb.version>1.21.0</xtdb.version>
+        <xtdb.version>1.21.0.1</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.3</jackson.version>
         <lucene.version>8.9.0</lucene.version>
-        <slf4j.version>1.7.36</slf4j.version>
+        <slf4j.version>2.0.0</slf4j.version>
         <logback.version>1.2.11</logback.version>
-        <testng.version>7.6.0</testng.version>
+        <testng.version>7.6.1</testng.version>
         <!-- Dependent libraries -->
         <httpclient.version>4.5.13</httpclient.version>
-        <netty.version>4.1.77.Final</netty.version>
+        <netty.version>4.1.79.Final</netty.version>
         <kafka.version>2.6.3</kafka.version>
         <jacksondataformat.version>2.13.3</jacksondataformat.version>
         <commonscodec.version>1.15</commonscodec.version>
@@ -88,7 +88,7 @@
         <!-- Build processing -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <spotbugs.version>4.7.0</spotbugs.version>
+        <spotbugs.version>4.7.1.0</spotbugs.version>
     </properties>
 
     <repositories>
@@ -322,7 +322,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
@@ -347,12 +347,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.4.0</version>
+                    <version>3.4.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>3.3.0</version>
+                    <version>3.4.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -372,7 +372,7 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>7.1.0</version>
+                    <version>7.1.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -446,7 +446,7 @@
             <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
-                <version>0.13</version>
+                <version>0.14</version>
                 <configuration>
                     <useDefaultExcludes>true</useDefaultExcludes>
                     <useMavenDefaultExcludes>true</useMavenDefaultExcludes>
