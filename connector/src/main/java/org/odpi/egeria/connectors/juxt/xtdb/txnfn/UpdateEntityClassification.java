@@ -64,7 +64,6 @@ public class UpdateEntityClassification extends UpdateInstanceProperties {
                 throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
                         entityGUID), this.getClass().getName(), METHOD_NAME);
             } else {
-                TxnValidations.nonProxyEntity(existing, entityGUID, CLASS_NAME, METHOD_NAME);
                 TxnValidations.entityFromStore(entityGUID, existing, CLASS_NAME, METHOD_NAME);
                 TxnValidations.instanceIsNotDeleted(existing, entityGUID, CLASS_NAME, METHOD_NAME);
                 TxnValidations.instanceCanBeUpdated(existing, entityGUID, metadataCollectionId, classificationName, CLASS_NAME, METHOD_NAME);
