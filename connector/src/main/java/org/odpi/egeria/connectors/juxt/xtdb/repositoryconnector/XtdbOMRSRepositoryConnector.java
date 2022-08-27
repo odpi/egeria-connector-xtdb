@@ -204,7 +204,8 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
         UpdateEntityProperties.create(tx);
         UndoEntityUpdate.create(tx);
         RestoreEntity.create(tx);
-        ClassifyEntity.create(tx);
+        ClassifyEntityDetail.create(tx);
+        ClassifyEntityProxy.create(tx);
         DeclassifyEntity.create(tx);
         UpdateEntityClassification.create(tx);
         AddRelationship.create(tx);
@@ -359,6 +360,38 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
                         this.getClass().getName(), methodName, e);
             }
             return ed;
+        } else {
+            // For async write we will ALWAYS return null, as there cannot be any consistent idea
+            // of what the object looks like before the write itself has completed
+            return null;
+        }
+    }
+
+    /**
+     * Validates that the commit was persisted (if synchronous), throwing an exception if it failed, and
+     * also retrieves and returns the summary entity that resulted from the transaction. Note that if the
+     * operation is configured to be asynchronous, this will ALWAYS return null for the entity details.
+     * @param docId of the entity within XTDB itself (i.e. prefixed)
+     * @param instant giving the commit point of the transaction
+     * @param methodName that made the commit
+     * @return EntitySummary result of the committed transaction (synchronous) or null (asynchronous)
+     * @throws Exception on any error
+     */
+    public EntitySummary getResultingEntitySummary(String docId,
+                                                   TransactionInstant instant,
+                                                   String methodName) throws Exception {
+        validateCommit(instant, methodName);
+        if (synchronousIndex) {
+            EntitySummary es;
+            try (IXtdbDatasource db = xtdbAPI.openDB(instant)) {
+                XtdbDocument result = AbstractReadOperation.getXtdbObjectByReference(db, docId);
+                EntitySummaryMapping esm = new EntitySummaryMapping(this, result);
+                es = esm.toEgeria();
+            } catch (IOException e) {
+                throw new RepositoryErrorException(XtdbOMRSErrorCode.CANNOT_CLOSE_RESOURCE.getMessageDefinition(),
+                        this.getClass().getName(), methodName, e);
+            }
+            return es;
         } else {
             // For async write we will ALWAYS return null, as there cannot be any consistent idea
             // of what the object looks like before the write itself has completed
