@@ -1044,6 +1044,30 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
      * {@inheritDoc}
      */
     @Override
+    public Classification classifyEntity(String userId,
+                                         EntityProxy entityProxy,
+                                         String classificationName,
+                                         InstanceProperties classificationProperties) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            ClassificationErrorException,
+            PropertyErrorException,
+            UserNotAuthorizedException,
+            FunctionNotSupportedException {
+        return classifyEntity(userId,
+                entityProxy,
+                classificationName,
+                null,
+                null,
+                null,
+                null,
+                classificationProperties);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public EntityDetail classifyEntity(String userId,
                                        String entityGUID,
                                        String classificationName,
@@ -1063,9 +1087,44 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         parentConnector.validateRepositoryIsActive(methodName);
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
-        return ClassifyEntity.transact(xtdbRepositoryConnector,
+        return ClassifyEntityDetail.transact(xtdbRepositoryConnector,
                 userId,
                 entityGUID,
+                classificationName,
+                externalSourceGUID,
+                externalSourceName,
+                classificationOrigin,
+                classificationOriginGUID,
+                classificationProperties);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Classification classifyEntity(String userId,
+                                         EntityProxy entityProxy,
+                                         String classificationName,
+                                         String externalSourceGUID,
+                                         String externalSourceName,
+                                         ClassificationOrigin classificationOrigin,
+                                         String classificationOriginGUID,
+                                         InstanceProperties classificationProperties) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            ClassificationErrorException,
+            PropertyErrorException,
+            UserNotAuthorizedException,
+            FunctionNotSupportedException {
+
+        final String methodName = "classifyEntity";
+        this.validateRepositoryConnector(methodName);
+        parentConnector.validateRepositoryIsActive(methodName);
+        repositoryValidator.validateUserId(repositoryName, userId, methodName);
+        repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityProxy == null ? null : entityProxy.getGUID(), methodName);
+        return ClassifyEntityProxy.transact(xtdbRepositoryConnector,
+                userId,
+                entityProxy,
                 classificationName,
                 externalSourceGUID,
                 externalSourceName,
