@@ -68,7 +68,7 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.11-SNAPSHOT</open-metadata.version>
+        <open-metadata.version>3.12</open-metadata.version>
         <xtdb.version>1.21.0.1</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.3</jackson.version>
