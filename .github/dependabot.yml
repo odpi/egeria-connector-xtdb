@@ -10,4 +10,10 @@ updates:
     open-pull-requests-limit: 100
     reviewers:
       - cmgrote
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: monthly
+      time: "03:00"
+      timezone: "Etc/UTC"
 ...
