@@ -71,7 +71,7 @@
         <open-metadata.version>3.14-SNAPSHOT</open-metadata.version>
         <xtdb.version>1.22.1</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
-        <jackson.version>2.13.3</jackson.version>
+        <jackson.version>2.14.1</jackson.version>
         <lucene.version>8.9.0</lucene.version>
         <slf4j.version>2.0.5</slf4j.version>
         <logback.version>1.4.5</logback.version>
@@ -80,7 +80,7 @@
         <httpclient.version>4.5.14</httpclient.version>
         <netty.version>4.1.79.Final</netty.version>
         <kafka.version>2.6.3</kafka.version>
-        <jacksondataformat.version>2.13.3</jacksondataformat.version>
+        <jacksondataformat.version>2.14.1</jacksondataformat.version>
         <commonscodec.version>1.15</commonscodec.version>
         <!-- Platform encoding  -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -175,6 +175,12 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-cbor</artifactId>
+                <version>${jacksondataformat.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-smile</artifactId>
                 <version>${jacksondataformat.version}</version>
                 <scope>runtime</scope>
             </dependency>
