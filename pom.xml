@@ -68,16 +68,16 @@
     </developers>
 
     <properties>
-        <open-metadata.version>3.11-SNAPSHOT</open-metadata.version>
-        <xtdb.version>1.21.0.1</xtdb.version>
+        <open-metadata.version>3.14-SNAPSHOT</open-metadata.version>
+        <xtdb.version>1.22.1</xtdb.version>
         <clojure.version>1.11.1</clojure.version>
         <jackson.version>2.13.3</jackson.version>
         <lucene.version>8.9.0</lucene.version>
-        <slf4j.version>2.0.0</slf4j.version>
-        <logback.version>1.2.11</logback.version>
+        <slf4j.version>2.0.5</slf4j.version>
+        <logback.version>1.4.5</logback.version>
         <testng.version>7.6.1</testng.version>
         <!-- Dependent libraries -->
-        <httpclient.version>4.5.13</httpclient.version>
+        <httpclient.version>4.5.14</httpclient.version>
         <netty.version>4.1.79.Final</netty.version>
         <kafka.version>2.6.3</kafka.version>
         <jacksondataformat.version>2.13.3</jacksondataformat.version>
@@ -332,7 +332,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.3.0</version>
+                    <version>3.4.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -367,7 +367,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
-                    <version>3.18.0</version>
+                    <version>3.19.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.owasp</groupId>
@@ -446,7 +446,7 @@
             <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
-                <version>0.14</version>
+                <version>0.15</version>
                 <configuration>
                     <useDefaultExcludes>true</useDefaultExcludes>
                     <useMavenDefaultExcludes>true</useMavenDefaultExcludes>
