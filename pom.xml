@@ -79,7 +79,7 @@
         <!-- Dependent libraries -->
         <httpclient.version>4.5.14</httpclient.version>
         <netty.version>4.1.79.Final</netty.version>
-        <kafka.version>3.3.1</kafka.version>
+        <kafka.version>3.3.2</kafka.version>
         <jacksondataformat.version>2.14.1</jacksondataformat.version>
         <commonscodec.version>1.15</commonscodec.version>
         <!-- Platform encoding  -->
