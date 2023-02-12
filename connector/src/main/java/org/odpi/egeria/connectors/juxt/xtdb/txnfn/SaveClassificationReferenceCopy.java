@@ -31,6 +31,7 @@ public abstract class SaveClassificationReferenceCopy extends AbstractTransactio
      * @param entity XTDB document to create, if existing is empty
      * @param entityGUID of the entity to update
      * @param classification to persist on the entity
+     * @param homeMetadataCollectionId the metadataCollectionId of the repository where the transaction is running
      * @throws Exception on any error
      */
     protected SaveClassificationReferenceCopy(String className,

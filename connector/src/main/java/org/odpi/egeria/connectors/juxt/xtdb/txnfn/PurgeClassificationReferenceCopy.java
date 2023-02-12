@@ -28,6 +28,8 @@ public abstract class PurgeClassificationReferenceCopy extends AbstractTransacti
 
     /**
      * Constructor used to execute the transaction function.
+     * @param className name of the implementing class
+     * @param methodName name of the implemented transaction method
      * @param txId the transaction ID of this function invocation
      * @param existing the existing entity in XT, if any
      * @param entity the entity against which to apply the classification
