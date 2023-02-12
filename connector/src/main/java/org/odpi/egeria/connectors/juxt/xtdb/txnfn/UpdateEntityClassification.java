@@ -21,28 +21,21 @@ import xtdb.api.tx.Transaction;
 /**
  * Transaction function for updating InstanceProperties on a metadata instance.
  */
-public class UpdateEntityClassification extends UpdateInstanceProperties {
-
-    private static final Logger log = LoggerFactory.getLogger(UpdateEntityClassification.class);
+public abstract class UpdateEntityClassification extends UpdateInstanceProperties {
 
     public static final Keyword FUNCTION_NAME = Keyword.intern("egeria", "updateEntityClassification");
     public static final String CLASS_NAME = UpdateEntityClassification.class.getName();
     public static final String METHOD_NAME = FUNCTION_NAME.toString();
-    private static final String FN = "" +
-            "(fn [ctx eid user cname properties mid] " +
-            "    (let [db (xtdb.api/db ctx)" +
-            "          tx-id (:tx-id db)" +
-            "          existing (xtdb.api/entity db eid)" +
-            "          updated (.doc (" + UpdateEntityClassification.class.getCanonicalName() + ". tx-id existing user eid mid cname properties))" +
-            getTxnTimeCalculation("updated") + "]" +
-            "         [[:xtdb.api/put updated txt]]))";
 
-    private final IPersistentMap xtdbDoc;
+    protected final IPersistentMap xtdbDoc;
 
     /**
      * Constructor used to execute the transaction function.
+     * @param className name of the implementing class
+     * @param methodName name of the implemented transaction method
      * @param txId the transaction ID of this function invocation
      * @param existing XTDB document to update
+     * @param proxy XTDB document to update, if existing is empty
      * @param userId doing the update
      * @param entityGUID of the entity to update
      * @param metadataCollectionId of the metadata collection in which the transaction is running
@@ -50,8 +43,11 @@ public class UpdateEntityClassification extends UpdateInstanceProperties {
      * @param properties to apply to the classification
      * @throws Exception on any error
      */
-    public UpdateEntityClassification(Long txId,
+    public UpdateEntityClassification(String className,
+                                      String methodName,
+                                      Long txId,
                                       PersistentHashMap existing,
+                                      PersistentHashMap proxy,
                                       String userId,
                                       String entityGUID,
                                       String metadataCollectionId,
@@ -60,72 +56,27 @@ public class UpdateEntityClassification extends UpdateInstanceProperties {
             throws Exception {
 
         try {
-            if (existing == null) {
-                throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
-                        entityGUID), this.getClass().getName(), METHOD_NAME);
+            PersistentHashMap toUpdate;
+            if (existing != null) {
+                // If we found an existing entity with this GUID, use it (not the provided proxy)
+                toUpdate = existing;
+            } else if (proxy != null) {
+                // Otherwise, fallback to the proxy we've been asked to create
+                toUpdate = proxy;
             } else {
-                TxnValidations.entityFromStore(entityGUID, existing, CLASS_NAME, METHOD_NAME);
-                TxnValidations.instanceIsNotDeleted(existing, entityGUID, CLASS_NAME, METHOD_NAME);
-                TxnValidations.instanceCanBeUpdated(existing, entityGUID, metadataCollectionId, classificationName, CLASS_NAME, METHOD_NAME);
-                xtdbDoc = updateInstanceProperties(userId, existing, properties, classificationName);
+                // And in case that was not provided (older updateEntityClassification method),
+                // exit out with the not found exception
+                throw new EntityNotKnownException(XtdbOMRSErrorCode.ENTITY_NOT_KNOWN.getMessageDefinition(
+                        entityGUID), className, methodName);
             }
+            TxnValidations.entityFromStore(entityGUID, toUpdate, className, methodName);
+            TxnValidations.instanceIsNotDeleted(toUpdate, entityGUID, className, methodName);
+            TxnValidations.instanceCanBeUpdated(toUpdate, entityGUID, metadataCollectionId, classificationName, className, methodName);
+            xtdbDoc = updateInstanceProperties(userId, toUpdate, properties, classificationName);
         } catch (Exception e) {
             throw ErrorMessageCache.add(txId, e);
         }
 
-    }
-
-    /**
-     * Update the properties of the provided entity instance in the XTDB repository by pushing the transaction
-     * down into the repository itself.
-     * @param xtdb connectivity
-     * @param userId doing the update
-     * @param entityGUID of the entity on which to update the classification's properties
-     * @param classificationName of the classification to update
-     * @param properties to apply to the classification
-     * @return EntityDetail of the entity with the new properties applied
-     * @throws EntityNotKnownException if the entity cannot be found
-     * @throws ClassificationErrorException if the specified classification cannot be found to update
-     * @throws InvalidParameterException if the entity exists but cannot be updated (deleted, reference copy, etc)
-     * @throws RepositoryErrorException on any other error
-     */
-    public static EntityDetail transact(XtdbOMRSRepositoryConnector xtdb,
-                                        String userId,
-                                        String entityGUID,
-                                        String classificationName,
-                                        InstanceProperties properties)
-            throws EntityNotKnownException, ClassificationErrorException, InvalidParameterException, RepositoryErrorException {
-        String docId = EntityDetailMapping.getReference(entityGUID);
-        Transaction.Builder tx = Transaction.builder();
-        tx.invokeFunction(FUNCTION_NAME, docId, userId, classificationName, properties, xtdb.getMetadataCollectionId());
-        TransactionInstant results = xtdb.runTx(tx.build());
-        try {
-            return xtdb.getResultingEntity(docId, results, METHOD_NAME);
-        } catch (EntityNotKnownException | ClassificationErrorException | InvalidParameterException | RepositoryErrorException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RepositoryErrorException(XtdbOMRSErrorCode.UNKNOWN_RUNTIME_ERROR.getMessageDefinition(),
-                    UpdateEntityClassification.class.getName(),
-                    METHOD_NAME,
-                    e);
-        }
-    }
-
-    /**
-     * Interface that returns the updated document to write-back from the transaction.
-     * @return IPersistentMap giving the updated document in its entirety
-     */
-    public IPersistentMap doc() {
-        log.debug("Entity being persisted: {}", xtdbDoc);
-        return xtdbDoc;
-    }
-
-    /**
-     * Create the transaction function within XTDB.
-     * @param tx transaction through which to create the function
-     */
-    public static void create(Transaction.Builder tx) {
-        createTransactionFunction(tx, FUNCTION_NAME, FN);
     }
 
 }

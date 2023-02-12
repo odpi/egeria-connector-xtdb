@@ -206,8 +206,10 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
         RestoreEntity.create(tx);
         ClassifyEntityDetail.create(tx);
         ClassifyEntityProxy.create(tx);
-        DeclassifyEntity.create(tx);
-        UpdateEntityClassification.create(tx);
+        DeclassifyEntityDetail.create(tx);
+        DeclassifyEntityProxy.create(tx);
+        UpdateEntityDetailClassification.create(tx);
+        UpdateEntityProxyClassification.create(tx);
         AddRelationship.create(tx);
         UpdateRelationshipStatus.create(tx);
         UpdateRelationshipProperties.create(tx);
@@ -225,9 +227,11 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
         ReHomeEntity.create(tx);
         ReHomeRelationship.create(tx);
         SaveEntityReferenceCopy.create(tx);
-        SaveClassificationReferenceCopy.create(tx);
+        SaveClassificationReferenceCopyEntityDetail.create(tx);
+        SaveClassificationReferenceCopyEntityProxy.create(tx);
         SaveRelationshipReferenceCopy.create(tx);
-        PurgeClassificationReferenceCopy.create(tx);
+        PurgeClassificationReferenceCopyEntityDetail.create(tx);
+        PurgeClassificationReferenceCopyEntityProxy.create(tx);
         // Null for the timeout here means use the default (which is therefore configurable directly by
         // the XTDB configurationProperties of the connector)
         Transaction txn = tx.build();

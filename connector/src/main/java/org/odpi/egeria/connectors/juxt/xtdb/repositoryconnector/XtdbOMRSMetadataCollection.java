@@ -1117,7 +1117,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             UserNotAuthorizedException,
             FunctionNotSupportedException {
 
-        final String methodName = "classifyEntity";
+        final String methodName = "classifyEntityProxy (detailed)";
         this.validateRepositoryConnector(methodName);
         parentConnector.validateRepositoryIsActive(methodName);
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
@@ -1145,7 +1145,22 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             EntityNotKnownException,
             ClassificationErrorException {
         super.declassifyEntityParameterValidation(userId, entityGUID, classificationName, "declassifyEntity");
-        return DeclassifyEntity.transact(xtdbRepositoryConnector, entityGUID, classificationName);
+        return DeclassifyEntityDetail.transact(xtdbRepositoryConnector, entityGUID, classificationName);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Classification declassifyEntity(String userId,
+                                           EntityProxy entityProxy,
+                                           String classificationName) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException,
+            ClassificationErrorException {
+        super.declassifyEntityParameterValidation(userId, entityProxy, classificationName, "declassifyEntityProxy");
+        return DeclassifyEntityProxy.transact(xtdbRepositoryConnector, entityProxy, classificationName);
     }
 
     /**
@@ -1162,7 +1177,26 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             ClassificationErrorException,
             PropertyErrorException {
         super.classifyEntityParameterValidation(userId, entityGUID, classificationName, properties, "updateEntityClassification");
-        return UpdateEntityClassification.transact(xtdbRepositoryConnector, userId, entityGUID, classificationName, properties);
+        return UpdateEntityDetailClassification.transact(xtdbRepositoryConnector, userId, entityGUID, classificationName, properties);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Classification updateEntityClassification(String userId,
+                                                     EntityProxy entityProxy,
+                                                     String classificationName,
+                                                     InstanceProperties properties) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException,
+            ClassificationErrorException,
+            PropertyErrorException,
+            UserNotAuthorizedException,
+            FunctionNotSupportedException {
+        super.classifyEntityParameterValidation(userId, entityProxy, classificationName, properties, "updateEntityProxyClassification");
+        return UpdateEntityProxyClassification.transact(xtdbRepositoryConnector, userId, entityProxy, classificationName, properties);
     }
 
     /**
@@ -1538,7 +1572,23 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             TypeErrorException,
             EntityConflictException,
             PropertyErrorException {
-        SaveClassificationReferenceCopy.transact(xtdbRepositoryConnector, entity, classification);
+        SaveClassificationReferenceCopyEntityDetail.transact(xtdbRepositoryConnector, entity, classification);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void saveClassificationReferenceCopy(String userId,
+                                                EntityProxy entity,
+                                                Classification classification) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            TypeErrorException,
+            EntityConflictException,
+            InvalidEntityException,
+            PropertyErrorException {
+        SaveClassificationReferenceCopyEntityProxy.transact(xtdbRepositoryConnector, entity, classification);
     }
 
     /**
@@ -1550,7 +1600,23 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
                                                  Classification classification) throws
             EntityConflictException,
             RepositoryErrorException {
-        PurgeClassificationReferenceCopy.transact(xtdbRepositoryConnector, entity, classification);
+        PurgeClassificationReferenceCopyEntityDetail.transact(xtdbRepositoryConnector, entity, classification);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void purgeClassificationReferenceCopy(String userId,
+                                                 EntityProxy entity,
+                                                 Classification classification) throws
+            InvalidParameterException,
+            TypeErrorException,
+            PropertyErrorException,
+            EntityConflictException,
+            InvalidEntityException,
+            RepositoryErrorException {
+        PurgeClassificationReferenceCopyEntityProxy.transact(xtdbRepositoryConnector, entity, classification);
     }
 
     /**
