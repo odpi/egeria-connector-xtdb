@@ -1606,6 +1606,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
     /**
      * {@inheritDoc}
      */
+    @Override
     public void purgeClassificationReferenceCopy(String userId,
                                                  EntityProxy entity,
                                                  Classification classification) throws
