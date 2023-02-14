@@ -1511,6 +1511,19 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
             InvalidParameterException,
             RepositoryErrorException,
             EntityNotKnownException {
+        return getHomeClassifications(userId, entityGUID, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<Classification> getHomeClassifications(String userId,
+                                                       String entityGUID,
+                                                       Date asOfTime) throws
+            InvalidParameterException,
+            RepositoryErrorException,
+            EntityNotKnownException {
 
         final String methodName = "getHomeClassifications";
 
@@ -1520,7 +1533,7 @@ public class XtdbOMRSMetadataCollection extends OMRSDynamicTypeMetadataCollectio
         repositoryValidator.validateUserId(repositoryName, userId, methodName);
         repositoryValidator.validateGUID(repositoryName, Constants.ENTITY_GUID, entityGUID, methodName);
 
-        EntitySummary retrievedEntity = new GetEntity(xtdbRepositoryConnector, entityGUID, null).asSummary();
+        EntitySummary retrievedEntity = new GetEntity(xtdbRepositoryConnector, entityGUID, asOfTime).asSummary();
         List<Classification> homeClassifications = new ArrayList<>();
 
         if (retrievedEntity != null) {
