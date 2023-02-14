@@ -92,3 +92,7 @@ settings.xml
 # ignore Helm chart dependencies
 cts/charts/**/charts/
 
+# gradle
+!gradle/**
+.gradle/
+build/

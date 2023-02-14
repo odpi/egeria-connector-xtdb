@@ -1,0 +1,306 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright Contributors to the ODPi Egeria project.
+ */
+
+
+/*
+ * Plugins for this parent module only - so just high level project related
+ */
+plugins {
+    id "io.freefair.aggregate-javadoc" version "6.6.1"
+    id "io.freefair.lombok" version "6.6.1"
+    // Checks for unnecessary dependencies
+    id 'com.autonomousapps.dependency-analysis' version "1.18.0"
+    // helps resolve log implementation clashes
+    id 'dev.jacomet.logging-capabilities' version "0.10.0"
+    // This plugin helps resolve jakarta/javax dev.jacomet.logging-capabilities
+    id 'org.gradlex.java-ecosystem-capabilities' version "1.0"
+}
+
+
+/*
+ * Configuration for all projects - INCLUDING this one
+ */
+
+allprojects {
+
+    group = 'org.odpi.egeria'
+    version = '4.0-SNAPSHOT'
+
+    // Mostly java, so default to this for now
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+    apply plugin: 'org.gradlex.java-ecosystem-capabilities'
+    apply plugin: 'dev.jacomet.logging-capabilities'
+    // As we've migrated from maven - we'll assume all submodules publish directly to maven
+    apply plugin: 'maven-publish'
+
+    repositories {
+        mavenCentral()
+        maven {
+            url "https://oss.sonatype.org/content/repositories/snapshots/"
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+    }
+
+    // ensures we pick up the very latest snapshots when built
+    configurations.all {
+        // check for updates every build
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+
+    /*
+     * Dependency Management - to fix versions. Pick up maven build settings for now
+     */
+
+    // Assign variables for any constraints
+    ext {
+        lombokVersion = '1.18.24'
+        egeriaVersion = '4.0-SNAPSHOT'
+        xtdbVersion = '1.23.0'
+        clojureVersion = '1.11.1'
+        jacksonVersion = '2.14.1'
+        luceneVersion = '8.9.0'
+        slf4jVersion = '2.0.6'
+        logbackVersion = '1.4.5'
+        testngVersion = '7.6.1'
+        // Dependent libraries
+        httpclientVersion = '4.5.14'
+        nettyVersion = '4.1.79.Final'
+        kafkaVersion = '3.4.0'
+        jacksonDataFormatVersion = '2.14.1'
+        commonscodecVersion = '1.15'
+    }
+
+    dependencies {
+        implementation("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
+        implementation("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
+        implementation("com.xtdb:xtdb-core:${xtdbVersion}")
+        implementation("org.clojure:clojure:${clojureVersion}")
+        implementation("org.apache.lucene:lucene-core:${luceneVersion}")
+        implementation("org.apache.lucene:lucene-queryparser:${luceneVersion}")
+        // Dependencies only required if configured to run with these extras: they will be included in the
+        // 'jar-with-dependencies' by default, but if you do not need them you can remove them and re-build
+        // to get a smaller footprint with less potential CVE exposure.
+        runtimeOnly("org.apache.lucene:lucene-analyzers-common:${luceneVersion}")
+        runtimeOnly("com.xtdb:xtdb-lucene:${xtdbVersion}")
+        runtimeOnly("com.xtdb:xtdb-rocksdb:${xtdbVersion}")
+        runtimeOnly("com.xtdb:xtdb-lmdb:${xtdbVersion}")
+        runtimeOnly("com.xtdb:xtdb-kafka:${xtdbVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-38153
+        runtimeOnly("org.apache.kafka:kafka-clients:${kafkaVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-28491
+        runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}")
+        runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jacksonVersion}")
+        runtimeOnly("com.xtdb:xtdb-jdbc:${xtdbVersion}")
+        runtimeOnly("com.xtdb:xtdb-s3:${xtdbVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-13956
+        runtimeOnly("org.apache.httpcomponents:httpclient:${httpclientVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-21295
+        runtimeOnly("io.netty:netty-codec-http2:${nettyVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-43797
+        runtimeOnly("io.netty:netty-codec-http:${nettyVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-37136, CVE-2021-37137
+        runtimeOnly("io.netty:netty-codec:${nettyVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-0026
+        runtimeOnly("io.netty:netty-handler:${nettyVersion}")
+        // Following dependency is to ensure we use updated version of dependent library to avoid sonatype-2012-0050
+        runtimeOnly("commons-codec:commons-codec:${commonscodecVersion}")
+        runtimeOnly("com.xtdb:xtdb-metrics:${xtdbVersion}")
+        // Dependencies provided by Egeria itself
+        implementation("org.odpi.egeria:audit-log-framework:${egeriaVersion}")
+        implementation("org.odpi.egeria:repository-services-apis:${egeriaVersion}")
+        implementation("org.odpi.egeria:open-connector-framework:${egeriaVersion}")
+        implementation("org.slf4j:slf4j-api:${slf4jVersion}")
+        // Dependencies only used for the build-time tests
+        implementation("ch.qos.logback:logback-classic:${logbackVersion}")
+        testImplementation("org.testng:testng:${testngVersion}") {
+            // Exclude snakeyaml, which has open CVEs and is unused
+            exclude group: "org.yaml", module: "snakeyaml"
+            exclude group: "org.apache.ant", module: "ant"
+        }
+        testImplementation("org.odpi.egeria:repository-services-implementation:${egeriaVersion}")
+        testImplementation("org.odpi.egeria:connector-configuration-factory:${egeriaVersion}") {
+            // Exclude the graph repository, as unused and will extend to many other dependencies
+            exclude group: "org.odpi.egeria", module: "graph-repository-connector"
+        }
+        testImplementation("org.odpi.egeria:open-metadata-types:${egeriaVersion}")
+    }
+
+    /*
+     * Java related configuration
+     */
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
+    tasks.withType(JavaCompile) {
+        options.release = 17
+        options.encoding = 'UTF-8'
+        options.incremental = true
+        options.failOnError = true
+        options.compilerArgs << "-Xlint:all"
+    }
+
+    // javadoc
+    javadoc {
+        options.addBooleanOption('html5', true)
+    }
+
+    // code coverage
+    jacoco {
+        toolVersion = "0.8.8"
+    }
+
+    // lombok
+    lombok {
+        version = "${lombokVersion}"
+    }
+    // Testing
+    test {
+        useJUnitPlatform {
+            includeEngines 'junit-jupiter'
+        }
+        dependencies {
+            testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+            testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+        }
+
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
+
+        reports {
+            html.required = true
+        }
+    }
+    /*
+     * Publishing of maven artifacts -- and signing (only for CI)
+     */
+    apply plugin: 'signing'
+
+
+    publishing {
+        publications {
+            mavenmodule(MavenPublication) {
+                from components.java
+                pom {
+                    url = 'http://egeria.odpi.org'
+                    licenses {
+                        // Code
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                        // Docs
+                        license {
+                            name = 'Creative Commons Attribution 4.0 International (CC BY 4.0)'
+                            url = 'https://creativecommons.org/licenses/by/4.0'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'cmgrote'
+                            name = 'Christopher Grote'
+                            email = 'chris@thegrotes.net'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/odpi/egeria-connector-xtdb.git'
+                        developerConnection = 'scm:git:ssh://github.com/odpi/egeria/egeria-connector-xtdb.git'
+                        url = 'http://github.com/odpi/egeria-connector-xtdb'
+                    }
+                }
+                // Override the project name & description for the pom based on properties set in the child build.gradle (hard to default & required for maven central)
+                pom.withXml {
+                    asNode().appendNode('name', "${project.name}")
+                    asNode().appendNode('description', "${project.description}")
+                }
+            }
+        }
+        // Release versions get pushed to staging area on maven central, snapshots to snapshot repo
+        // Secrets for credentials
+        repositories {
+            maven {
+                    name = 'OSSRH'
+                    def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+                    def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+                    url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                    // User token (under profile) on oss.sonatype.org
+                    credentials {
+                        username = System.getenv("OSSRH_USERNAME")
+                        password = System.getenv("OSSRH_TOKEN")
+                    }
+                }
+        }
+    }
+
+    /*
+     * Additional useful tasks
+     */
+    task printAllDependencies(type: DependencyReportTask) {}
+    task printSubDependencies(type: DependencyReportTask) {}
+    task findDependency(type: DependencyInsightReportTask) {}
+
+} // end of allProjects
+
+
+/*
+ * Configuration for sub projects only
+ */
+subprojects {
+    // All tasks currently will run under allProjects - which includes root.
+}
+
+
+/*
+ * Additional aggregate tasks run only at parent
+ */
+
+// Jacoco reporting -- from gradle docs
+task codeCoverageReport(type: JacocoReport) {
+    // Gather execution data from all subprojects
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+    // Add all relevant sourcesets from the subprojects
+    subprojects.each {
+        sourceSets it.sourceSets.main
+    }
+
+    // enable the different report types (html, xml, csv)
+    reports {
+        // xml is usually used to integrate code coverage with
+        // other tools like SonarQube, Coveralls or Codecov
+        xml.required = true
+
+        // HTML reports can be used to see code coverage
+        // without any external tools
+        html.required = true
+        csv.required = true
+    }
+
+}
+// always run the tests before generating the report
+codeCoverageReport.dependsOn {
+    subprojects*.test
+}
+
+// Dependency checking - see https://github.com/autonomousapps/dependency-analysis-android-gradle-plugin
+dependencyAnalysis {
+    issues {
+        all {
+            onAny {
+                severity('fail')
+            }
+            onUnusedDependencies {
+                exclude("junit:junit", "org.junit.jupiter:junit-jupiter-api", "org.junit.jupiter:junit-jupiter-engine", "com.fasterxml.jackson.core:jackson-annotations")
+            }
+        }
+    }
+}
+
+// Always run dependency check for every regular build
+build.dependsOn("buildHealth")
