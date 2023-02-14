@@ -4,6 +4,7 @@ package org.odpi.egeria.connectors.juxt.xtdb.mapping;
 
 import clojure.lang.*;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSErrorCode;
+import org.odpi.egeria.connectors.juxt.xtdb.cache.TypeDefCache;
 import org.odpi.openmetadata.repositoryservices.ffdc.exception.InvalidParameterException;
 import xtdb.api.XtdbDocument;
 import org.odpi.egeria.connectors.juxt.xtdb.auditlog.XtdbOMRSAuditCode;
@@ -138,11 +139,9 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         List<String> typeList = new ArrayList<>();
         InstanceType type = iah.getType();
         typeList.add(type.getTypeDefGUID());
-        List<TypeDefLink> superTypes = type.getTypeDefSuperTypes();
-        if (superTypes != null) {
-            for (TypeDefLink superType : superTypes) {
-                typeList.add(superType.getGUID());
-            }
+        List<TypeDefLink> superTypes = TypeDefCache.getAllSuperTypes(type.getTypeDefGUID());
+        for (TypeDefLink superType : superTypes) {
+            typeList.add(superType.getGUID());
         }
         builder.put(getKeyword(namespace, N_TYPE + ".guids"), PersistentVector.create(typeList));
         builder.put(getKeyword(namespace, N_TYPE + ".category"), type.getTypeDefCategory().getOrdinal());
@@ -211,11 +210,9 @@ public abstract class InstanceAuditHeaderMapping extends AbstractMapping {
         // Then we'll also serialize the full InstanceType information into the N_TYPE property itself.
         List<String> typeList = new ArrayList<>();
         typeList.add(type.getTypeDefGUID());
-        List<TypeDefLink> superTypes = type.getTypeDefSuperTypes();
-        if (superTypes != null) {
-            for (TypeDefLink superType : superTypes) {
-                typeList.add(superType.getGUID());
-            }
+        List<TypeDefLink> superTypes = TypeDefCache.getAllSuperTypes(type.getTypeDefGUID());
+        for (TypeDefLink superType : superTypes) {
+            typeList.add(superType.getGUID());
         }
 
         return doc

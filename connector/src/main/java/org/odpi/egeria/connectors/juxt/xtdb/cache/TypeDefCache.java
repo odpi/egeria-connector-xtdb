@@ -258,17 +258,6 @@ public class TypeDefCache {
             instanceType.setTypeDefGUID(typeDefGUID);
             instanceType.setTypeDefName(typeDef.getName());
             instanceType.setTypeDefVersion(typeDef.getVersion());
-            instanceType.setTypeDefDescription(typeDef.getDescription());
-            instanceType.setTypeDefDescriptionGUID(typeDef.getDescriptionGUID());
-            instanceType.setTypeDefSuperTypes(getAllSuperTypes(typeDefGUID));
-            instanceType.setValidStatusList(typeDef.getValidInstanceStatusList());
-
-            Map<String, PropertyKeywords> properties = getAllPropertyKeywordsForTypeDef(typeDef.getGUID());
-
-            if (!properties.isEmpty()) {
-                instanceType.setValidInstanceProperties(properties.values()
-                        .stream().map(PropertyKeywords::getPropertyName).collect(Collectors.toList()));
-            }
 
             // Lazily cache the instance type for next time...
             knownInstanceTypes.put(typeName, instanceType);
