@@ -38,6 +38,8 @@ import static org.testng.Assert.assertTrue;
  */
 public class MockConnection extends Connection {
 
+    private static final long serialVersionUID = 1L;
+
     public static final String SOURCE_NAME = "MockXTDBConnection";
     public static final String METADATA_COLLECTION_ID = "123";
     public static final String METADATA_COLLECTION_NAME = "XTDB repo for unit testing";
