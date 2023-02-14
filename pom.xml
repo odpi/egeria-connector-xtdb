@@ -468,6 +468,7 @@
                     <excludes>
                         <exclude>/CNAME</exclude>
                         <exclude>/dco_signoffs/*.txt</exclude>
+                        <exclude>/gradle/**</exclude>
                         <exclude>**/banner.txt</exclude>
                         <exclude>**/*.json</exclude>
                         <exclude>**/*.ipynb</exclude>
