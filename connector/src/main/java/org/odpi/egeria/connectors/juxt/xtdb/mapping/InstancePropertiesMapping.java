@@ -13,10 +13,7 @@ import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollec
 import org.odpi.openmetadata.repositoryservices.connectors.stores.metadatacollectionstore.properties.instances.InstanceType;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * Maps the properties of InstanceProperties between persistence and objects.
@@ -41,11 +38,11 @@ public class InstancePropertiesMapping {
                                                 InstanceType type,
                                                 XtdbDocument xtdbDoc) {
 
-        List<String> validProperties = type.getValidInstanceProperties();
+        Set<String> validProperties = TypeDefCache.getAllPropertyKeywordsForTypeDef(type.getTypeDefGUID()).keySet();
         String namespace = TypeDefCache.getPropertyNamespaceForType(type.getTypeDefGUID());
 
         // Iterate through each of the properties this instance could contain and add them to the map of values
-        if (validProperties != null && !validProperties.isEmpty()) {
+        if (!validProperties.isEmpty()) {
             Map<String, InstancePropertyValue> values = new TreeMap<>();
             for (String propertyName : validProperties) {
                 InstancePropertyValue value = InstancePropertyValueMapping.getInstancePropertyValueFromDoc(xtdbConnector, xtdbDoc, namespace, propertyName);
@@ -72,11 +69,11 @@ public class InstancePropertiesMapping {
     public static InstanceProperties getFromMap(InstanceType type,
                                                 IPersistentMap doc) throws IOException {
 
-        List<String> validProperties = type.getValidInstanceProperties();
+        Set<String> validProperties = TypeDefCache.getAllPropertyKeywordsForTypeDef(type.getTypeDefGUID()).keySet();
         String namespace = TypeDefCache.getPropertyNamespaceForType(type.getTypeDefGUID());
 
         // Iterate through each of the properties this instance could contain and add them to the map of values
-        if (validProperties != null && !validProperties.isEmpty()) {
+        if (!validProperties.isEmpty()) {
             Map<String, InstancePropertyValue> values = new TreeMap<>();
             for (String propertyName : validProperties) {
                 InstancePropertyValue value = InstancePropertyValueMapping.getInstancePropertyValueFromMap(doc, namespace, propertyName);
@@ -121,13 +118,11 @@ public class InstancePropertiesMapping {
 
         // explicitly set any other properties on the instance to null, so that we can still include them
         // if sorting, or running an explicit 'IS_NULL' or 'NOT_NULL' search against appropriately
-        List<String> allProperties = type.getValidInstanceProperties();
-        if (allProperties != null) {
-            for (String propertyName : allProperties) {
-                if (!propertyMap.containsKey(propertyName)) {
-                    // Only explicitly set to null if the earlier processing has not already set a value on the property
-                    InstancePropertyValueMapping.addInstancePropertyValueToDoc(xtdbConnector, type, builder, propertyName, null);
-                }
+        Set<String> allProperties = TypeDefCache.getAllPropertyKeywordsForTypeDef(type.getTypeDefGUID()).keySet();
+        for (String propertyName : allProperties) {
+            if (!propertyMap.containsKey(propertyName)) {
+                // Only explicitly set to null if the earlier processing has not already set a value on the property
+                InstancePropertyValueMapping.addInstancePropertyValueToDoc(xtdbConnector, type, builder, propertyName, null);
             }
         }
 

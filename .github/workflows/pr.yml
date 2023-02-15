@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Contributors to the ODPi Egeria project.
+name: "Pull Request"
+
+on:
+  pull_request:
+    branches: [main, release-4*]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: "Verify"
+    if: startsWith(github.repository,'odpi/')
+    steps:
+      - uses: actions/checkout@v3
+      - uses: gradle/wrapper-validation-action@v1
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          cache-read-only: true
+          arguments: build publishToMavenLocal
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: Jacoco coverage report
+          path: build/reports/jacoco/codeCoverageReport
+      - name: Upload log of any dependency failures
+        uses: actions/upload-artifact@v3
+        with:
+          name: Dependency analysis report (on failure)
+          path: build/reports/dependency-analysis/build-health-report.txt
+          if-no-files-found: ignore
