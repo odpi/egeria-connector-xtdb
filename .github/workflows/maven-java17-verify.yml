@@ -4,12 +4,12 @@ name: "Maven Build"
 
 on:
   pull_request:
-    branches: [main, release-*]
+    branches: [release-3*]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: "Maven Java 16"
+    name: "Maven Java 17"
     steps:
       - uses: actions/checkout@v3
         name: Checkout

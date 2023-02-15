@@ -1,54 +1,79 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Contributors to the ODPi Egeria project.
-name: "Build"
+name: "Merge"
 
 # Trigger after code is merged. only on main repo
 # - does not run on modification (may be just text)
 
 on:
   push:
-    branches: [main, release-*]
+    branches: [main, release-4*]
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    permissions:
+      # for gh-pages
+      contents: write
     runs-on: ubuntu-latest
     name: "Merge"
+    if: startsWith(github.repository,'odpi/')
     steps:
       - uses: actions/checkout@v3
-        name: Checkout source
-      - name: Set up JDK 11
+      - uses: gradle/wrapper-validation-action@v1
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          # Java 11 is used for merge builds (PRs do check Java latest)
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
-          # Publishing attributes for maven central (this step adds to setting.xml)
-          server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
-          # Keys must be known to maven central - require broad publishing
-          gpg-private-key: ${{ secrets.OSSRH_GPG_PRIVATE_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
-      # Build and publish - but only for main
-      - name: Build with Maven (Publish snapshots to maven central)
-        if: ${{ github.repository == 'odpi/egeria-connector-xtdb' && github.ref == 'refs/heads/main'}}
-        # See https://github.com/actions/toolkit/issues/231 requires parms using . to be quoted
-        run: 'mvn -B -DuseMavenCentral clean deploy'
-        # Needed for publishing -- note we push to a staging area, login to oss.sonatype.org to
-        # verify (close) the repository & release
+      - name: Build and publish to Maven Central
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: gradle/gradle-build-action@v2
+        with:
+          cache-read-only: false
+          arguments: build publish
         env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
-          # Build and publish - but only for main
-      - name: Build with Maven (no snapshots published)
-        if: ${{ github.repository != 'odpi/egeria-connector-xtdb' || github.ref != 'refs/heads/main'}}
-        run: mvn -B clean verify
-      # Mostly for verification - not published to the release itself for now
+          OSSRH_GPG_KEYID: ${{ secrets.OSSRH_GPG_KEYID }}
+          OSSRH_GPG_PASSPHRASE: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
+          OSSRH_GPG_PRIVATE_KEY: ${{ secrets.OSSRH_GPG_PRIVATE_KEY }}
+          OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+      - name: Build only (do not publish)
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: gradle/gradle-build-action@v2
+        with:
+          cache-read-only: false
+          arguments: build
+      - name: Build JavaDocs
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: gradle/gradle-build-action@v2
+        with:
+          cache-read-only: false
+          arguments: aggregateJavadoc
+      - name: Publish JavaDocs
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: build/docs/javadoc
+      - name: Upload log of any dependency failures
+        uses: actions/upload-artifact@v3
+        with:
+          name: Dependency Analysis Report (on failure)
+          path: build/reports/dependency-analysis/build-health-report.txt
+          if-no-files-found: ignore
       - name: Upload assemblies
         uses: actions/upload-artifact@v3
         with:
           name: Assemblies
           path: |
-            connector/target/*.jar
-            migrator/target/*.jar
+            connector/build/libs/*.jar
+            migrator/build/libs/*.jar
+      - name: Upload Test coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: Jacoco Coverage Report
+          path: build/reports/jacoco/codeCoverageReport
+          if-no-files-found: ignore
