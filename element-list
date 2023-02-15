@@ -1,0 +1,10 @@
+org.odpi.egeria.connectors.juxt.xtdb.auditlog
+org.odpi.egeria.connectors.juxt.xtdb.cache
+org.odpi.egeria.connectors.juxt.xtdb.mapping
+org.odpi.egeria.connectors.juxt.xtdb.migration
+org.odpi.egeria.connectors.juxt.xtdb.migration.model
+org.odpi.egeria.connectors.juxt.xtdb.model
+org.odpi.egeria.connectors.juxt.xtdb.model.search
+org.odpi.egeria.connectors.juxt.xtdb.readops
+org.odpi.egeria.connectors.juxt.xtdb.repositoryconnector
+org.odpi.egeria.connectors.juxt.xtdb.txnfn
