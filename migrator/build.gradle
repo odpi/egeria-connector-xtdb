@@ -27,9 +27,3 @@ task withDependencies(type: Jar) {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
-
-test {
-    useTestNG()
-    // This will default to standard search pattern - see https://docs.gradle.org/current/userguide/java_testing.html#sec:test_detection
-    scanForTestClasses = false
-}

@@ -4,9 +4,6 @@
  */
 
 dependencies {
-    /*implementation 'org.slf4j:slf4j-api'
-    compileOnly 'com.fasterxml.jackson.core:jackson-annotations'
-    testImplementation 'org.testng:testng'*/
     testImplementation "ch.qos.logback:logback-classic"
 }
 
@@ -21,10 +18,4 @@ task withDependencies(type: Jar) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
-}
-
-test {
-    useTestNG()
-    // This will default to standard search pattern - see https://docs.gradle.org/current/userguide/java_testing.html#sec:test_detection
-    scanForTestClasses = false
 }
