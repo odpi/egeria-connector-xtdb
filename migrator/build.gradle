@@ -27,3 +27,5 @@ task withDependencies(type: Jar) {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
+
+build.dependsOn("withDependencies")
