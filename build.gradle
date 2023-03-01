@@ -113,6 +113,19 @@ subprojects {
                     runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jacksonVersion}")
                     testCompileOnly("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
 
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-13956
+                    runtimeOnly("org.apache.httpcomponents:httpclient:${httpclientVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-21295
+                    runtimeOnly("io.netty:netty-codec-http2:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-43797
+                    runtimeOnly("io.netty:netty-codec-http:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-37136, CVE-2021-37137
+                    runtimeOnly("io.netty:netty-codec:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-0026
+                    runtimeOnly("io.netty:netty-handler:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid sonatype-2012-0050
+                    runtimeOnly("commons-codec:commons-codec:${commonscodecVersion}")
+
                     runtimeOnly("com.xtdb:xtdb-jdbc:${xtdbVersion}")
                     runtimeOnly("com.xtdb:xtdb-s3:${xtdbVersion}")
 
