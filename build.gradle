@@ -81,8 +81,7 @@ subprojects {
 
     dependencies {
         // This adds constraints (which can be overriden below) for all dependencies egeria uses
-        //TODO - needs reinstating. Currently not working due to https://github.com/odpi/egeria/issues/7421
-        //implementation platform("org.odpi.egeria:egeria:${egeriaVersion}")
+        implementation platform("org.odpi.egeria:egeria:${egeriaVersion}")
 
         // specifies versions if dependencies used in projects
         constraints

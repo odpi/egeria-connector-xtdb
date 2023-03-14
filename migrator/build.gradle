@@ -9,6 +9,7 @@ dependencies {
     implementation("org.clojure:clojure")
     compileOnly("org.slf4j:slf4j-api")
     testCompileOnly("com.fasterxml.jackson.core:jackson-annotations")
+    testRuntimeOnly("org.odpi.egeria:repository-services-apis")
     testImplementation("org.testng:testng") {
         // Exclude snakeyaml, which has open CVEs and is unused
         exclude group: "org.yaml", module: "snakeyaml"
