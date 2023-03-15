@@ -5,27 +5,19 @@
 
 dependencies {
     implementation project(":egeria-connector-xtdb")
-    implementation "ch.qos.logback:logback-classic"
-    runtimeOnly "org.odpi.egeria:audit-log-framework"
-    runtimeOnly "org.odpi.egeria:repository-services-apis"
-    runtimeOnly "org.odpi.egeria:open-connector-framework"
-    compileOnly "org.slf4j:slf4j-api"
+    api("com.xtdb:xtdb-core")
+    implementation("org.clojure:clojure")
+    compileOnly("org.slf4j:slf4j-api")
+    testCompileOnly("com.fasterxml.jackson.core:jackson-annotations")
+    testRuntimeOnly("org.odpi.egeria:repository-services-apis")
+    testImplementation("org.testng:testng") {
+        // Exclude snakeyaml, which has open CVEs and is unused
+        exclude group: "org.yaml", module: "snakeyaml"
+        exclude group: "org.apache.ant", module: "ant"
+    }
+
 }
 
 description = 'Migration utilities for the OCF OMRS Connector for a historical metadata back-end based on XTDB.'
 
-java {
-    withJavadocJar()
-}
-
-task withDependencies(type: Jar) {
-    manifest {
-        attributes 'Main-Class': 'org.odpi.egeria.connectors.juxt.xtdb.migration.Migrator'
-    }
-    archiveClassifier = 'jar-with-dependencies'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
-}
-
-build.dependsOn("withDependencies")
+build.dependsOn shadowJar

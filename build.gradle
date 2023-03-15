@@ -8,14 +8,15 @@
  * Plugins for this parent module only - so just high level project related
  */
 plugins {
-    id "io.freefair.aggregate-javadoc" version "6.6.1"
-    id "io.freefair.lombok" version "6.6.1"
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id 'idea'
+    id 'maven-publish'
     // Checks for unnecessary dependencies
-    id 'com.autonomousapps.dependency-analysis' version "1.18.0"
+    id 'com.autonomousapps.dependency-analysis' version "1.19.0"
     // helps resolve log implementation clashes
     id 'dev.jacomet.logging-capabilities' version "0.10.0"
     // This plugin helps resolve jakarta/javax dev.jacomet.logging-capabilities
-    id 'org.gradlex.java-ecosystem-capabilities' version "1.0"
+    id 'org.gradlex.java-ecosystem-capabilities' version "1.1"
 }
 
 
@@ -23,21 +24,24 @@ plugins {
  * Configuration for all projects - INCLUDING this one
  */
 
-allprojects {
+subprojects {
 
     group = 'org.odpi.egeria'
     version = '4.0-SNAPSHOT'
 
     // Mostly java, so default to this for now
     apply plugin: 'java'
+    apply plugin: 'java-library'
     apply plugin: 'jacoco'
     apply plugin: 'org.gradlex.java-ecosystem-capabilities'
     apply plugin: 'dev.jacomet.logging-capabilities'
-    // As we've migrated from maven - we'll assume all submodules publish directly to maven
     apply plugin: 'maven-publish'
+    apply plugin: 'com.autonomousapps.dependency-analysis'
+    apply plugin: 'com.github.johnrengelman.shadow'
 
     repositories {
         mavenCentral()
+        google()
         maven {
             url "https://oss.sonatype.org/content/repositories/snapshots/"
             mavenContent {
@@ -76,58 +80,68 @@ allprojects {
     }
 
     dependencies {
-        implementation("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
-        implementation("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
-        implementation("com.xtdb:xtdb-core:${xtdbVersion}")
-        implementation("org.clojure:clojure:${clojureVersion}")
-        implementation("org.apache.lucene:lucene-core:${luceneVersion}")
-        implementation("org.apache.lucene:lucene-queryparser:${luceneVersion}")
-        // Dependencies only required if configured to run with these extras: they will be included in the
-        // 'jar-with-dependencies' by default, but if you do not need them you can remove them and re-build
-        // to get a smaller footprint with less potential CVE exposure.
-        runtimeOnly("org.apache.lucene:lucene-analyzers-common:${luceneVersion}")
-        runtimeOnly("com.xtdb:xtdb-lucene:${xtdbVersion}")
-        runtimeOnly("com.xtdb:xtdb-rocksdb:${xtdbVersion}")
-        runtimeOnly("com.xtdb:xtdb-lmdb:${xtdbVersion}")
-        runtimeOnly("com.xtdb:xtdb-kafka:${xtdbVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-38153
-        runtimeOnly("org.apache.kafka:kafka-clients:${kafkaVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-28491
-        runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}")
-        runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jacksonVersion}")
-        runtimeOnly("com.xtdb:xtdb-jdbc:${xtdbVersion}")
-        runtimeOnly("com.xtdb:xtdb-s3:${xtdbVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-13956
-        runtimeOnly("org.apache.httpcomponents:httpclient:${httpclientVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-21295
-        runtimeOnly("io.netty:netty-codec-http2:${nettyVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-43797
-        runtimeOnly("io.netty:netty-codec-http:${nettyVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-37136, CVE-2021-37137
-        runtimeOnly("io.netty:netty-codec:${nettyVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-0026
-        runtimeOnly("io.netty:netty-handler:${nettyVersion}")
-        // Following dependency is to ensure we use updated version of dependent library to avoid sonatype-2012-0050
-        runtimeOnly("commons-codec:commons-codec:${commonscodecVersion}")
-        runtimeOnly("com.xtdb:xtdb-metrics:${xtdbVersion}")
-        // Dependencies provided by Egeria itself
-        implementation("org.odpi.egeria:audit-log-framework:${egeriaVersion}")
-        implementation("org.odpi.egeria:repository-services-apis:${egeriaVersion}")
-        implementation("org.odpi.egeria:open-connector-framework:${egeriaVersion}")
-        implementation("org.slf4j:slf4j-api:${slf4jVersion}")
-        // Dependencies only used for the build-time tests
-        implementation("ch.qos.logback:logback-classic:${logbackVersion}")
-        testImplementation("org.testng:testng:${testngVersion}") {
-            // Exclude snakeyaml, which has open CVEs and is unused
-            exclude group: "org.yaml", module: "snakeyaml"
-            exclude group: "org.apache.ant", module: "ant"
-        }
-        testImplementation("org.odpi.egeria:repository-services-implementation:${egeriaVersion}")
-        testImplementation("org.odpi.egeria:connector-configuration-factory:${egeriaVersion}") {
-            // Exclude the graph repository, as unused and will extend to many other dependencies
-            exclude group: "org.odpi.egeria", module: "graph-repository-connector"
-        }
-        testImplementation("org.odpi.egeria:open-metadata-types:${egeriaVersion}")
+        // This adds constraints (which can be overriden below) for all dependencies egeria uses
+        implementation platform("org.odpi.egeria:egeria:${egeriaVersion}")
+
+        // specifies versions if dependencies used in projects
+        constraints
+                {
+                    implementation("ch.qos.logback:logback-classic:${logbackVersion}")
+                    implementation("org.odpi.egeria:audit-log-framework:${egeriaVersion}")
+                    implementation("org.odpi.egeria:repository-services-apis:${egeriaVersion}")
+                    implementation("org.odpi.egeria:open-connector-framework:${egeriaVersion}")
+
+                    compileOnly("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
+                    compileOnly("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
+                    implementation("com.xtdb:xtdb-core:${xtdbVersion}")
+                    implementation("org.clojure:clojure:${clojureVersion}")
+                    implementation("org.apache.lucene:lucene-core:${luceneVersion}")
+                    implementation("org.apache.lucene:lucene-queryparser:${luceneVersion}")
+                    // Dependencies only required if configured to run with these extras: they will be included in the
+                    // 'jar-with-dependencies' by default, but if you do not need them you can remove them and re-build
+                    // to get a smaller footprint with less potential CVE exposure.
+                    runtimeOnly("org.apache.lucene:lucene-analyzers-common:${luceneVersion}")
+                    runtimeOnly("com.xtdb:xtdb-lucene:${xtdbVersion}")
+                    runtimeOnly("com.xtdb:xtdb-rocksdb:${xtdbVersion}")
+                    runtimeOnly("com.xtdb:xtdb-lmdb:${xtdbVersion}")
+                    runtimeOnly("com.xtdb:xtdb-kafka:${xtdbVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-38153
+                    compileOnly("org.apache.kafka:kafka-clients:${kafkaVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-28491
+                    runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}")
+                    runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jacksonVersion}")
+                    testCompileOnly("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
+
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-13956
+                    runtimeOnly("org.apache.httpcomponents:httpclient:${httpclientVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-21295
+                    runtimeOnly("io.netty:netty-codec-http2:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-43797
+                    runtimeOnly("io.netty:netty-codec-http:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-37136, CVE-2021-37137
+                    runtimeOnly("io.netty:netty-codec:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-0026
+                    runtimeOnly("io.netty:netty-handler:${nettyVersion}")
+                    // Following dependency is to ensure we use updated version of dependent library to avoid sonatype-2012-0050
+                    runtimeOnly("commons-codec:commons-codec:${commonscodecVersion}")
+
+                    runtimeOnly("com.xtdb:xtdb-jdbc:${xtdbVersion}")
+                    runtimeOnly("com.xtdb:xtdb-s3:${xtdbVersion}")
+
+                    runtimeOnly("com.xtdb:xtdb-metrics:${xtdbVersion}")
+                    // Dependencies provided by Egeria itself
+                    compileOnly("org.odpi.egeria:audit-log-framework:${egeriaVersion}")
+                    compileOnly("org.odpi.egeria:repository-services-apis:${egeriaVersion}")
+                    compileOnly("org.odpi.egeria:open-connector-framework:${egeriaVersion}")
+                    compileOnly("org.slf4j:slf4j-api:${slf4jVersion}")
+
+                    // Dependencies only used for the build-time tests
+                    testImplementation("ch.qos.logback:logback-classic:${logbackVersion}")
+                    testImplementation("org.testng:testng:${testngVersion}")
+                    testImplementation("org.odpi.egeria:repository-services-implementation:${egeriaVersion}")
+                    testImplementation("org.odpi.egeria:connector-configuration-factory:${egeriaVersion}")
+                    testImplementation("org.odpi.egeria:open-metadata-types:${egeriaVersion}")
+                }
     }
 
     /*
@@ -155,9 +169,9 @@ allprojects {
         toolVersion = "0.8.8"
     }
 
-    // lombok
-    lombok {
-        version = "${lombokVersion}"
+    // Uber jar
+    shadowJar {
+        archiveClassifier = 'jar-with-dependencies'
     }
     // Testing
     test {
@@ -221,35 +235,28 @@ allprojects {
         // Secrets for credentials
         repositories {
             maven {
-                    name = 'OSSRH'
-                    def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
-                    def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
-                    url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-                    // User token (under profile) on oss.sonatype.org
-                    credentials {
-                        username = System.getenv("OSSRH_USERNAME")
-                        password = System.getenv("OSSRH_TOKEN")
-                    }
+                name = 'OSSRH'
+                def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+                def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                // User token (under profile) on oss.sonatype.org
+                credentials {
+                    username = System.getenv("OSSRH_USERNAME")
+                    password = System.getenv("OSSRH_TOKEN")
                 }
+            }
         }
     }
 
-    /*
-     * Additional useful tasks
-     */
-    task printAllDependencies(type: DependencyReportTask) {}
-    task printSubDependencies(type: DependencyReportTask) {}
-    task findDependency(type: DependencyInsightReportTask) {}
 
-} // end of allProjects
+} // end of subProjects
 
 
-/*
- * Configuration for sub projects only
- */
-subprojects {
-    // All tasks currently will run under allProjects - which includes root.
-}
+apply plugin: 'java' // this is enough to ensure the build can be launched from the root project
+// Additional useful tasks
+task printAllDependencies(type: DependencyReportTask) {}
+task printSubDependencies(type: DependencyReportTask) {}
+task findDependency(type: DependencyInsightReportTask) {}
 
 
 /*
@@ -291,9 +298,9 @@ dependencyAnalysis {
             onAny {
                 severity('fail')
             }
-            onUnusedDependencies {
-                exclude("com.fasterxml.jackson.core:jackson-annotations")
-            }
+            //onUnusedDependencies {
+            //    exclude("com.fasterxml.jackson.core:jackson-annotations")
+            //}
         }
     }
 }

@@ -3,21 +3,60 @@
  * Copyright Contributors to the ODPi Egeria project.
  */
 
+
 dependencies {
-    testImplementation "ch.qos.logback:logback-classic"
+    // Compile only - already included in egeria
+    compileOnly("com.fasterxml.jackson.core:jackson-databind")
+    compileOnly("com.fasterxml.jackson.core:jackson-annotations")
+
+    // Dependencies provided by Egeria itself
+    compileOnly("org.odpi.egeria:audit-log-framework")
+    compileOnly("org.odpi.egeria:repository-services-apis")
+    compileOnly("org.odpi.egeria:open-connector-framework")
+    compileOnly("org.slf4j:slf4j-api")
+    compileOnly("org.apache.kafka:kafka-clients")
+
+    // Compile and run
+    implementation("org.apache.lucene:lucene-queryparser")
+    api("com.xtdb:xtdb-core")
+    api("org.clojure:clojure")
+
+    // Dependencies only required if configured to run with these extras: they will be included in the
+    // 'jar-with-dependencies' by default, but if you do not need them you can remove them and re-build
+    // to get a smaller footprint with less potential CVE exposure.
+    // These are only used by the connector at runtime
+    runtimeOnly("org.apache.lucene:lucene-core")
+    runtimeOnly("org.apache.lucene:lucene-analyzers-common")
+    runtimeOnly("com.xtdb:xtdb-lucene")
+    runtimeOnly("com.xtdb:xtdb-rocksdb")
+    runtimeOnly("com.xtdb:xtdb-lmdb")
+    runtimeOnly("com.xtdb:xtdb-kafka")
+    runtimeOnly("com.xtdb:xtdb-jdbc")
+    runtimeOnly("com.xtdb:xtdb-s3")
+    runtimeOnly("com.xtdb:xtdb-metrics")
+
+    runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor")
+    runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-smile")
+
+    // Dependencies only used for the build-time tests
+    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testImplementation("org.testng:testng") {
+        // Exclude snakeyaml, which has open CVEs and is unused
+        exclude group: "org.yaml", module: "snakeyaml"
+        exclude group: "org.apache.ant", module: "ant"
+    }
+    // We need these egeria libraries for testing
+    testImplementation("org.odpi.egeria:repository-services-implementation")
+    testImplementation("org.odpi.egeria:connector-configuration-factory") {
+        // Exclude the graph repository, as unused and will extend to many other dependencies
+        exclude group: "org.odpi.egeria", module: "graph-repository-connector"
+    }
+    testImplementation("org.odpi.egeria:open-metadata-types")
+    testCompileOnly("org.odpi.egeria:audit-log-framework")
+    testCompileOnly("org.odpi.egeria:repository-services-apis")
+    testCompileOnly("org.odpi.egeria:open-connector-framework")
 }
 
 description = 'An OCF OMRS Connector for a historical metadata back-end based on XTDB.'
 
-java {
-    withJavadocJar()
-}
-
-task withDependencies(type: Jar) {
-    archiveClassifier = 'jar-with-dependencies'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
-}
-
-build.dependsOn("withDependencies")
+build.dependsOn shadowJar
