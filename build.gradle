@@ -17,6 +17,7 @@ plugins {
     id 'dev.jacomet.logging-capabilities' version "0.10.0"
     // This plugin helps resolve jakarta/javax dev.jacomet.logging-capabilities
     id 'org.gradlex.java-ecosystem-capabilities' version "1.1"
+    id "io.freefair.aggregate-javadoc" version "6.6.3"
 }
 
 
@@ -38,6 +39,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'com.autonomousapps.dependency-analysis'
     apply plugin: 'com.github.johnrengelman.shadow'
+
 
     repositories {
         mavenCentral()
