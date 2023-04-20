@@ -118,7 +118,7 @@ public class XtdbOMRSRepositoryConnector extends OMRSRepositoryConnector {
             if (configProperties.containsKey(XtdbOMRSRepositoryConnectorProvider.XTDB_CONFIG_EDN)) {
                 // EDN-style configuration
                 try {
-                    configFile = File.createTempFile("xtdb", ".edn", new File("./"));
+                    configFile = File.createTempFile(serverName, ".edn", new File("./"));
                     String xtdbCfg = (String) configProperties.get(XtdbOMRSRepositoryConnectorProvider.XTDB_CONFIG_EDN);
                     luceneConfigured = xtdbCfg.contains(Constants.XTDB_LUCENE);
                     BufferedWriter writer = new BufferedWriter(new FileWriter(configFile));
