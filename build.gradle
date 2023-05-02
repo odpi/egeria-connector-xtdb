@@ -65,7 +65,7 @@ subprojects {
     // Assign variables for any constraints
     ext {
         lombokVersion = '1.18.24'
-        egeriaVersion = '4.0-SNAPSHOT'
+        egeriaVersion = '4.0'
         xtdbVersion = '1.23.0'
         clojureVersion = '1.11.1'
         jacksonVersion = '2.14.1'
@@ -82,17 +82,13 @@ subprojects {
     }
 
     dependencies {
-        // This adds constraints (which can be overriden below) for all dependencies egeria uses
+        // This adds constraints (which can be overridden below) for all dependencies egeria uses
         implementation platform("org.odpi.egeria:egeria:${egeriaVersion}")
 
         // specifies versions if dependencies used in projects
         constraints
                 {
                     implementation("ch.qos.logback:logback-classic:${logbackVersion}")
-                    implementation("org.odpi.egeria:audit-log-framework:${egeriaVersion}")
-                    implementation("org.odpi.egeria:repository-services-apis:${egeriaVersion}")
-                    implementation("org.odpi.egeria:open-connector-framework:${egeriaVersion}")
-
                     compileOnly("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
                     compileOnly("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
                     implementation("com.xtdb:xtdb-core:${xtdbVersion}")
