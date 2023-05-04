@@ -25,14 +25,14 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          # Java 11 is used for final released build
+          # Java 17 is used for final released build
           java-version: '17'
           distribution: 'temurin'
       - name: Build and publish to Maven Central
         uses: gradle/gradle-build-action@v2
         with:
           cache-read-only: false
-          arguments: build publish
+          arguments: build publish -Dorg.gradle.parallel=false
         env:
           OSSRH_GPG_KEYID: ${{ secrets.OSSRH_GPG_KEYID }}
           OSSRH_GPG_PASSPHRASE: ${{ secrets.OSSRH_GPG_PASSPHRASE }}
