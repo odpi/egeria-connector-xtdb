@@ -13,9 +13,9 @@ This repository houses the code for a plugin repository connector using [XTDB](h
 
 Of particular interest for Egeria is that it has native support for storing historical information and temporal queries -- making it one of the first repositories to support the use of the `asOfTime` parameter across all metadata.
 
-## [Documentation](https://odpi.github.io/egeria-docs/connectors/repository/xtdb/)
+## [Documentation](https://egeria-project.org/connectors/repository/xtdb/)
 
-[https://odpi.github.io/egeria-docs/connectors/repository/xtdb/](https://odpi.github.io/egeria-docs/connectors/repository/xtdb/)
+[https://egeria-project.org/connectors/repository/xtdb/](https://egeria-project.org/connectors/repository/xtdb/)
 
 ----
 License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
