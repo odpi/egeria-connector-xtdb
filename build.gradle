@@ -64,21 +64,9 @@ subprojects {
 
     // Assign variables for any constraints
     ext {
-        lombokVersion = '1.18.24'
         egeriaVersion = '4.0'
         xtdbVersion = '1.23.0'
         clojureVersion = '1.11.1'
-        jacksonVersion = '2.14.1'
-        luceneVersion = '8.9.0'
-        slf4jVersion = '2.0.6'
-        logbackVersion = '1.4.5'
-        testngVersion = '7.6.1'
-        // Dependent libraries
-        httpclientVersion = '4.5.14'
-        nettyVersion = '4.1.79.Final'
-        kafkaVersion = '3.4.0'
-        jacksonDataFormatVersion = '2.14.1'
-        commonscodecVersion = '1.15'
     }
 
     dependencies {
@@ -88,58 +76,22 @@ subprojects {
         // specifies versions if dependencies used in projects
         constraints
                 {
-                    implementation("ch.qos.logback:logback-classic:${logbackVersion}")
-                    compileOnly("com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}")
-                    compileOnly("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
-                    implementation("com.xtdb:xtdb-core:${xtdbVersion}")
+                   implementation("com.xtdb:xtdb-core:${xtdbVersion}")
                     implementation("org.clojure:clojure:${clojureVersion}")
-                    implementation("org.apache.lucene:lucene-core:${luceneVersion}")
-                    implementation("org.apache.lucene:lucene-queryparser:${luceneVersion}")
                     // Dependencies only required if configured to run with these extras: they will be included in the
                     // 'jar-with-dependencies' by default, but if you do not need them you can remove them and re-build
                     // to get a smaller footprint with less potential CVE exposure.
-                    runtimeOnly("org.apache.lucene:lucene-analyzers-common:${luceneVersion}")
+                    // runtimeOnly("org.apache.lucene:lucene-analyzers-common:${luceneVersion}")
                     runtimeOnly("com.xtdb:xtdb-lucene:${xtdbVersion}")
                     runtimeOnly("com.xtdb:xtdb-rocksdb:${xtdbVersion}")
                     runtimeOnly("com.xtdb:xtdb-lmdb:${xtdbVersion}")
                     runtimeOnly("com.xtdb:xtdb-kafka:${xtdbVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-38153
-                    compileOnly("org.apache.kafka:kafka-clients:${kafkaVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-28491
-                    runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}")
-                    runtimeOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jacksonVersion}")
-                    testCompileOnly("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
-
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-13956
-                    runtimeOnly("org.apache.httpcomponents:httpclient:${httpclientVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-21295
-                    runtimeOnly("io.netty:netty-codec-http2:${nettyVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-43797
-                    runtimeOnly("io.netty:netty-codec-http:${nettyVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2021-37136, CVE-2021-37137
-                    runtimeOnly("io.netty:netty-codec:${nettyVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid CVE-2020-0026
-                    runtimeOnly("io.netty:netty-handler:${nettyVersion}")
-                    // Following dependency is to ensure we use updated version of dependent library to avoid sonatype-2012-0050
-                    runtimeOnly("commons-codec:commons-codec:${commonscodecVersion}")
 
                     runtimeOnly("com.xtdb:xtdb-jdbc:${xtdbVersion}")
                     runtimeOnly("com.xtdb:xtdb-s3:${xtdbVersion}")
 
                     runtimeOnly("com.xtdb:xtdb-metrics:${xtdbVersion}")
-                    // Dependencies provided by Egeria itself
-                    compileOnly("org.odpi.egeria:audit-log-framework:${egeriaVersion}")
-                    compileOnly("org.odpi.egeria:repository-services-apis:${egeriaVersion}")
-                    compileOnly("org.odpi.egeria:open-connector-framework:${egeriaVersion}")
-                    compileOnly("org.slf4j:slf4j-api:${slf4jVersion}")
-
-                    // Dependencies only used for the build-time tests
-                    testImplementation("ch.qos.logback:logback-classic:${logbackVersion}")
-                    testImplementation("org.testng:testng:${testngVersion}")
-                    testImplementation("org.odpi.egeria:repository-services-implementation:${egeriaVersion}")
-                    testImplementation("org.odpi.egeria:connector-configuration-factory:${egeriaVersion}")
-                    testImplementation("org.odpi.egeria:open-metadata-types:${egeriaVersion}")
-                }
+                 }
     }
 
     /*
@@ -159,7 +111,7 @@ subprojects {
 
     // javadoc
     javadoc {
-        options.addBooleanOption('html5', true)
+        options.addBooleanOption('html5', true) // default
     }
 
     // code coverage

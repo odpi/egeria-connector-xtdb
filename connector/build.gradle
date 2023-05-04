@@ -55,6 +55,7 @@ dependencies {
     testCompileOnly("org.odpi.egeria:audit-log-framework")
     testCompileOnly("org.odpi.egeria:repository-services-apis")
     testCompileOnly("org.odpi.egeria:open-connector-framework")
+    testCompileOnly("com.fasterxml.jackson.core:jackson-annotations")
 }
 
 description = 'An OCF OMRS Connector for a historical metadata back-end based on XTDB.'
