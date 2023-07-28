@@ -64,8 +64,8 @@ subprojects {
 
     // Assign variables for any constraints
     ext {
-        egeriaVersion = '4.0'
-        xtdbVersion = '1.23.0'
+        egeriaVersion = '4.2'
+        xtdbVersion = '1.24.0'
         clojureVersion = '1.11.1'
     }
 
